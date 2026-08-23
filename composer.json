@@ -1,0 +1,8 @@
+{
+  "name": "stashd/plugin-api",
+  "description": "The language-neutral contract for native Stashd plugins",
+  "type": "library",
+  "license": "MIT",
+  "version": "0.1.0",
+  "autoload": {}
+}

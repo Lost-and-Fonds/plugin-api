@@ -207,8 +207,8 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     contracts = [
-        parse_file(args.repo_root / "plugin-api/wit/input.wit", "plugin-api/wit/input.wit"),
-        parse_file(args.repo_root / "plugin-api/wit/broadcast.wit", "plugin-api/wit/broadcast.wit"),
+        parse_file(args.repo_root / "wit/input.wit", "wit/input.wit"),
+        parse_file(args.repo_root / "wit/broadcast.wit", "wit/broadcast.wit"),
     ]
     schema = {"schema_version": 1, "package": "stashd:plugin@0.1.0", "contracts": contracts}
     args.output_dir.mkdir(parents=True, exist_ok=True)

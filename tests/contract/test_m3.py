@@ -193,7 +193,7 @@ def test_goldens(schema: dict[str, Any], goldens: Path) -> None:
 
 
 def test_schema_regeneration(root: Path, schema_dir: Path) -> None:
-    extractor = root / "spikes/native-plugin-runner/m3/extract_wit.py"
+    extractor = root / "tools/extract_wit.py"
     with tempfile.TemporaryDirectory() as temp:
         subprocess.run(["python3", str(extractor), "--repo-root", str(root), "--output-dir", temp], check=True)
         for name in ("wit-schema.json", "compatibility-report.md"):
