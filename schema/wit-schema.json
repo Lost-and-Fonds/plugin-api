@@ -391,8 +391,11 @@
                 {
                   "name": "source",
                   "type": {
-                    "kind": "scalar",
-                    "name": "string"
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "source-value"
+                    }
                   }
                 }
               ],
@@ -690,6 +693,24 @@
                   }
                 }
               ]
+            },
+            "source-value": {
+              "fields": [
+                {
+                  "name": "key",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "value",
+                  "type": {
+                    "kind": "named",
+                    "name": "option-value"
+                  }
+                }
+              ]
             }
           },
           "resources": [],
@@ -704,6 +725,13 @@
                   "type": {
                     "kind": "scalar",
                     "name": "bool"
+                  }
+                },
+                {
+                  "name": "number",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "s64"
                   }
                 },
                 {

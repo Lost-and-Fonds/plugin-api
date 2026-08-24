@@ -79,7 +79,13 @@ interface input-plugin {
 
     variant option-value {
         boolean(bool),
+        number(s64),
         text(string),
+    }
+
+    record source-value {
+        key: string,
+        value: option-value,
     }
 
     record input-option {
@@ -141,7 +147,7 @@ interface input-plugin {
         failed(error),
     }
 
-    resolve: func(source: string) -> result<resolved-input, plugin-error>;
+    resolve: func(source: list<source-value>) -> result<resolved-input, plugin-error>;
     discover: func(input-id: string, intent: discovery-intent, options: list<input-option>) -> result<list<discovered-item>, plugin-error>;
     acquire: func(item: discovered-item, options: acquisition-options) -> result<acquisition-result, plugin-error>;
 }
