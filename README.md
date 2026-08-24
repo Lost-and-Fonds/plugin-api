@@ -4,7 +4,7 @@ This repository is the canonical, language-neutral contract for Stashd
 plugins: WIT definitions, generated schema, contract fixtures, and
 compatibility rules.
 
-The contract is normative. `stashd/plugin-sdk` provides the PHP authoring API;
+The contract is normative. `stashd/php-sdk` provides the PHP authoring API;
 `Lost-and-Fonds/stashd` owns the host/runtime and application integration.
 Provider repositories own provider behavior.
 
