@@ -594,6 +594,23 @@
                       "name": "string"
                     }
                   }
+                },
+                {
+                  "name": "size-bytes",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "u64"
+                    }
+                  }
+                },
+                {
+                  "name": "size-estimated",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "bool"
+                  }
                 }
               ]
             },
@@ -690,6 +707,23 @@
                       "kind": "scalar",
                       "name": "u32"
                     }
+                  }
+                },
+                {
+                  "name": "size-bytes",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "u64"
+                    }
+                  }
+                },
+                {
+                  "name": "size-estimated",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "bool"
                   }
                 }
               ]

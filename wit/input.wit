@@ -119,6 +119,8 @@ interface input-plugin {
         title: option<string>,
         artwork-reference: option<string>,
         estimated-item-count: option<u32>,
+        size-bytes: option<u64>,
+        size-estimated: bool,
     }
 
     record discovered-item {
@@ -130,6 +132,8 @@ interface input-plugin {
         artwork-reference: option<string>,
         duration-seconds: option<u32>,
         kind: option<string>,
+        size-bytes: option<u64>,
+        size-estimated: bool,
     }
 
     record error {
