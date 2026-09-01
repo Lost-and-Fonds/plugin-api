@@ -611,6 +611,16 @@
                     "kind": "scalar",
                     "name": "bool"
                   }
+                },
+                {
+                  "name": "upstream-state",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
                 }
               ]
             },

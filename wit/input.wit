@@ -134,6 +134,7 @@ interface input-plugin {
         kind: option<string>,
         size-bytes: option<u64>,
         size-estimated: bool,
+        upstream-state: option<string>,
     }
 
     record error {
