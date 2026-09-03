@@ -68,6 +68,7 @@ interface input-host {
 
     record progress {
         stage: string,
+        fraction: option<float64>,
     }
 
     report-progress: func(progress: progress);
