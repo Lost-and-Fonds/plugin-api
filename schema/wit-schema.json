@@ -905,6 +905,16 @@
                     "kind": "scalar",
                     "name": "string"
                   }
+                },
+                {
+                  "name": "fraction",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "float32"
+                    }
+                  }
                 }
               ],
               "name": "report-progress",

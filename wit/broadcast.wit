@@ -78,7 +78,7 @@ interface broadcast-host {
     }
 
     open-staging-area: func() -> staging-area;
-    report-progress: func(stage: string);
+    report-progress: func(stage: string, fraction: option<float32>);
     log: func(message: string);
 }
 
