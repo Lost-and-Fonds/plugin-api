@@ -1,0 +1,9 @@
+{
+  "error": {
+    "tag": "rate-limited",
+    "value": {"message": "remote quota exceeded", "retryable": true}
+  },
+  "id": "publish-1",
+  "kind": "response",
+  "protocol": 1
+}

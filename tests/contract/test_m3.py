@@ -122,7 +122,7 @@ def test_options_variants_results(schema: dict[str, Any]) -> None:
     for tag, value in (("boolean", True), ("number", 7), ("text", "x")):
         assert codec.decode("broadcast-plugin", option_spec, json.dumps({"tag": tag, "value": value}))["tag"] == tag
     error_spec = {"kind": "named", "name": "plugin-error"}
-    for branch in ("unsupported", "not-found", "unavailable", "invalid-data", "failed"):
+    for branch in ("unsupported", "not-found", "authentication", "rate-limited", "unavailable", "invalid-data", "failed"):
         value = {"tag": branch, "value": {"message": "message", "retryable": False}}
         codec.decode("broadcast-plugin", error_spec, json.dumps(value))
     try:
@@ -135,6 +135,11 @@ def test_options_variants_results(schema: dict[str, Any]) -> None:
               "error": {"kind": "named", "name": "plugin-error"}}
     codec.encode("broadcast-plugin", result, {"ok": {"choices": [], "values": []}})
     codec.encode("broadcast-plugin", result, {"error": {"tag": "failed", "value": {"message": "x", "retryable": True}}})
+    input_host = next(interface for name, interface in interfaces(schema) if name == "input-host")
+    request = next(record for name, record in input_host["records"].items() if name == "http-request")
+    assert {field["name"] for field in request["fields"]} == {"method", "url", "credential", "headers", "body"}
+    response = next(record for name, record in input_host["records"].items() if name == "http-response")
+    assert {field["name"] for field in response["fields"]} == {"status", "headers", "body"}
     for bad in ('{"ok":{},"error":{}}', '{}'):
         try:
             codec.decode("broadcast-plugin", result, bad)

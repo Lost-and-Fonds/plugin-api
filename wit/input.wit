@@ -1,13 +1,30 @@
-package stashd:plugin@0.1.0;
+package stashd:plugin@0.2.0;
 
 interface input-host {
+    enum http-method {
+        get,
+        post,
+        put,
+        patch,
+        delete,
+    }
+
+    record http-header {
+        name: string,
+        value: string,
+    }
+
     record http-request {
+        method: http-method,
         url: string,
         credential: option<string>,
+        headers: list<http-header>,
+        body: list<u8>,
     }
 
     record http-response {
         status: u16,
+        headers: list<http-header>,
         body: list<u8>,
     }
 
@@ -21,7 +38,7 @@ interface input-host {
     }
 
     resource http-client {
-        get: func(request: http-request) -> result<http-response, http-error>;
+        request: func(request: http-request) -> result<http-response, http-error>;
     }
 
     open-http-client: func() -> http-client;
@@ -37,7 +54,6 @@ interface input-host {
         exit-code: s32,
         stdout: string,
         stderr: string,
-        files: list<string>,
     }
 
     variant helper-error {
@@ -48,7 +64,7 @@ interface input-host {
 
     record staged-artifact {
         reference: string,
-        role: artifact-role,
+        role: option<artifact-role>,
         media-type: option<string>,
         size-bytes: u64,
     }
@@ -61,7 +77,7 @@ interface input-host {
 
     resource staging-area {
         run-helper: func(name: string, args: list<string>) -> result<helper-result, helper-error>;
-        stage: func(relative-path: string, role: artifact-role, media-type: option<string>) -> result<staged-artifact, staging-error>;
+        stage: func(relative-path: string, media-type: option<string>) -> result<staged-artifact, staging-error>;
     }
 
     open-staging-area: func() -> staging-area;

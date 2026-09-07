@@ -1,0 +1,11 @@
+{
+  "id": "resolve-1",
+  "kind": "request",
+  "method": "input.resolve",
+  "params": {
+    "source": [
+      {"key": "url", "value": {"tag": "text", "value": "https://example.test/item"}}
+    ]
+  },
+  "protocol": 1
+}

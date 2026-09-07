@@ -1,4 +1,4 @@
-package stashd:plugin@0.1.0;
+package stashd:plugin@0.2.0;
 
 interface broadcast-host {
     enum http-method {
@@ -24,12 +24,15 @@ interface broadcast-host {
 
     record http-response {
         status: u16,
+        headers: list<http-header>,
         body: list<u8>,
     }
 
     variant http-error {
         denied,
         credential-unavailable,
+        authentication-rejected,
+        rate-limited,
         unavailable(string),
         failed(string),
     }
@@ -44,7 +47,6 @@ interface broadcast-host {
         exit-code: s32,
         stdout: string,
         stderr: string,
-        files: list<string>,
     }
 
     variant helper-error {
@@ -181,6 +183,8 @@ interface broadcast-plugin {
     variant plugin-error {
         unsupported(error),
         not-found(error),
+        authentication(error),
+        rate-limited(error),
         unavailable(error),
         invalid-data(error),
         failed(error),

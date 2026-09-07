@@ -4,7 +4,7 @@ This file is generated from the active WIT files; it is not a second contract.
 
 | File | Interface | Records | Variants | Enums | Resources | Functions |
 |---|---|---:|---:|---:|---:|---:|
-| `wit/input.wit` | `input-host` | 5 | 3 | 1 | 2 | 4 |
+| `wit/input.wit` | `input-host` | 6 | 3 | 2 | 2 | 4 |
 | `wit/input.wit` | `input-plugin` | 7 | 2 | 2 | 0 | 3 |
 | `wit/broadcast.wit` | `broadcast-host` | 6 | 3 | 1 | 2 | 4 |
 | `wit/broadcast.wit` | `broadcast-plugin` | 14 | 2 | 0 | 0 | 4 |
@@ -19,4 +19,4 @@ This file is generated from the active WIT files; it is not a second contract.
 - results map to exactly one of `{"ok": value}` or `{"error": value}`;
 - Component resources remain opaque invocation-scoped references; no ABI object is generated.
 
-The generated schema has no Wasmtime or Component ABI dependency. Large-body/resource lifetime details remain pre-freeze follow-ups.
+RPC v1 represents binary list<u8> values as base64 strings in capability payloads; large response bodies use opaque resource handles and resource.read. The generated schema has no Wasmtime or Component ABI dependency.

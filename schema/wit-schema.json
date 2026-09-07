@@ -12,6 +12,15 @@
                 "artwork",
                 "metadata"
               ]
+            },
+            "http-method": {
+              "values": [
+                "get",
+                "post",
+                "put",
+                "patch",
+                "delete"
+              ]
             }
           },
           "functions": [
@@ -81,21 +90,36 @@
                     "kind": "scalar",
                     "name": "string"
                   }
+                }
+              ]
+            },
+            "http-header": {
+              "fields": [
+                {
+                  "name": "name",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
                 },
                 {
-                  "name": "files",
+                  "name": "value",
                   "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
+                    "kind": "scalar",
+                    "name": "string"
                   }
                 }
               ]
             },
             "http-request": {
               "fields": [
+                {
+                  "name": "method",
+                  "type": {
+                    "kind": "named",
+                    "name": "http-method"
+                  }
+                },
                 {
                   "name": "url",
                   "type": {
@@ -112,6 +136,26 @@
                       "name": "string"
                     }
                   }
+                },
+                {
+                  "name": "headers",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "http-header"
+                    }
+                  }
+                },
+                {
+                  "name": "body",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "u8"
+                    }
+                  }
                 }
               ]
             },
@@ -122,6 +166,16 @@
                   "type": {
                     "kind": "scalar",
                     "name": "u16"
+                  }
+                },
+                {
+                  "name": "headers",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "http-header"
+                    }
                   }
                 },
                 {
@@ -169,8 +223,11 @@
                 {
                   "name": "role",
                   "type": {
-                    "kind": "named",
-                    "name": "artifact-role"
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "artifact-role"
+                    }
                   }
                 },
                 {
@@ -206,7 +263,7 @@
                       }
                     }
                   ],
-                  "name": "get",
+                  "name": "request",
                   "result": {
                     "error": {
                       "kind": "named",
@@ -264,13 +321,6 @@
                       "type": {
                         "kind": "scalar",
                         "name": "string"
-                      }
-                    },
-                    {
-                      "name": "role",
-                      "type": {
-                        "kind": "named",
-                        "name": "artifact-role"
                       }
                     },
                     {
@@ -853,7 +903,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.1.0",
+      "package": "stashd:plugin@0.2.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -957,16 +1007,6 @@
                     "kind": "scalar",
                     "name": "string"
                   }
-                },
-                {
-                  "name": "files",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
                 }
               ]
             },
@@ -1043,6 +1083,16 @@
                   "type": {
                     "kind": "scalar",
                     "name": "u16"
+                  }
+                },
+                {
+                  "name": "headers",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "http-header"
+                    }
                   }
                 },
                 {
@@ -1287,6 +1337,14 @@
                 },
                 {
                   "name": "credential-unavailable",
+                  "type": null
+                },
+                {
+                  "name": "authentication-rejected",
+                  "type": null
+                },
+                {
+                  "name": "rate-limited",
                   "type": null
                 },
                 {
@@ -1912,6 +1970,20 @@
                   }
                 },
                 {
+                  "name": "authentication",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "rate-limited",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
                   "name": "unavailable",
                   "type": {
                     "kind": "named",
@@ -1937,7 +2009,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.1.0",
+      "package": "stashd:plugin@0.2.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -1950,6 +2022,6 @@
       }
     }
   ],
-  "package": "stashd:plugin@0.1.0",
+  "package": "stashd:plugin@0.2.0",
   "schema_version": 1
 }

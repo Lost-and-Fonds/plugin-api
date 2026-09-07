@@ -193,9 +193,9 @@ def report(schema: dict) -> str:
             "- enums map to strings;",
             "- variants map to `{\"tag\": string, \"value\": value}` when a payload exists;",
             "- results map to exactly one of `{\"ok\": value}` or `{\"error\": value}`;",
-            "- Component resources remain opaque invocation-scoped references; no ABI object is generated.",
-            "",
-            "The generated schema has no Wasmtime or Component ABI dependency. Large-body/resource lifetime details remain pre-freeze follow-ups.",
+        "- Component resources remain opaque invocation-scoped references; no ABI object is generated.",
+        "",
+        "RPC v1 represents binary list<u8> values as base64 strings in capability payloads; large response bodies use opaque resource handles and resource.read. The generated schema has no Wasmtime or Component ABI dependency.",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -210,7 +210,7 @@ def main() -> None:
         parse_file(args.repo_root / "wit/input.wit", "wit/input.wit"),
         parse_file(args.repo_root / "wit/broadcast.wit", "wit/broadcast.wit"),
     ]
-    schema = {"schema_version": 1, "package": "stashd:plugin@0.1.0", "contracts": contracts}
+    schema = {"schema_version": 1, "package": "stashd:plugin@0.2.0", "contracts": contracts}
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "wit-schema.json").write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n")
     (args.output_dir / "compatibility-report.md").write_text(report(schema))
