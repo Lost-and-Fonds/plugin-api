@@ -19,4 +19,4 @@ This file is generated from the active WIT files; it is not a second contract.
 - results map to exactly one of `{"ok": value}` or `{"error": value}`;
 - Component resources remain opaque invocation-scoped references; no ABI object is generated.
 
-RPC v1 represents binary list<u8> values as base64 strings in capability payloads; large response bodies use opaque resource handles and resource.read. The generated schema has no Wasmtime or Component ABI dependency.
+RPC v1 represents inline list<u8> values as JSON strings because the current host transports PHP byte strings directly; resource.read chunks use base64 and large response bodies use opaque resource handles. The generated schema has no Wasmtime or Component ABI dependency.
