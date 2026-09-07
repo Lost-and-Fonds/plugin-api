@@ -1,0 +1,13 @@
+{
+  "id": "cap-1",
+  "kind": "request",
+  "method": "http.request",
+  "params": {
+    "method": "GET",
+    "url": "https://example.test/item",
+    "credential": null,
+    "headers": [],
+    "body": ""
+  },
+  "protocol": 1
+}

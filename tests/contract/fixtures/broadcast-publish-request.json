@@ -1,0 +1,12 @@
+{
+  "id": "publish-1",
+  "kind": "request",
+  "method": "broadcast.publish",
+  "params": {
+    "reference": "broadcast-1",
+    "settings": [],
+    "sources": [],
+    "items": []
+  },
+  "protocol": 1
+}

@@ -1,0 +1,20 @@
+{
+  "id": "discover-1",
+  "kind": "response",
+  "protocol": 1,
+  "result": [
+    {
+        "id": "item-1",
+        "reference": "https://example.test/item-1",
+        "title": "Example item",
+        "description": null,
+        "published-at": null,
+        "artwork-reference": null,
+        "duration-seconds": null,
+        "kind": "video",
+        "size-bytes": null,
+        "size-estimated": false,
+        "upstream-state": null
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "cap-1",
+  "kind": "response",
+  "protocol": 1,
+  "result": {
+    "status": 200,
+    "headers": [
+      {"name": "content-type", "value": "text/plain"}
+    ],
+    "body": "ok"
+  }
+}
