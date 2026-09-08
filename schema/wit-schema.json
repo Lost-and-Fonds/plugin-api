@@ -565,6 +565,19 @@
                       "name": "input-option"
                     }
                   }
+                },
+                {
+                  "name": "requested-roles",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "list",
+                      "value": {
+                        "kind": "named",
+                        "name": "artifact-role"
+                      }
+                    }
+                  }
                 }
               ]
             },
@@ -577,6 +590,16 @@
                     "value": {
                       "kind": "named",
                       "name": "staged-artifact"
+                    }
+                  }
+                },
+                {
+                  "name": "unavailable",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "unavailable-artifact"
                     }
                   }
                 }
@@ -812,6 +835,31 @@
                   "type": {
                     "kind": "named",
                     "name": "option-value"
+                  }
+                }
+              ]
+            },
+            "unavailable-artifact": {
+              "fields": [
+                {
+                  "name": "role",
+                  "type": {
+                    "kind": "named",
+                    "name": "artifact-role"
+                  }
+                },
+                {
+                  "name": "permanent",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "bool"
+                  }
+                },
+                {
+                  "name": "message",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
                   }
                 }
               ]

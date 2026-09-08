@@ -123,10 +123,18 @@ interface input-plugin {
     record acquisition-options {
         media-kind: media-kind,
         options: list<input-option>,
+        requested-roles: option<list<artifact-role>>,
+    }
+
+    record unavailable-artifact {
+        role: artifact-role,
+        permanent: bool,
+        message: string,
     }
 
     record acquisition-result {
         artifacts: list<staged-artifact>,
+        unavailable: list<unavailable-artifact>,
     }
 
     record resolved-input {

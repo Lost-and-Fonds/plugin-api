@@ -24,4 +24,7 @@ response resources are read through `resource.read` handles.
 
 The 0.2 contract makes the generic HTTP request shape and typed plugin errors
 explicit. Core accepts 0.1 manifests during migration, but new plugins should
-declare 0.2 and use the current SDK.
+declare 0.2 and use the current SDK. Input acquisition may request a subset of
+generic artifact roles; the result can report a role as temporarily or
+permanently unavailable without implying that an existing Vault Asset should
+be removed.
