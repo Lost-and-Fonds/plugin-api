@@ -56,6 +56,19 @@
             {
               "arguments": [
                 {
+                  "name": "item",
+                  "type": {
+                    "kind": "named",
+                    "name": "discovered-item"
+                  }
+                }
+              ],
+              "name": "report-discovered",
+              "result": null
+            },
+            {
+              "arguments": [
+                {
                   "name": "message",
                   "type": {
                     "kind": "scalar",
@@ -68,6 +81,108 @@
             }
           ],
           "records": {
+            "discovered-item": {
+              "fields": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "title",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "description",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "published-at",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "artwork-reference",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "duration-seconds",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "u32"
+                    }
+                  }
+                },
+                {
+                  "name": "kind",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "size-bytes",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "u64"
+                    }
+                  }
+                },
+                {
+                  "name": "size-estimated",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "bool"
+                  }
+                },
+                {
+                  "name": "upstream-state",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                }
+              ]
+            },
             "helper-result": {
               "fields": [
                 {

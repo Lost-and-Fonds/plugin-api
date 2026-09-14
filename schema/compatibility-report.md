@@ -4,7 +4,7 @@ This file is generated from the active WIT files; it is not a second contract.
 
 | File | Interface | Records | Variants | Enums | Resources | Functions |
 |---|---|---:|---:|---:|---:|---:|
-| `wit/input.wit` | `input-host` | 6 | 3 | 2 | 2 | 4 |
+| `wit/input.wit` | `input-host` | 7 | 3 | 2 | 2 | 5 |
 | `wit/input.wit` | `input-plugin` | 8 | 2 | 2 | 0 | 3 |
 | `wit/broadcast.wit` | `broadcast-host` | 6 | 3 | 1 | 2 | 4 |
 | `wit/broadcast.wit` | `broadcast-plugin` | 14 | 2 | 0 | 0 | 4 |
