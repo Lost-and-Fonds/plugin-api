@@ -1,19 +1,13 @@
 # Stashd plugin API
 
 This repository is the canonical, language-neutral contract for Stashd
-plugins: WIT definitions, generated schema, contract fixtures, and
-compatibility rules.
+plugins: WIT definitions, generated schema, and compatibility rules.
 
 The contract is normative. `stashd/php-sdk` provides the PHP authoring API;
 `Lost-and-Fonds/stashd` owns the host/runtime and application integration.
 Provider repositories own provider behavior.
 
-Version changes must preserve the documented compatibility policy and pass the
-contract test suite:
-
-```sh
-./tests/contract/run.sh
-```
+Version changes must preserve the documented compatibility policy.
 
 The current contract is `stashd:plugin@0.2.0`. It describes invocation-scoped
 host capabilities for both Input and Broadcast lifecycles. RPC v1 remains the
