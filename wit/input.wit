@@ -125,6 +125,12 @@ interface input-plugin {
         value: option-value,
     }
 
+    /// Invocation-scoped raw secret, supplied only when the host grants raw access.
+    record input-credential {
+        key: string,
+        value: string,
+    }
+
     enum discovery-intent {
         refresh,
         complete,
@@ -139,6 +145,7 @@ interface input-plugin {
         media-kind: media-kind,
         options: list<input-option>,
         requested-roles: option<list<artifact-role>>,
+        credentials: option<list<input-credential>>,
     }
 
     record unavailable-artifact {

@@ -693,6 +693,19 @@
                       }
                     }
                   }
+                },
+                {
+                  "name": "credentials",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "list",
+                      "value": {
+                        "kind": "named",
+                        "name": "input-credential"
+                      }
+                    }
+                  }
                 }
               ]
             },
@@ -836,6 +849,24 @@
                   "type": {
                     "kind": "scalar",
                     "name": "bool"
+                  }
+                }
+              ]
+            },
+            "input-credential": {
+              "fields": [
+                {
+                  "name": "key",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "value",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
                   }
                 }
               ]
