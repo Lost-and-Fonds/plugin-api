@@ -1,10 +1,7 @@
 package stashd:plugin@0.9.0;
 
-interface collection-export-host {
-    log: func(message: string);
-}
-
 interface collection-export-plugin {
+    use plugin-types.{plugin-error-detail};
     variant option-value {
         boolean(bool),
         number(s64),
@@ -35,25 +32,21 @@ interface collection-export-plugin {
         contents: list<u8>,
     }
 
-    record error {
-        message: string,
-        retryable: bool,
-    }
-
     variant plugin-error {
-        unsupported(error),
-        not-found(error),
-        authentication(error),
-        rate-limited(error),
-        unavailable(error),
-        invalid-data(error),
-        failed(error),
+        unsupported(plugin-error-detail),
+        not-found(plugin-error-detail),
+        authentication(plugin-error-detail),
+        rate-limited(plugin-error-detail),
+        unavailable(plugin-error-detail),
+        invalid-data(plugin-error-detail),
+        failed(plugin-error-detail),
     }
 
     export-collection: func(exporter: string, collection: collection, options: list<setting>) -> result<exported-artifact, plugin-error>;
 }
 
 world collection-export-world {
-    import collection-export-host;
+    import plugin-types;
+    import logging-host;
     export collection-export-plugin;
 }

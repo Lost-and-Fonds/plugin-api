@@ -1,5 +1,80 @@
 package stashd:plugin@0.9.0;
 
+/// Lifecycle-independent plugin value contracts. Metadata facets remain in
+/// `io-host` with the shared host-managed I/O boundary.
+interface plugin-types {
+    /// Plugin-owned diagnostic detail attached to lifecycle-specific error
+    /// variants. The lifecycle variants themselves remain separate.
+    record plugin-error-detail {
+        message: string,
+        retryable: bool,
+    }
+}
+
+/// Shared progress callback and value for lifecycles that report progress.
+interface progress-host {
+    /// A fractional completion estimate for work performed by one invocation.
+    /// Unknown, indeterminate, and stage-only progress use `none`.
+    record progress {
+        stage: string,
+        fraction: option<f64>,
+    }
+    report-progress: func(progress: progress);
+}
+
+/// Invocation-scoped diagnostic logging shared by every plugin lifecycle.
+interface logging-host {
+    log: func(message: string);
+}
+
+/// Generic outbound HTTP capability shared by Input and Broadcast. The host
+/// applies opaque credential references without exposing secret material.
+interface http-host {
+    use io-host.{byte-stream, credential-reference};
+
+    enum http-method {
+        get,
+        post,
+        put,
+        patch,
+        delete,
+    }
+
+    record http-header {
+        name: string,
+        value: string,
+    }
+
+    record http-request {
+        method: http-method,
+        url: string,
+        credential: option<credential-reference>,
+        headers: list<http-header>,
+        body: list<u8>,
+    }
+
+    record http-response {
+        status: u16,
+        headers: list<http-header>,
+        body: byte-stream,
+    }
+
+    variant http-error {
+        denied,
+        credential-unavailable,
+        authentication-rejected,
+        rate-limited,
+        unavailable(string),
+        failed(string),
+    }
+
+    resource http-client {
+        request: func(request: http-request) -> result<http-response, http-error>;
+    }
+
+    open-http-client: func() -> http-client;
+}
+
 /// Generic, invocation-scoped byte streams and staged output. Resources are
 /// host-owned; references never expose filesystem paths or storage details.
 interface io-host {

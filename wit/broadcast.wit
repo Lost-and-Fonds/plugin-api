@@ -1,60 +1,16 @@
 package stashd:plugin@0.9.0;
 
 interface broadcast-host {
-    use io-host.{byte-stream};
-    enum http-method {
-        get,
-        post,
-        put,
-        patch,
-        delete,
-    }
-
-    record http-header {
-        name: string,
-        value: string,
-    }
-
-    record http-request {
-        method: http-method,
-        url: string,
-        credential: option<string>,
-        headers: list<http-header>,
-        body: list<u8>,
-    }
-
-    record http-response {
-        status: u16,
-        headers: list<http-header>,
-        body: byte-stream,
-    }
-
-    variant http-error {
-        denied,
-        credential-unavailable,
-        authentication-rejected,
-        rate-limited,
-        unavailable(string),
-        failed(string),
-    }
-
-    resource http-client {
-        request: func(request: http-request) -> result<http-response, http-error>;
-    }
-
-    open-http-client: func() -> http-client;
-
     record published-file {
         item-id: string,
         source-reference: string,
         relative-path: string,
     }
-
-    report-progress: func(stage: string, fraction: option<f32>);
-    log: func(message: string);
 }
 
 interface broadcast-plugin {
+    use io-host.{staged-artifact};
+    use plugin-types.{plugin-error-detail};
     use broadcast-host.{published-file};
     variant option-value {
         boolean(bool),
@@ -98,14 +54,8 @@ interface broadcast-plugin {
         items: list<item>,
     }
 
-    record artifact {
-        reference: string,
-        media-type: option<string>,
-        size-bytes: u64,
-    }
-
     record publication {
-        artifact: artifact,
+        artifact: staged-artifact,
         files: list<published-file>,
         published-metadata: list<setting>,
     }
@@ -145,19 +95,14 @@ interface broadcast-plugin {
         artifacts: list<derived-artifact>,
     }
 
-    record error {
-        message: string,
-        retryable: bool,
-    }
-
     variant plugin-error {
-        unsupported(error),
-        not-found(error),
-        authentication(error),
-        rate-limited(error),
-        unavailable(error),
-        invalid-data(error),
-        failed(error),
+        unsupported(plugin-error-detail),
+        not-found(plugin-error-detail),
+        authentication(plugin-error-detail),
+        rate-limited(plugin-error-detail),
+        unavailable(plugin-error-detail),
+        invalid-data(plugin-error-detail),
+        failed(plugin-error-detail),
     }
 
     prepare: func(request: publish-request) -> result<preparation, plugin-error>;
@@ -169,5 +114,9 @@ interface broadcast-plugin {
 world broadcast-world {
     import io-host;
     import broadcast-host;
+    import http-host;
+    import progress-host;
+    import plugin-types;
+    import logging-host;
     export broadcast-plugin;
 }

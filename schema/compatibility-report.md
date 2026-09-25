@@ -4,14 +4,17 @@ This file is generated from the active WIT files; it is not a second contract.
 
 | File | Interface | Records | Variants | Enums | Resources | Functions |
 |---|---|---:|---:|---:|---:|---:|
-| `wit/input.wit` | `input-host` | 6 | 2 | 1 | 2 | 5 |
-| `wit/input.wit` | `input-plugin` | 6 | 2 | 1 | 0 | 4 |
-| `wit/broadcast.wit` | `broadcast-host` | 4 | 1 | 1 | 1 | 3 |
-| `wit/broadcast.wit` | `broadcast-plugin` | 14 | 2 | 0 | 0 | 4 |
-| `wit/enrichment.wit` | `enrichment-host` | 2 | 1 | 0 | 0 | 3 |
-| `wit/enrichment.wit` | `enrichment-plugin` | 7 | 1 | 0 | 0 | 2 |
-| `wit/collection-export.wit` | `collection-export-host` | 0 | 0 | 0 | 0 | 1 |
-| `wit/collection-export.wit` | `collection-export-plugin` | 5 | 2 | 0 | 0 | 1 |
+| `wit/input.wit` | `input-host` | 2 | 1 | 0 | 1 | 2 |
+| `wit/input.wit` | `input-plugin` | 5 | 2 | 1 | 0 | 4 |
+| `wit/broadcast.wit` | `broadcast-host` | 1 | 0 | 0 | 0 | 0 |
+| `wit/broadcast.wit` | `broadcast-plugin` | 12 | 2 | 0 | 0 | 4 |
+| `wit/enrichment.wit` | `enrichment-host` | 2 | 1 | 0 | 0 | 1 |
+| `wit/enrichment.wit` | `enrichment-plugin` | 6 | 1 | 0 | 0 | 2 |
+| `wit/collection-export.wit` | `collection-export-plugin` | 4 | 2 | 0 | 0 | 1 |
+| `wit/io.wit` | `plugin-types` | 1 | 0 | 0 | 0 | 0 |
+| `wit/io.wit` | `progress-host` | 1 | 0 | 0 | 0 | 1 |
+| `wit/io.wit` | `logging-host` | 0 | 0 | 0 | 0 | 1 |
+| `wit/io.wit` | `http-host` | 3 | 1 | 1 | 1 | 1 |
 | `wit/io.wit` | `io-host` | 5 | 3 | 0 | 3 | 2 |
 
 ## Component worlds
@@ -20,10 +23,10 @@ The plugin-package schema lists canonical WIT worlds as the available component 
 
 | World | Imports | Exports |
 |---|---|---|
-| `input-world` | `io-host`, `input-host` | `input-plugin` |
-| `broadcast-world` | `io-host`, `broadcast-host` | `broadcast-plugin` |
-| `enrichment-world` | `io-host`, `enrichment-host` | `enrichment-plugin` |
-| `collection-export-world` | `collection-export-host` | `collection-export-plugin` |
+| `input-world` | `io-host`, `input-host`, `http-host`, `progress-host`, `plugin-types`, `logging-host` | `input-plugin` |
+| `broadcast-world` | `io-host`, `broadcast-host`, `http-host`, `progress-host`, `plugin-types`, `logging-host` | `broadcast-plugin` |
+| `enrichment-world` | `io-host`, `enrichment-host`, `progress-host`, `plugin-types`, `logging-host` | `enrichment-plugin` |
+| `collection-export-world` | `plugin-types`, `logging-host` | `collection-export-plugin` |
 
 ## Native mapping
 

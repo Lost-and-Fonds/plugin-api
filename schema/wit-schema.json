@@ -4,17 +4,7 @@
       "file": "wit/input.wit",
       "interfaces": {
         "input-host": {
-          "enums": {
-            "http-method": {
-              "values": [
-                "get",
-                "post",
-                "put",
-                "patch",
-                "delete"
-              ]
-            }
-          },
+          "enums": {},
           "functions": [
             {
               "arguments": [
@@ -40,27 +30,6 @@
               }
             },
             {
-              "arguments": [],
-              "name": "open-http-client",
-              "result": {
-                "kind": "named",
-                "name": "http-client"
-              }
-            },
-            {
-              "arguments": [
-                {
-                  "name": "progress",
-                  "type": {
-                    "kind": "named",
-                    "name": "progress"
-                  }
-                }
-              ],
-              "name": "report-progress",
-              "result": null
-            },
-            {
               "arguments": [
                 {
                   "name": "item",
@@ -71,19 +40,6 @@
                 }
               ],
               "name": "report-discovered",
-              "result": null
-            },
-            {
-              "arguments": [
-                {
-                  "name": "message",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                }
-              ],
-              "name": "log",
               "result": null
             }
           ],
@@ -143,100 +99,6 @@
                 }
               ]
             },
-            "http-header": {
-              "fields": [
-                {
-                  "name": "name",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "value",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                }
-              ]
-            },
-            "http-request": {
-              "fields": [
-                {
-                  "name": "method",
-                  "type": {
-                    "kind": "named",
-                    "name": "http-method"
-                  }
-                },
-                {
-                  "name": "url",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "credential",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "named",
-                      "name": "credential-reference"
-                    }
-                  }
-                },
-                {
-                  "name": "headers",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "http-header"
-                    }
-                  }
-                },
-                {
-                  "name": "body",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "u8"
-                    }
-                  }
-                }
-              ]
-            },
-            "http-response": {
-              "fields": [
-                {
-                  "name": "status",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "u16"
-                  }
-                },
-                {
-                  "name": "headers",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "http-header"
-                    }
-                  }
-                },
-                {
-                  "name": "body",
-                  "type": {
-                    "kind": "named",
-                    "name": "byte-stream"
-                  }
-                }
-              ]
-            },
             "input-delegation": {
               "fields": [
                 {
@@ -244,27 +106,6 @@
                   "type": {
                     "kind": "scalar",
                     "name": "string"
-                  }
-                }
-              ]
-            },
-            "progress": {
-              "fields": [
-                {
-                  "name": "stage",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "fraction",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "f64"
-                    }
                   }
                 }
               ]
@@ -290,38 +131,9 @@
                 }
               ],
               "name": "credential-access"
-            },
-            {
-              "functions": [
-                {
-                  "arguments": [
-                    {
-                      "name": "request",
-                      "type": {
-                        "kind": "named",
-                        "name": "http-request"
-                      }
-                    }
-                  ],
-                  "name": "request",
-                  "result": {
-                    "error": {
-                      "kind": "named",
-                      "name": "http-error"
-                    },
-                    "kind": "result",
-                    "ok": {
-                      "kind": "named",
-                      "name": "http-response"
-                    }
-                  }
-                }
-              ],
-              "name": "http-client"
             }
           ],
           "uses": {
-            "byte-stream": "io-host",
             "credential-reference": "io-host",
             "plugin-metadata": "io-host"
           },
@@ -335,40 +147,6 @@
                 {
                   "name": "unavailable",
                   "type": null
-                }
-              ]
-            },
-            "http-error": {
-              "values": [
-                {
-                  "name": "denied",
-                  "type": null
-                },
-                {
-                  "name": "credential-unavailable",
-                  "type": null
-                },
-                {
-                  "name": "authentication-rejected",
-                  "type": null
-                },
-                {
-                  "name": "rate-limited",
-                  "type": null
-                },
-                {
-                  "name": "unavailable",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "failed",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
                 }
               ]
             }
@@ -576,24 +354,6 @@
                 }
               ]
             },
-            "error": {
-              "fields": [
-                {
-                  "name": "message",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "retryable",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "bool"
-                  }
-                }
-              ]
-            },
             "input-option": {
               "fields": [
                 {
@@ -694,6 +454,7 @@
             "credential-binding": "io-host",
             "discovered-item": "input-host",
             "input-delegation": "input-host",
+            "plugin-error-detail": "plugin-types",
             "plugin-metadata": "io-host",
             "staged-artifact": "io-host"
           },
@@ -729,63 +490,63 @@
                   "name": "unsupported",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "not-found",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "credential-denied",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "credential-unavailable",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "authentication",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "rate-limited",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "unavailable",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "invalid-data",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "failed",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 }
               ]
@@ -801,7 +562,11 @@
           ],
           "imports": [
             "io-host",
-            "input-host"
+            "input-host",
+            "http-host",
+            "progress-host",
+            "plugin-types",
+            "logging-host"
           ]
         }
       }
@@ -810,158 +575,9 @@
       "file": "wit/broadcast.wit",
       "interfaces": {
         "broadcast-host": {
-          "enums": {
-            "http-method": {
-              "values": [
-                "get",
-                "post",
-                "put",
-                "patch",
-                "delete"
-              ]
-            }
-          },
-          "functions": [
-            {
-              "arguments": [],
-              "name": "open-http-client",
-              "result": {
-                "kind": "named",
-                "name": "http-client"
-              }
-            },
-            {
-              "arguments": [
-                {
-                  "name": "stage",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "fraction",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "f32"
-                    }
-                  }
-                }
-              ],
-              "name": "report-progress",
-              "result": null
-            },
-            {
-              "arguments": [
-                {
-                  "name": "message",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                }
-              ],
-              "name": "log",
-              "result": null
-            }
-          ],
+          "enums": {},
+          "functions": [],
           "records": {
-            "http-header": {
-              "fields": [
-                {
-                  "name": "name",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "value",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                }
-              ]
-            },
-            "http-request": {
-              "fields": [
-                {
-                  "name": "method",
-                  "type": {
-                    "kind": "named",
-                    "name": "http-method"
-                  }
-                },
-                {
-                  "name": "url",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "credential",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "headers",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "http-header"
-                    }
-                  }
-                },
-                {
-                  "name": "body",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "u8"
-                    }
-                  }
-                }
-              ]
-            },
-            "http-response": {
-              "fields": [
-                {
-                  "name": "status",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "u16"
-                  }
-                },
-                {
-                  "name": "headers",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "http-header"
-                    }
-                  }
-                },
-                {
-                  "name": "body",
-                  "type": {
-                    "kind": "named",
-                    "name": "byte-stream"
-                  }
-                }
-              ]
-            },
             "published-file": {
               "fields": [
                 {
@@ -988,75 +604,9 @@
               ]
             }
           },
-          "resources": [
-            {
-              "functions": [
-                {
-                  "arguments": [
-                    {
-                      "name": "request",
-                      "type": {
-                        "kind": "named",
-                        "name": "http-request"
-                      }
-                    }
-                  ],
-                  "name": "request",
-                  "result": {
-                    "error": {
-                      "kind": "named",
-                      "name": "http-error"
-                    },
-                    "kind": "result",
-                    "ok": {
-                      "kind": "named",
-                      "name": "http-response"
-                    }
-                  }
-                }
-              ],
-              "name": "http-client"
-            }
-          ],
-          "uses": {
-            "byte-stream": "io-host"
-          },
-          "variants": {
-            "http-error": {
-              "values": [
-                {
-                  "name": "denied",
-                  "type": null
-                },
-                {
-                  "name": "credential-unavailable",
-                  "type": null
-                },
-                {
-                  "name": "authentication-rejected",
-                  "type": null
-                },
-                {
-                  "name": "rate-limited",
-                  "type": null
-                },
-                {
-                  "name": "unavailable",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "failed",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                }
-              ]
-            }
-          }
+          "resources": [],
+          "uses": {},
+          "variants": {}
         },
         "broadcast-plugin": {
           "enums": {},
@@ -1155,34 +705,6 @@
             }
           ],
           "records": {
-            "artifact": {
-              "fields": [
-                {
-                  "name": "reference",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "media-type",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "size-bytes",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "u64"
-                  }
-                }
-              ]
-            },
             "choice": {
               "fields": [
                 {
@@ -1253,24 +775,6 @@
                   "type": {
                     "kind": "scalar",
                     "name": "u64"
-                  }
-                }
-              ]
-            },
-            "error": {
-              "fields": [
-                {
-                  "name": "message",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "retryable",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "bool"
                   }
                 }
               ]
@@ -1491,7 +995,7 @@
                   "name": "artifact",
                   "type": {
                     "kind": "named",
-                    "name": "artifact"
+                    "name": "staged-artifact"
                   }
                 },
                 {
@@ -1599,7 +1103,9 @@
           },
           "resources": [],
           "uses": {
-            "published-file": "broadcast-host"
+            "plugin-error-detail": "plugin-types",
+            "published-file": "broadcast-host",
+            "staged-artifact": "io-host"
           },
           "variants": {
             "option-value": {
@@ -1633,49 +1139,49 @@
                   "name": "unsupported",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "not-found",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "authentication",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "rate-limited",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "unavailable",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "invalid-data",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "failed",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 }
               ]
@@ -1691,7 +1197,11 @@
           ],
           "imports": [
             "io-host",
-            "broadcast-host"
+            "broadcast-host",
+            "http-host",
+            "progress-host",
+            "plugin-types",
+            "logging-host"
           ]
         }
       }
@@ -1741,42 +1251,6 @@
                   "name": "byte-stream"
                 }
               }
-            },
-            {
-              "arguments": [
-                {
-                  "name": "stage",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "fraction",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "f32"
-                    }
-                  }
-                }
-              ],
-              "name": "report-progress",
-              "result": null
-            },
-            {
-              "arguments": [
-                {
-                  "name": "message",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                }
-              ],
-              "name": "log",
-              "result": null
             }
           ],
           "records": {
@@ -1916,10 +1390,17 @@
                   }
                 },
                 {
-                  "name": "capability",
+                  "name": "capability-id",
                   "type": {
-                    "kind": "named",
-                    "name": "capability"
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "capability-revision",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
                   }
                 },
                 {
@@ -2105,30 +1586,13 @@
                   }
                 }
               ]
-            },
-            "error": {
-              "fields": [
-                {
-                  "name": "message",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "retryable",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "bool"
-                  }
-                }
-              ]
             }
           },
           "resources": [],
           "uses": {
             "asset": "enrichment-host",
             "item-context": "enrichment-host",
+            "plugin-error-detail": "plugin-types",
             "plugin-metadata": "io-host",
             "staged-artifact": "io-host"
           },
@@ -2139,56 +1603,56 @@
                   "name": "unsupported",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "not-found",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "authentication",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "rate-limited",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "unavailable",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "invalid-configuration",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "invalid-data",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "failed",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 }
               ]
@@ -2204,7 +1668,10 @@
           ],
           "imports": [
             "io-host",
-            "enrichment-host"
+            "enrichment-host",
+            "progress-host",
+            "plugin-types",
+            "logging-host"
           ]
         }
       }
@@ -2212,28 +1679,6 @@
     {
       "file": "wit/collection-export.wit",
       "interfaces": {
-        "collection-export-host": {
-          "enums": {},
-          "functions": [
-            {
-              "arguments": [
-                {
-                  "name": "message",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                }
-              ],
-              "name": "log",
-              "result": null
-            }
-          ],
-          "records": {},
-          "resources": [],
-          "uses": {},
-          "variants": {}
-        },
         "collection-export-plugin": {
           "enums": {},
           "functions": [
@@ -2345,24 +1790,6 @@
                 }
               ]
             },
-            "error": {
-              "fields": [
-                {
-                  "name": "message",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "retryable",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "bool"
-                  }
-                }
-              ]
-            },
             "exported-artifact": {
               "fields": [
                 {
@@ -2411,7 +1838,9 @@
             }
           },
           "resources": [],
-          "uses": {},
+          "uses": {
+            "plugin-error-detail": "plugin-types"
+          },
           "variants": {
             "option-value": {
               "values": [
@@ -2444,49 +1873,49 @@
                   "name": "unsupported",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "not-found",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "authentication",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "rate-limited",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "unavailable",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "invalid-data",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 },
                 {
                   "name": "failed",
                   "type": {
                     "kind": "named",
-                    "name": "error"
+                    "name": "plugin-error-detail"
                   }
                 }
               ]
@@ -2501,7 +1930,8 @@
             "collection-export-plugin"
           ],
           "imports": [
-            "collection-export-host"
+            "plugin-types",
+            "logging-host"
           ]
         }
       }
@@ -2509,6 +1939,195 @@
     {
       "file": "wit/io.wit",
       "interfaces": {
+        "http-host": {
+          "enums": {
+            "http-method": {
+              "values": [
+                "get",
+                "post",
+                "put",
+                "patch",
+                "delete"
+              ]
+            }
+          },
+          "functions": [
+            {
+              "arguments": [],
+              "name": "open-http-client",
+              "result": {
+                "kind": "named",
+                "name": "http-client"
+              }
+            }
+          ],
+          "records": {
+            "http-header": {
+              "fields": [
+                {
+                  "name": "name",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "value",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
+            "http-request": {
+              "fields": [
+                {
+                  "name": "method",
+                  "type": {
+                    "kind": "named",
+                    "name": "http-method"
+                  }
+                },
+                {
+                  "name": "url",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "credential",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "credential-reference"
+                    }
+                  }
+                },
+                {
+                  "name": "headers",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "http-header"
+                    }
+                  }
+                },
+                {
+                  "name": "body",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "u8"
+                    }
+                  }
+                }
+              ]
+            },
+            "http-response": {
+              "fields": [
+                {
+                  "name": "status",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "u16"
+                  }
+                },
+                {
+                  "name": "headers",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "http-header"
+                    }
+                  }
+                },
+                {
+                  "name": "body",
+                  "type": {
+                    "kind": "named",
+                    "name": "byte-stream"
+                  }
+                }
+              ]
+            }
+          },
+          "resources": [
+            {
+              "functions": [
+                {
+                  "arguments": [
+                    {
+                      "name": "request",
+                      "type": {
+                        "kind": "named",
+                        "name": "http-request"
+                      }
+                    }
+                  ],
+                  "name": "request",
+                  "result": {
+                    "error": {
+                      "kind": "named",
+                      "name": "http-error"
+                    },
+                    "kind": "result",
+                    "ok": {
+                      "kind": "named",
+                      "name": "http-response"
+                    }
+                  }
+                }
+              ],
+              "name": "http-client"
+            }
+          ],
+          "uses": {
+            "byte-stream": "io-host",
+            "credential-reference": "io-host"
+          },
+          "variants": {
+            "http-error": {
+              "values": [
+                {
+                  "name": "denied",
+                  "type": null
+                },
+                {
+                  "name": "credential-unavailable",
+                  "type": null
+                },
+                {
+                  "name": "authentication-rejected",
+                  "type": null
+                },
+                {
+                  "name": "rate-limited",
+                  "type": null
+                },
+                {
+                  "name": "unavailable",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "failed",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            }
+          }
+        },
         "io-host": {
           "enums": {},
           "functions": [
@@ -2868,6 +2487,99 @@
               ]
             }
           }
+        },
+        "logging-host": {
+          "enums": {},
+          "functions": [
+            {
+              "arguments": [
+                {
+                  "name": "message",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ],
+              "name": "log",
+              "result": null
+            }
+          ],
+          "records": {},
+          "resources": [],
+          "uses": {},
+          "variants": {}
+        },
+        "plugin-types": {
+          "enums": {},
+          "functions": [],
+          "records": {
+            "plugin-error-detail": {
+              "fields": [
+                {
+                  "name": "message",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "retryable",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "bool"
+                  }
+                }
+              ]
+            }
+          },
+          "resources": [],
+          "uses": {},
+          "variants": {}
+        },
+        "progress-host": {
+          "enums": {},
+          "functions": [
+            {
+              "arguments": [
+                {
+                  "name": "progress",
+                  "type": {
+                    "kind": "named",
+                    "name": "progress"
+                  }
+                }
+              ],
+              "name": "report-progress",
+              "result": null
+            }
+          ],
+          "records": {
+            "progress": {
+              "fields": [
+                {
+                  "name": "stage",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "fraction",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "f64"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "resources": [],
+          "uses": {},
+          "variants": {}
         }
       },
       "package": "stashd:plugin@0.9.0",

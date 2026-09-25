@@ -30,11 +30,10 @@ interface enrichment-host {
     /// Supplying `offset` and `length` supports partial reads without random
     /// access to a host path.
     open-asset: func(reference: string, offset: u64, length: option<u64>) -> result<byte-stream, asset-error>;
-    report-progress: func(stage: string, fraction: option<f32>);
-    log: func(message: string);
 }
 
 interface enrichment-plugin {
+    use plugin-types.{plugin-error-detail};
     use enrichment-host.{asset, item-context};
     use io-host.{plugin-metadata, staged-artifact};
 
@@ -83,20 +82,15 @@ interface enrichment-plugin {
         assets: list<derived-asset>,
     }
 
-    record error {
-        message: string,
-        retryable: bool,
-    }
-
     variant plugin-error {
-        unsupported(error),
-        not-found(error),
-        authentication(error),
-        rate-limited(error),
-        unavailable(error),
-        invalid-configuration(error),
-        invalid-data(error),
-        failed(error),
+        unsupported(plugin-error-detail),
+        not-found(plugin-error-detail),
+        authentication(plugin-error-detail),
+        rate-limited(plugin-error-detail),
+        unavailable(plugin-error-detail),
+        invalid-configuration(plugin-error-detail),
+        invalid-data(plugin-error-detail),
+        failed(plugin-error-detail),
     }
 
     /// Return the operations that are applicable to this Item/Asset context.
@@ -106,11 +100,14 @@ interface enrichment-plugin {
     /// and return plugin-owned metadata and/or durable derived Assets. The
     /// plugin validates selections against the capability's advertised
     /// options and reports invalid values with `invalid-configuration`.
-    enrich: func(context: item-context, capability: capability, configuration: list<configuration-value>) -> result<enrichment-result, plugin-error>;
+    enrich: func(context: item-context, capability-id: string, capability-revision: string, configuration: list<configuration-value>) -> result<enrichment-result, plugin-error>;
 }
 
 world enrichment-world {
     import io-host;
     import enrichment-host;
+    import progress-host;
+    import plugin-types;
+    import logging-host;
     export enrichment-plugin;
 }

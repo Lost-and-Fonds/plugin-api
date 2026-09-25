@@ -26,6 +26,10 @@ def interface(candidate: dict, filename: str, name: str) -> dict:
     return contract["interfaces"][name]
 
 
+def contract(candidate: dict, filename: str) -> dict:
+    return next(item for item in candidate["contracts"] if item["file"] == filename)
+
+
 def expect_rejected(name: str, mutate) -> None:
     candidate = copy.deepcopy(schema)
     mutate(candidate)
@@ -64,7 +68,7 @@ def replace_resolver_type_with_string(candidate: dict) -> None:
 
 
 def inline_http_body(candidate: dict) -> None:
-    response = input_interface(candidate, "input-host")["records"]["http-response"]
+    response = interface(candidate, "wit/io.wit", "http-host")["records"]["http-response"]
     next(field for field in response["fields"] if field["name"] == "body")["type"] = {
         "kind": "list",
         "value": {"kind": "scalar", "name": "u8"},
@@ -72,7 +76,7 @@ def inline_http_body(candidate: dict) -> None:
 
 
 def inline_broadcast_http_body(candidate: dict) -> None:
-    response = interface(candidate, "wit/broadcast.wit", "broadcast-host")["records"]["http-response"]
+    response = interface(candidate, "wit/io.wit", "http-host")["records"]["http-response"]
     next(field for field in response["fields"] if field["name"] == "body")["type"] = {
         "kind": "list",
         "value": {"kind": "scalar", "name": "u8"},
@@ -162,6 +166,84 @@ def encode_enrichment_configuration_in_identity(candidate: dict) -> None:
     ]
 
 
+def change_shared_progress_precision(candidate: dict) -> None:
+    progress = interface(candidate, "wit/io.wit", "progress-host")["records"]["progress"]
+    next(field for field in progress["fields"] if field["name"] == "fraction")["type"] = {
+        "kind": "option", "value": {"kind": "scalar", "name": "f32"}
+    }
+
+
+def remove_broadcast_progress_import(candidate: dict) -> None:
+    contract(candidate, "wit/broadcast.wit")["worlds"]["broadcast-world"]["imports"].remove("progress-host")
+
+
+def add_progress_to_collection_export(candidate: dict) -> None:
+    contract(candidate, "wit/collection-export.wit")["worlds"]["collection-export-world"]["imports"].append("progress-host")
+
+
+def remove_collection_logging_import(candidate: dict) -> None:
+    contract(candidate, "wit/collection-export.wit")["worlds"]["collection-export-world"]["imports"].remove("logging-host")
+
+
+def remove_input_http_import(candidate: dict) -> None:
+    contract(candidate, "wit/input.wit")["worlds"]["input-world"]["imports"].remove("http-host")
+
+
+def make_broadcast_http_credential_raw(candidate: dict) -> None:
+    request = interface(candidate, "wit/io.wit", "http-host")["records"]["http-request"]
+    next(field for field in request["fields"] if field["name"] == "credential")["type"] = {
+        "kind": "option", "value": {"kind": "scalar", "name": "string"}
+    }
+
+
+def remove_enrichment_revision(candidate: dict) -> None:
+    enrich = next(
+        function for function in interface(candidate, "wit/enrichment.wit", "enrichment-plugin")["functions"]
+        if function["name"] == "enrich"
+    )
+    enrich["arguments"] = [argument for argument in enrich["arguments"] if argument["name"] != "capability-revision"]
+
+
+def restore_enrichment_discovery_descriptor(candidate: dict) -> None:
+    enrich = next(
+        function for function in interface(candidate, "wit/enrichment.wit", "enrichment-plugin")["functions"]
+        if function["name"] == "enrich"
+    )
+    enrich["arguments"] = [
+        argument for argument in enrich["arguments"]
+        if argument["name"] not in {"capability-id", "capability-revision"}
+    ]
+    enrich["arguments"].insert(1, {"name": "capability", "type": {"kind": "named", "name": "capability"}})
+
+
+def duplicate_broadcast_error_detail(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    owner["records"]["error"] = {
+        "fields": [
+            {"name": "message", "type": {"kind": "scalar", "name": "string"}},
+            {"name": "retryable", "type": {"kind": "scalar", "name": "bool"}},
+        ]
+    }
+    next(case for case in owner["variants"]["plugin-error"]["values"] if case["name"] == "failed")["type"] = {
+        "kind": "named", "name": "error"
+    }
+
+
+def duplicate_broadcast_staged_artifact(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    owner["records"]["artifact"] = {
+        "fields": [
+            {"name": "reference", "type": {"kind": "scalar", "name": "string"}},
+            {"name": "media-type", "type": {"kind": "option", "value": {"kind": "scalar", "name": "string"}}},
+            {"name": "size-bytes", "type": {"kind": "scalar", "name": "u64"}},
+        ]
+    }
+    publication = owner["records"]["publication"]
+    next(field for field in publication["fields"] if field["name"] == "artifact")["type"] = {
+        "kind": "named", "name": "artifact"
+    }
+
+
 def restore_raw_acquisition_credentials(candidate: dict) -> None:
     interface = input_interface(candidate, "input-plugin")
     interface["records"]["acquisition-options"]["fields"] = [
@@ -198,3 +280,13 @@ expect_rejected("secret embedded in opaque credential configuration", embed_secr
 expect_rejected("legacy raw acquisition credential model", restore_raw_acquisition_credentials)
 expect_rejected("Enrichment without explicit invocation configuration", remove_enrichment_configuration)
 expect_rejected("Enrichment configuration encoded in capability identity", encode_enrichment_configuration_in_identity)
+expect_rejected("split progress precision", change_shared_progress_precision)
+expect_rejected("Broadcast without shared progress", remove_broadcast_progress_import)
+expect_rejected("Collection Export progress added for symmetry", add_progress_to_collection_export)
+expect_rejected("Collection Export without shared logging", remove_collection_logging_import)
+expect_rejected("Input without canonical HTTP capability", remove_input_http_import)
+expect_rejected("raw Broadcast HTTP credential", make_broadcast_http_credential_raw)
+expect_rejected("Enrichment invocation without revision", remove_enrichment_revision)
+expect_rejected("Enrichment invocation consuming discovery descriptor", restore_enrichment_discovery_descriptor)
+expect_rejected("duplicated Broadcast error detail", duplicate_broadcast_error_detail)
+expect_rejected("duplicated Broadcast staged artifact", duplicate_broadcast_staged_artifact)

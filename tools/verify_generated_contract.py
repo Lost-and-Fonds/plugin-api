@@ -83,6 +83,10 @@ io_contract = next((contract for contract in contracts if contract["file"] == "w
 if io_contract is None:
     raise SystemExit("the shared host-managed I/O contract is missing")
 io_host = io_contract["interfaces"].get("io-host", {})
+plugin_types = io_contract["interfaces"].get("plugin-types", {})
+http_host = io_contract["interfaces"].get("http-host", {})
+progress_host = io_contract["interfaces"].get("progress-host", {})
+logging_host = io_contract["interfaces"].get("logging-host", {})
 
 
 def fields(interface: dict, record_name: str) -> dict[str, dict]:
@@ -113,11 +117,20 @@ if any(metadata_fields[name] != {"kind": "scalar", "name": "string"} for name in
 
 require_metadata_facet(input_host, "discovered-item")
 require_metadata_facet(input_plugin, "resolved-input")
+if input_host["uses"].get("plugin-metadata") != "io-host" or input_plugin["uses"].get("plugin-metadata") != "io-host":
+    raise SystemExit("Input metadata facets must reuse the canonical io-host type")
 if input_plugin["uses"].get("staged-artifact") != "io-host":
     raise SystemExit("Input results must return the shared canonical artifact descriptor")
 acquisition_fields = fields(input_plugin, "acquisition-result")
 if "artifacts" not in acquisition_fields or not contains_named_type(acquisition_fields["artifacts"], "staged-artifact"):
     raise SystemExit("Input acquisition must return completed outputs through the canonical staged-artifact descriptor")
+
+broadcast_plugin = next(contract for contract in contracts if contract["file"] == "wit/broadcast.wit")["interfaces"]["broadcast-plugin"]
+publication_artifact = fields(broadcast_plugin, "publication").get("artifact")
+if publication_artifact != {"kind": "named", "name": "staged-artifact"} or broadcast_plugin["uses"].get("staged-artifact") != "io-host":
+    raise SystemExit("Broadcast publications must return the canonical host-staged artifact descriptor")
+if "artifact" in broadcast_plugin.get("records", {}):
+    raise SystemExit("Broadcast must not duplicate the shared staged-artifact descriptor")
 
 staged_fields = fields(io_host, "staged-artifact")
 if not {"reference", "media-type", "size-bytes", "metadata"} <= staged_fields.keys():
@@ -153,12 +166,12 @@ credential_errors = input_host["variants"].get("credential-error", {}).get("valu
 if {value["name"] for value in credential_errors} != {"denied", "unavailable"}:
     raise SystemExit("credential denial and unavailability must remain distinguishable")
 
-input_http_credential = fields(input_host, "http-request").get("credential")
+input_http_credential = fields(http_host, "http-request").get("credential")
 if input_http_credential != {"kind": "option", "value": credential_reference}:
-    raise SystemExit("Input HTTP must select credentials through the shared opaque reference model")
-http_errors = {value["name"] for value in input_host["variants"].get("http-error", {}).get("values", [])}
+    raise SystemExit("shared HTTP must select credentials through the opaque reference model")
+http_errors = {value["name"] for value in http_host["variants"].get("http-error", {}).get("values", [])}
 if not {"denied", "credential-unavailable", "authentication-rejected"} <= http_errors:
-    raise SystemExit("Input HTTP must distinguish access denial, unavailable credentials, and authentication rejection")
+    raise SystemExit("shared HTTP must distinguish access denial, unavailable credentials, and authentication rejection")
 source_value_fields = fields(input_plugin, "source-value")
 option_fields = fields(input_plugin, "input-option")
 for record_name, record_fields in (("source-value", source_value_fields), ("input-option", option_fields)):
@@ -258,16 +271,72 @@ for filename, world_name in (("wit/input.wit", "input-world"), ("wit/enrichment.
     if "io-host" not in world.get("imports", []):
         raise SystemExit(f"{world_name} must import the shared host-managed I/O interface")
 
-def require_streamed_http_response(filename: str, interface_name: str) -> None:
+if fields(http_host, "http-response").get("body") != {"kind": "named", "name": "byte-stream"}:
+    raise SystemExit("shared HTTP responses must expose bodies as bounded byte streams")
+if http_host.get("uses", {}).get("byte-stream") != "io-host":
+    raise SystemExit("shared HTTP responses must use the canonical host byte stream")
+for filename, world_name in (("wit/input.wit", "input-world"), ("wit/broadcast.wit", "broadcast-world")):
     contract = next(item for item in contracts if item["file"] == filename)
-    interface = contract["interfaces"][interface_name]
-    response_fields = fields(interface, "http-response")
-    if response_fields.get("body") != {"kind": "named", "name": "byte-stream"} or interface["uses"].get("byte-stream") != "io-host":
-        raise SystemExit(f"{filename} HTTP responses must expose bodies as bounded byte streams")
+    world = contract["worlds"].get(world_name, {})
+    if "http-host" not in world.get("imports", []):
+        raise SystemExit(f"{world_name} must import the canonical HTTP capability")
+    host_interface = contract["interfaces"]["input-host" if world_name == "input-world" else "broadcast-host"]
+    if any(name in host_interface.get("records", {}) for name in ("http-request", "http-response", "http-header")):
+        raise SystemExit(f"{world_name} must not redeclare shared HTTP value types")
+if "http-host" in worlds["enrichment-world"]["imports"] or "http-host" in worlds["collection-export-world"]["imports"]:
+    raise SystemExit("HTTP capability must remain limited to lifecycles that need it")
 
+# The same invocation progress contract applies to Input, Broadcast, and
+# Enrichment. Collection Export intentionally has no progress lifecycle.
+progress_fields = fields(progress_host, "progress")
+if progress_fields != {
+    "stage": {"kind": "scalar", "name": "string"},
+    "fraction": {"kind": "option", "value": {"kind": "scalar", "name": "f64"}},
+}:
+    raise SystemExit("shared progress must use a stage and optional f64 fraction")
+if progress_host.get("functions") != [{
+    "name": "report-progress",
+    "arguments": [{"name": "progress", "type": {"kind": "named", "name": "progress"}}],
+    "result": None,
+}]:
+    raise SystemExit("progress reporting must use the canonical invocation progress value")
+for world_name in ("input-world", "broadcast-world", "enrichment-world"):
+    if "progress-host" not in worlds[world_name]["imports"]:
+        raise SystemExit(f"{world_name} must import the shared progress capability")
+if "progress-host" in worlds["collection-export-world"]["imports"]:
+    raise SystemExit("Collection Export must not gain progress solely for symmetry")
 
-require_streamed_http_response("wit/input.wit", "input-host")
-require_streamed_http_response("wit/broadcast.wit", "broadcast-host")
+if logging_host.get("functions") != [{
+    "name": "log",
+    "arguments": [{"name": "message", "type": {"kind": "scalar", "name": "string"}}],
+    "result": None,
+}]:
+    raise SystemExit("plugin diagnostic logging must use one canonical message callback")
+for world_name in ("input-world", "broadcast-world", "enrichment-world", "collection-export-world"):
+    if "logging-host" not in worlds[world_name]["imports"]:
+        raise SystemExit(f"{world_name} must import shared invocation logging")
+for interface_name in ("input-host", "broadcast-host", "enrichment-host"):
+    if any(function["name"] == "log" for function in interfaces[interface_name].get("functions", [])):
+        raise SystemExit(f"{interface_name} must not redeclare shared logging")
+
+# Plugin outcome detail is shared; error variant taxonomies stay with each
+# lifecycle and may evolve independently.
+error_detail_fields = fields(plugin_types, "plugin-error-detail")
+if error_detail_fields != {
+    "message": {"kind": "scalar", "name": "string"},
+    "retryable": {"kind": "scalar", "name": "bool"},
+}:
+    raise SystemExit("shared plugin error detail must preserve message and retryability")
+for interface_name in ("input-plugin", "broadcast-plugin", "enrichment-plugin", "collection-export-plugin"):
+    owner = interfaces[interface_name]
+    cases = owner.get("variants", {}).get("plugin-error", {}).get("values", [])
+    if not cases or any(case.get("type") != {"kind": "named", "name": "plugin-error-detail"} for case in cases):
+        raise SystemExit(f"{interface_name} must use shared detail while owning its plugin-error cases")
+    if "error" in owner.get("records", {}):
+        raise SystemExit(f"{interface_name} must not duplicate the shared error detail record")
+    owning_world = next(world for world, value in worlds.items() if interface_name in value["exports"])
+    if "plugin-types" not in worlds[owning_world]["imports"]:
+        raise SystemExit(f"{owning_world} must import the shared plugin value types")
 
 helper = next((function for function in io_host.get("functions", []) if function["name"] == "run-helper"), None)
 output_argument = next((argument for argument in helper.get("arguments", []) if argument["name"] == "output"), None) if helper else None
@@ -362,8 +431,8 @@ if enrichment_contract is None:
 enrichment_host = enrichment_contract["interfaces"].get("enrichment-host", {})
 enrichment_plugin = enrichment_contract["interfaces"].get("enrichment-plugin", {})
 enrichment_world = enrichment_contract["worlds"].get("enrichment-world", {})
-if set(enrichment_world.get("imports", [])) != {"io-host", "enrichment-host"} or enrichment_world.get("exports") != ["enrichment-plugin"]:
-    raise SystemExit("enrichment-world must import shared I/O and its own host interface")
+if set(enrichment_world.get("imports", [])) != {"io-host", "enrichment-host", "progress-host", "plugin-types", "logging-host"} or enrichment_world.get("exports") != ["enrichment-plugin"]:
+    raise SystemExit("enrichment-world must import only its own host and the applicable shared interfaces")
 
 
 def require_fields(interface: dict, record_name: str, expected: set[str]) -> dict[str, dict]:
@@ -383,6 +452,8 @@ if not {"item-id", "assets", "metadata"} <= context_fields.keys():
     raise SystemExit("Enrichment context must expose generic Item identity, Assets, and metadata")
 if not contains_named_type(context_fields["assets"], "asset"):
     raise SystemExit("Enrichment context Assets must use the canonical Asset descriptor")
+if enrichment_host["uses"].get("plugin-metadata") != "io-host" or enrichment_plugin["uses"].get("plugin-metadata") != "io-host":
+    raise SystemExit("Enrichment metadata facets must reuse the canonical io-host type")
 open_asset = next((function for function in enrichment_host.get("functions", []) if function["name"] == "open-asset"), None)
 if open_asset is None or not contains_named_type(open_asset.get("result"), "byte-stream") or enrichment_host["uses"].get("byte-stream") != "io-host":
     raise SystemExit("Enrichment must open bounded streams over existing Asset bytes")
@@ -433,10 +504,12 @@ enrich_function = next(
 if enrich_function is None or not contains_named_type(enrich_function.get("result"), "enrichment-result"):
     raise SystemExit("Enrichment must run a declared capability and return an enrichment-result")
 enrich_arguments = {argument["name"]: argument["type"] for argument in enrich_function.get("arguments", [])}
-if "capability" not in enrich_arguments or not contains_named_type(
-    enrich_arguments["capability"], "capability"
-):
-    raise SystemExit("Enrichment invocation must identify its capability separately from configuration")
+if enrich_arguments.get("capability-id") != {"kind": "scalar", "name": "string"} or enrich_arguments.get(
+    "capability-revision"
+) != {"kind": "scalar", "name": "string"}:
+    raise SystemExit("Enrichment invocation must receive stable capability identity and revision, not its discovery descriptor")
+if "capability" in enrich_arguments:
+    raise SystemExit("Enrichment invocation must not receive the discovery-only capability descriptor")
 if enrich_arguments.get("configuration") != {
     "kind": "list",
     "value": {"kind": "named", "name": "configuration-value"},

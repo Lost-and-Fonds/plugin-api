@@ -33,8 +33,9 @@ capability also advertises zero or more generic configuration options. An
 option has a stable plugin-owned key, a display label, a required flag, and
 accepted choices represented as opaque string values with display labels. An
 empty option list represents a fixed operation. Callers return selected key
-and value pairs to `enrich` separately from the capability. Plugins validate
-them and report invalid selections with `invalid-configuration`; the host
+and value pairs to `enrich` with the advertised capability's stable ID and
+revision. Plugins validate them against that revision and report invalid
+selections with `invalid-configuration`; the host
 transports the descriptors and values without interpreting their meaning.
 Plugins should change the capability revision when its accepted configuration
 contract changes incompatibly, and callers should submit selections for the
@@ -107,6 +108,45 @@ a mount or path. A plugin can call a helper once for each output stream when a
 helper produces multiple files, or copy a returned byte stream through the
 same writer API.
 
+## Shared primitive decisions
+
+`plugin-metadata` and `staged-artifact` remain canonical in `io-host`. Input
+acquisition, Broadcast publication, and Enrichment derived Assets return the
+same staged output descriptor. Collection Export's named inline file result
+has a different transport and stays separate. The `progress-host` interface
+owns the shared `progress` value (`stage` plus an optional `f64` fraction) and
+callback. Input, Broadcast, and Enrichment report the same kind of invocation
+progress, so they use the same precision and callback. Collection Export is a
+one-shot collection-to-artifact contract with no progress lifecycle; it does
+not import `progress-host`.
+
+The `plugin-types` interface owns shared `plugin-error-detail` (`message` and
+`retryable`) without merging the separate lifecycle error variants. Every world
+uses one `logging-host` message callback for invocation diagnostics.
+
+Input and Broadcast use the same generic outbound HTTP capability, request,
+response stream, transport errors, and opaque credential reference through
+`http-host`. Enrichment and Collection Export do not import HTTP. Input,
+Broadcast, Enrichment, and Collection Export share only plugin error detail;
+each retains its own `plugin-error` cases because unsupported operations,
+configuration validation, credential outcomes, and lifecycle failures differ.
+
+The repeated option/value shapes remain separate. Input source values and
+acquisition options configure a source or plugin; Broadcast settings and
+operation choices configure interactive runtime work and publication; Enrichment
+advertises capability-specific caller selections using string values and
+revisions. Collection Export settings configure one export. Their similar
+field layouts do not give them one semantic contract or one future SDK type.
+Likewise Broadcast's `choice` and Enrichment's `configuration-choice` are
+separate because one describes an interactive operation result and the other
+describes accepted invocation configuration.
+
+Enrichment discovery returns the full capability descriptor for host and UI
+use. Invocation receives only `capability-id`, `capability-revision`, and the
+caller's selections alongside Item/Asset context. This preserves
+revision-aware execution without making presentation labels and advertised
+option descriptors part of the plugin's execution input.
+
 The Input contract describes opaque plugin-owned source and Item references,
 generic byte sizes, and staged artifact descriptors (reference, media type, and
 byte size). It does not require a URL, audiovisual media kind, title, duration,
@@ -132,7 +172,8 @@ Core routing and cycle bounds, SDK support for the new field and resolver,
 and provider implementations such as Generic Feeds remain downstream work.
 
 Collection exporters receive generic collection metadata, entries, and options,
-and return a named media artifact or a typed plugin error.
+and return a named media artifact or a typed plugin error. Their lifecycle does
+not define progress reporting.
 
 ## Verify the contract
 
@@ -146,9 +187,13 @@ Run `./bin/verify-contract` with Python 3 and `wasm-tools` 1.225.0 available on
 freshness and determinism, verifies package/world identity, checks package
 component discovery against the declared WIT worlds, and enforces generic
 Input credential lifecycle access, explicit generic Enrichment configuration,
-HTTP streaming, and staging invariants. It also proves that the semantic checks
+shared progress precision, shared Input/Broadcast HTTP types, shared plugin
+error detail, shared logging, revision-aware Enrichment invocation, HTTP
+streaming, and staging invariants. It also proves that the semantic checks
 reject acquisition-only credentials, raw credentials in generic Input records,
 inline-only HTTP bodies, missing staged writers, implicit helper staging,
 filesystem paths in staging, Input delegation regressions, configuration
-encoded into capability identity, and removal of the Enrichment invocation
-configuration boundary.
+encoded into capability identity, split shared progress precision, a raw HTTP
+credential, missing capability revision, the discovery descriptor passed to
+Enrichment execution, duplicated plugin error detail, and removal of the
+Enrichment invocation configuration boundary, plus missing shared logging.
