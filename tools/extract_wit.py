@@ -195,7 +195,7 @@ def report(schema: dict) -> str:
             "- results map to exactly one of `{\"ok\": value}` or `{\"error\": value}`;",
         "- Component resources remain opaque invocation-scoped references; no ABI object is generated.",
         "",
-        "RPC v1 represents inline list<u8> values as JSON strings because the current host transports PHP byte strings directly; resource.read chunks use base64 and large response bodies use opaque resource handles. The generated schema has no Wasmtime or Component ABI dependency.",
+        "RPC v1 represents inline list<u8> values as JSON arrays of unsigned byte values. The generated schema has no Wasmtime or Component ABI dependency.",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -209,6 +209,7 @@ def main() -> None:
     contracts = [
         parse_file(args.repo_root / "wit/input.wit", "wit/input.wit"),
         parse_file(args.repo_root / "wit/broadcast.wit", "wit/broadcast.wit"),
+        parse_file(args.repo_root / "wit/collection-export.wit", "wit/collection-export.wit"),
     ]
     packages = {contract["package"] for contract in contracts}
     if None in packages or len(packages) != 1:

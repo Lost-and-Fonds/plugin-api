@@ -2215,6 +2215,303 @@
           ]
         }
       }
+    },
+    {
+      "file": "wit/collection-export.wit",
+      "interfaces": {
+        "collection-export-host": {
+          "enums": {},
+          "functions": [
+            {
+              "arguments": [
+                {
+                  "name": "message",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ],
+              "name": "log",
+              "result": null
+            }
+          ],
+          "records": {},
+          "resources": [],
+          "uses": {},
+          "variants": {}
+        },
+        "collection-export-plugin": {
+          "enums": {},
+          "functions": [
+            {
+              "arguments": [
+                {
+                  "name": "exporter",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "collection",
+                  "type": {
+                    "kind": "named",
+                    "name": "collection"
+                  }
+                },
+                {
+                  "name": "options",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "setting"
+                    }
+                  }
+                }
+              ],
+              "name": "export-collection",
+              "result": {
+                "error": {
+                  "kind": "named",
+                  "name": "plugin-error"
+                },
+                "kind": "result",
+                "ok": {
+                  "kind": "named",
+                  "name": "exported-artifact"
+                }
+              }
+            }
+          ],
+          "records": {
+            "collection": {
+              "fields": [
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "title",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "entries",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "collection-entry"
+                    }
+                  }
+                }
+              ]
+            },
+            "collection-entry": {
+              "fields": [
+                {
+                  "name": "title",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "kind",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "label",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
+            "error": {
+              "fields": [
+                {
+                  "name": "message",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "retryable",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "bool"
+                  }
+                }
+              ]
+            },
+            "exported-artifact": {
+              "fields": [
+                {
+                  "name": "filename",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "media-type",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "contents",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "u8"
+                    }
+                  }
+                }
+              ]
+            },
+            "setting": {
+              "fields": [
+                {
+                  "name": "key",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "value",
+                  "type": {
+                    "kind": "named",
+                    "name": "option-value"
+                  }
+                }
+              ]
+            }
+          },
+          "resources": [],
+          "uses": {},
+          "variants": {
+            "option-value": {
+              "values": [
+                {
+                  "name": "boolean",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "bool"
+                  }
+                },
+                {
+                  "name": "number",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "s64"
+                  }
+                },
+                {
+                  "name": "text",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
+            "plugin-error": {
+              "values": [
+                {
+                  "name": "unsupported",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "not-found",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "authentication",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "rate-limited",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "unavailable",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "invalid-data",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "failed",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "package": "stashd:plugin@0.2.0",
+      "worlds": {
+        "collection-export-world": {
+          "exports": [
+            "collection-export-plugin"
+          ],
+          "imports": [
+            "collection-export-host"
+          ]
+        }
+      }
     }
   ],
   "package": "stashd:plugin@0.2.0",

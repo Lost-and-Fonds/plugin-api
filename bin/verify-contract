@@ -32,6 +32,10 @@ if packages != {schema["package"]}:
 expected_worlds = {
     "input-world": {"imports": ["input-host"], "exports": ["input-plugin"]},
     "broadcast-world": {"imports": ["broadcast-host"], "exports": ["broadcast-plugin"]},
+    "collection-export-world": {
+        "imports": ["collection-export-host"],
+        "exports": ["collection-export-plugin"],
+    },
 }
 actual_worlds = {name: world for contract in contracts for name, world in contract["worlds"].items()}
 if actual_worlds != expected_worlds:
