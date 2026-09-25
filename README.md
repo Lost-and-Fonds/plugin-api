@@ -9,7 +9,7 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.9.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.10.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and collection-export
 lifecycles. RPC v1 remains the native transport: four-byte big-endian length
 followed by a UTF-8 JSON object. Large byte streams use opaque host resources;
@@ -69,6 +69,12 @@ so a credential revoked after discovery can be unavailable during acquisition.
 Contract 0.9 adds generic Enrichment configuration descriptors and a separate
 caller-selection argument to `enrich`. Capability IDs and revisions remain
 separate from selected values.
+
+Contract 0.10 normalizes genuinely shared plugin protocol primitives from #8:
+common progress precision, plugin error detail, invocation logging, HTTP
+requests, and staged output, while retaining lifecycle-specific error and
+configuration models. Enrichment execution receives capability identity and
+revision separately from its advertised descriptor.
 
 Inputs can select the same reference on `http-request`; the HTTP host applies
 it without exposing secret material to the plugin. `run-helper` accepts the

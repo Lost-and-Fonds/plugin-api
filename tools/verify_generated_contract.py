@@ -14,7 +14,8 @@ package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
-if len(packages) != 1 or None in packages or packages != {schema["package"]}:
+expected_package = "stashd:plugin@0.10.0"
+if len(packages) != 1 or None in packages or packages != {schema["package"]} or schema["package"] != expected_package:
     raise SystemExit("WIT package identity mismatch")
 
 interfaces = {
@@ -41,7 +42,7 @@ for name, world in worlds.items():
     if any(interface not in interfaces for interface in imports + exports):
         raise SystemExit(f"component world {name!r} references an interface outside the WIT package")
 
-if package_schema.get("x-stashd-contract-package") != schema["package"]:
+if package_schema.get("x-stashd-contract-package") != schema["package"] or package_schema.get("x-stashd-contract-package") != expected_package:
     raise SystemExit("plugin package schema refers to a different WIT package identity")
 package_required = set(package_schema.get("required", []))
 if not {"id", "version", "components"} <= package_required:

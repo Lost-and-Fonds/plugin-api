@@ -244,6 +244,10 @@ def duplicate_broadcast_staged_artifact(candidate: dict) -> None:
     }
 
 
+def downgrade_contract_package_identity(candidate: dict) -> None:
+    candidate["package"] = "stashd:plugin@0.9.0"
+
+
 def restore_raw_acquisition_credentials(candidate: dict) -> None:
     interface = input_interface(candidate, "input-plugin")
     interface["records"]["acquisition-options"]["fields"] = [
@@ -290,3 +294,4 @@ expect_rejected("Enrichment invocation without revision", remove_enrichment_revi
 expect_rejected("Enrichment invocation consuming discovery descriptor", restore_enrichment_discovery_descriptor)
 expect_rejected("duplicated Broadcast error detail", duplicate_broadcast_error_detail)
 expect_rejected("duplicated Broadcast staged artifact", duplicate_broadcast_staged_artifact)
+expect_rejected("contract package identity downgraded from 0.10.0", downgrade_contract_package_identity)
