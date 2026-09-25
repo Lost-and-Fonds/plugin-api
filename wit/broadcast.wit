@@ -1,4 +1,4 @@
-package stashd:plugin@0.13.0;
+package stashd:plugin@0.14.0;
 
 interface broadcast-host {
     use io-host.{byte-stream, stream-error};
@@ -66,7 +66,8 @@ interface broadcast-plugin {
     }
 
     record publication {
-        /// Optional local staged output; remote-only publication uses `none`.
+        /// Optional local staged output. The host adopts it only when this
+        /// publication result succeeds; remote-only publication uses `none`.
         artifact: option<staged-artifact>,
         /// Present only when the destination exposes filesystem-relative paths.
         files: option<list<published-file>>,
@@ -75,14 +76,14 @@ interface broadcast-plugin {
         destination-metadata: list<plugin-metadata>,
     }
 
-    record finalization-request {
-        request: publish-request,
-        publication: publication,
-    }
-
+    /// A plugin-defined interactive operation on destination configuration or
+    /// state. It is independent of publishing Items and returns UI choices or
+    /// values; it is not a publication phase or a generic arbitrary RPC.
     record operation-request {
+        /// Stable plugin-defined operation name.
         name: string,
         settings: list<setting>,
+        /// Operation-specific caller input, represented as string settings.
         payload: list<setting>,
     }
 
@@ -96,22 +97,6 @@ interface broadcast-plugin {
         values: list<setting>,
     }
 
-    /// A prepared derived output associated with an Item. Provenance names
-    /// preserved Asset IDs; provider-specific derivation details stay in its
-    /// metadata facets.
-    record derived-artifact {
-        item-id: string,
-        reference: string,
-        derived-from: list<string>,
-        media-type: option<string>,
-        size-bytes: u64,
-        metadata: list<plugin-metadata>,
-    }
-
-    record preparation {
-        artifacts: list<derived-artifact>,
-    }
-
     variant plugin-error {
         unsupported(plugin-error-detail),
         not-found(plugin-error-detail),
@@ -122,12 +107,16 @@ interface broadcast-plugin {
         failed(plugin-error-detail),
     }
 
-    /// Credentials are host-granted for this invocation. All phases receive
-    /// the same model because preparation, publication, finalization, or
-    /// destination operations may need authenticated access.
-    prepare: func(request: publish-request, credentials: list<credential-binding>) -> result<preparation, plugin-error>;
+    /// The complete publication operation. A plugin may perform any
+    /// destination-specific selection, transformation, packaging, upload, or
+    /// commit work inside this call. It may stage bytes and reopen them during
+    /// this invocation. There is no required prepare or finalize call.
+    /// Credentials and staged resources are scoped to this invocation.
     publish: func(request: publish-request, credentials: list<credential-binding>) -> result<publication, plugin-error>;
-    finalize: func(request: finalization-request, credentials: list<credential-binding>) -> result<publication, plugin-error>;
+
+    /// Runs an explicitly requested plugin-defined interactive destination
+    /// operation, independently of publication. It does not publish the
+    /// request's Items and its result is not publication state.
     operation: func(request: operation-request, credentials: list<credential-binding>) -> result<operation-result, plugin-error>;
 }
 

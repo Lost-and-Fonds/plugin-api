@@ -1,4 +1,4 @@
-package stashd:plugin@0.13.0;
+package stashd:plugin@0.14.0;
 
 /// Lifecycle-independent plugin value contracts. Metadata facets remain in
 /// `io-host` with the shared host-managed I/O boundary.

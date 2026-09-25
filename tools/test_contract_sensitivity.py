@@ -123,9 +123,8 @@ def expose_broadcast_vault_path(candidate: dict) -> None:
 
 def broadcast_credentials_only_during_publish(candidate: dict) -> None:
     owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
-    for name in ("prepare", "finalize", "operation"):
-        function = next(function for function in owner["functions"] if function["name"] == name)
-        function["arguments"] = [argument for argument in function["arguments"] if argument["name"] != "credentials"]
+    function = next(function for function in owner["functions"] if function["name"] == "operation")
+    function["arguments"] = [argument for argument in function["arguments"] if argument["name"] != "credentials"]
 
 
 def embed_credentials_in_broadcast_settings(candidate: dict) -> None:
@@ -155,10 +154,49 @@ def add_raw_secret_to_enrichment_record(candidate: dict) -> None:
 
 def pass_reference_without_binding(candidate: dict) -> None:
     owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
-    prepare = next(function for function in owner["functions"] if function["name"] == "prepare")
-    next(argument for argument in prepare["arguments"] if argument["name"] == "credentials")["type"] = {
+    publish = next(function for function in owner["functions"] if function["name"] == "publish")
+    next(argument for argument in publish["arguments"] if argument["name"] == "credentials")["type"] = {
         "kind": "list", "value": {"kind": "named", "name": "credential-reference"}
     }
+
+
+def add_prepare_phase(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    owner["functions"].append({
+        "name": "prepare",
+        "arguments": [
+            {"name": "request", "type": {"kind": "named", "name": "publish-request"}},
+            {"name": "credentials", "type": {"kind": "list", "value": {"kind": "named", "name": "credential-binding"}}},
+        ],
+        "result": {"kind": "result", "ok": {"kind": "named", "name": "preparation"}, "error": {"kind": "named", "name": "plugin-error"}},
+    })
+
+
+def add_finalize_phase(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    owner["functions"].append({
+        "name": "finalize",
+        "arguments": [
+            {"name": "request", "type": {"kind": "named", "name": "finalization-request"}},
+            {"name": "credentials", "type": {"kind": "list", "value": {"kind": "named", "name": "credential-binding"}}},
+        ],
+        "result": {"kind": "result", "ok": {"kind": "named", "name": "publication"}, "error": {"kind": "named", "name": "plugin-error"}},
+    })
+
+
+def restore_opaque_prepared_output(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    owner["records"]["derived-artifact"] = {"fields": [
+        {"name": "item-id", "type": {"kind": "scalar", "name": "string"}},
+        {"name": "reference", "type": {"kind": "scalar", "name": "string"}},
+        {"name": "derived-from", "type": {"kind": "list", "value": {"kind": "scalar", "name": "string"}}},
+        {"name": "media-type", "type": {"kind": "option", "value": {"kind": "scalar", "name": "string"}}},
+        {"name": "size-bytes", "type": {"kind": "scalar", "name": "u64"}},
+        {"name": "metadata", "type": {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}}},
+    ]}
+    owner["records"]["preparation"] = {"fields": [
+        {"name": "artifacts", "type": {"kind": "list", "value": {"kind": "named", "name": "derived-artifact"}}},
+    ]}
 
 
 def remove_enrichment_shared_http(candidate: dict) -> None:
@@ -427,4 +465,7 @@ expect_rejected("publication requires filesystem paths", require_filesystem_resu
 expect_rejected("Asset kind restored as a universal taxonomy", restore_asset_kind_taxonomy)
 expect_rejected("destination receipts lose opaque plugin metadata", replace_destination_receipts_with_settings)
 expect_rejected("credentials embedded in Broadcast publication results", embed_credentials_in_publication)
-expect_rejected("contract package identity downgraded from 0.13.0", downgrade_contract_package_identity)
+expect_rejected("Broadcast preparation phase restored", add_prepare_phase)
+expect_rejected("Broadcast finalization phase restored", add_finalize_phase)
+expect_rejected("opaque-reference derived-artifact staging restored", restore_opaque_prepared_output)
+expect_rejected("contract package identity downgraded from 0.14.0", downgrade_contract_package_identity)

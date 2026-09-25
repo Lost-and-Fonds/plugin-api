@@ -7,7 +7,7 @@ This file is generated from the active WIT files; it is not a second contract.
 | `wit/input.wit` | `input-host` | 2 | 1 | 0 | 1 | 2 |
 | `wit/input.wit` | `input-plugin` | 5 | 2 | 1 | 0 | 4 |
 | `wit/broadcast.wit` | `broadcast-host` | 1 | 0 | 0 | 0 | 1 |
-| `wit/broadcast.wit` | `broadcast-plugin` | 12 | 2 | 0 | 0 | 4 |
+| `wit/broadcast.wit` | `broadcast-plugin` | 9 | 2 | 0 | 0 | 2 |
 | `wit/enrichment.wit` | `enrichment-host` | 2 | 1 | 0 | 0 | 1 |
 | `wit/enrichment.wit` | `enrichment-plugin` | 6 | 1 | 0 | 0 | 2 |
 | `wit/collection-export.wit` | `collection-export-plugin` | 4 | 2 | 0 | 0 | 1 |

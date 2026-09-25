@@ -554,7 +554,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.13.0",
+      "package": "stashd:plugin@0.14.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -681,73 +681,7 @@
                   }
                 }
               ],
-              "name": "prepare",
-              "result": {
-                "error": {
-                  "kind": "named",
-                  "name": "plugin-error"
-                },
-                "kind": "result",
-                "ok": {
-                  "kind": "named",
-                  "name": "preparation"
-                }
-              }
-            },
-            {
-              "arguments": [
-                {
-                  "name": "request",
-                  "type": {
-                    "kind": "named",
-                    "name": "publish-request"
-                  }
-                },
-                {
-                  "name": "credentials",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "credential-binding"
-                    }
-                  }
-                }
-              ],
               "name": "publish",
-              "result": {
-                "error": {
-                  "kind": "named",
-                  "name": "plugin-error"
-                },
-                "kind": "result",
-                "ok": {
-                  "kind": "named",
-                  "name": "publication"
-                }
-              }
-            },
-            {
-              "arguments": [
-                {
-                  "name": "request",
-                  "type": {
-                    "kind": "named",
-                    "name": "finalization-request"
-                  }
-                },
-                {
-                  "name": "credentials",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "credential-binding"
-                    }
-                  }
-                }
-              ],
-              "name": "finalize",
               "result": {
                 "error": {
                   "kind": "named",
@@ -858,79 +792,6 @@
                 }
               ]
             },
-            "derived-artifact": {
-              "fields": [
-                {
-                  "name": "item-id",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "reference",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "derived-from",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "media-type",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "size-bytes",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "u64"
-                  }
-                },
-                {
-                  "name": "metadata",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "plugin-metadata"
-                    }
-                  }
-                }
-              ]
-            },
-            "finalization-request": {
-              "fields": [
-                {
-                  "name": "request",
-                  "type": {
-                    "kind": "named",
-                    "name": "publish-request"
-                  }
-                },
-                {
-                  "name": "publication",
-                  "type": {
-                    "kind": "named",
-                    "name": "publication"
-                  }
-                }
-              ]
-            },
             "item": {
               "fields": [
                 {
@@ -1012,20 +873,6 @@
                     "value": {
                       "kind": "named",
                       "name": "setting"
-                    }
-                  }
-                }
-              ]
-            },
-            "preparation": {
-              "fields": [
-                {
-                  "name": "artifacts",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "derived-artifact"
                     }
                   }
                 }
@@ -1239,7 +1086,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.13.0",
+      "package": "stashd:plugin@0.14.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -1721,7 +1568,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.13.0",
+      "package": "stashd:plugin@0.14.0",
       "worlds": {
         "enrichment-world": {
           "exports": [
@@ -1985,7 +1832,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.13.0",
+      "package": "stashd:plugin@0.14.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2708,10 +2555,10 @@
           "variants": {}
         }
       },
-      "package": "stashd:plugin@0.13.0",
+      "package": "stashd:plugin@0.14.0",
       "worlds": {}
     }
   ],
-  "package": "stashd:plugin@0.13.0",
+  "package": "stashd:plugin@0.14.0",
   "schema_version": 1
 }

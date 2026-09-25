@@ -14,7 +14,7 @@ package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
-expected_package = "stashd:plugin@0.13.0"
+expected_package = "stashd:plugin@0.14.0"
 if len(packages) != 1 or None in packages or packages != {schema["package"]} or schema["package"] != expected_package:
     raise SystemExit("WIT package identity mismatch")
 
@@ -153,13 +153,31 @@ if asset_fields["metadata"] != {"kind": "list", "value": {"kind": "named", "name
     raise SystemExit("Broadcast Assets must use canonical plugin metadata facets")
 if {"kind", "derivation-key", "url"} & asset_fields.keys():
     raise SystemExit("Broadcast Assets must not impose a kind taxonomy, derivation key, or public URL")
-prepared_fields = fields(broadcast_plugin, "derived-artifact")
-if not {"item-id", "reference", "derived-from", "media-type", "size-bytes", "metadata"} <= prepared_fields.keys():
-    raise SystemExit("prepared derived outputs must retain generic Item, Asset provenance, representation, and metadata")
-if {"kind", "derivation-key", "derived-from-reference"} & prepared_fields.keys() or prepared_fields["metadata"] != {
-    "kind": "list", "value": {"kind": "named", "name": "plugin-metadata"},
+broadcast_functions = {function["name"]: function for function in broadcast_plugin.get("functions", [])}
+if set(broadcast_functions) != {"publish", "operation"}:
+    raise SystemExit("Broadcast must expose direct publish and independent operation, without prepare/finalize phases")
+publish = broadcast_functions["publish"]
+if publish.get("arguments") != [
+    {"name": "request", "type": {"kind": "named", "name": "publish-request"}},
+    {"name": "credentials", "type": {"kind": "list", "value": {"kind": "named", "name": "credential-binding"}}},
+] or publish.get("result") != {
+    "kind": "result",
+    "ok": {"kind": "named", "name": "publication"},
+    "error": {"kind": "named", "name": "plugin-error"},
 }:
-    raise SystemExit("prepared outputs must not expose provider derivation taxonomies outside plugin metadata")
+    raise SystemExit("Broadcast publish must accept one request and invocation credentials and return a publication directly")
+operation = broadcast_functions["operation"]
+if operation.get("arguments") != [
+    {"name": "request", "type": {"kind": "named", "name": "operation-request"}},
+    {"name": "credentials", "type": {"kind": "list", "value": {"kind": "named", "name": "credential-binding"}}},
+] or operation.get("result") != {
+    "kind": "result",
+    "ok": {"kind": "named", "name": "operation-result"},
+    "error": {"kind": "named", "name": "plugin-error"},
+}:
+    raise SystemExit("Broadcast operation must remain a separate interactive operation with its own request and result")
+if {"preparation", "derived-artifact", "finalization-request"} & broadcast_plugin.get("records", {}).keys():
+    raise SystemExit("Broadcast must not define cross-invocation preparation or finalization records")
 
 publication_fields = fields(broadcast_plugin, "publication")
 publication_artifact = publication_fields.get("artifact")
@@ -286,7 +304,7 @@ broadcast_contract = next(contract for contract in contracts if contract["file"]
 broadcast_plugin = broadcast_contract["interfaces"].get("broadcast-plugin", {})
 if broadcast_plugin.get("uses", {}).get("credential-binding") != "io-host":
     raise SystemExit("Broadcast must reuse io-host.credential-binding")
-for phase in ("prepare", "publish", "finalize", "operation"):
+for phase in ("publish", "operation"):
     require_credential_bindings(phase, broadcast_plugin)
 require_no_embedded_credentials("Broadcast", broadcast_plugin.get("records", {}))
 require_no_embedded_credentials("Broadcast host", broadcast_contract["interfaces"].get("broadcast-host", {}).get("records", {}))
