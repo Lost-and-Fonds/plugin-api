@@ -9,7 +9,7 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.5.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.6.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and collection-export lifecycles. RPC
 v1 remains the native transport: four-byte big-endian length followed by a
 UTF-8 JSON object. Inline `list<u8>` values map to JSON arrays of unsigned byte
@@ -46,6 +46,19 @@ Core uses opaque IDs and references to connect lifecycle records, byte estimates
 for storage decisions, and staged descriptors to ingest content and calculate
 fixity. It does not infer domain meaning from plugin metadata.
 
+An Input can attach an optional `input-delegation` to a discovered item. It
+contains only the opaque reference another Input should resolve; keeping it on
+the discovered item preserves the discovering Input and item as provenance.
+Core routes the reference by probing installed Inputs through
+`resolve-delegation`. A receiving Input returns its normal `resolved-input` or
+the typed `unsupported` error. Core does not parse references or need a
+provider taxonomy. Package and component IDs identify each Input in a
+delegation chain, while discovered item IDs retain the handoff context, so
+Core can detect repeats or bound a chain later.
+
+Core routing and cycle bounds, SDK support for the new field and resolver,
+and provider implementations such as Generic Feeds remain downstream work.
+
 Collection exporters receive generic collection metadata, entries, and options,
 and return a named media artifact or a typed plugin error.
 
@@ -60,4 +73,5 @@ Run `./bin/verify-contract` with Python 3 and `wasm-tools` 1.225.0 available on
 `PATH`. It parses the complete WIT package, checks generated artifacts for
 freshness and determinism, verifies package/world identity, checks package
 component discovery against the declared WIT worlds, and enforces generic
-Input and Enrichment invariants.
+Input and Enrichment invariants. It also proves that the Input delegation
+checks reject provider-specific and missing-boundary regressions.

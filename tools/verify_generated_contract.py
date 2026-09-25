@@ -117,8 +117,47 @@ require_metadata_facet(input_plugin, "resolved-input")
 item_fields = fields(input_host, "discovered-item")
 if not {"id", "reference"} <= item_fields.keys():
     raise SystemExit("discovered-item must retain its stable identity and opaque reference")
+delegation_fields = input_host["records"].get("input-delegation", {}).get("fields", [])
+if {field["name"] for field in delegation_fields} != {"reference"}:
+    raise SystemExit("Input delegation must contain only one opaque reference")
+if delegation_fields[0]["type"] != {"kind": "scalar", "name": "string"}:
+    raise SystemExit("Input delegation reference must remain an opaque string")
+delegation_type = item_fields.get("delegation")
+if delegation_type != {"kind": "option", "value": {"kind": "named", "name": "input-delegation"}}:
+    raise SystemExit("discovered-item must carry optional generic Input delegation context")
 if input_plugin["uses"].get("discovered-item") != "input-host":
     raise SystemExit("input-plugin must reuse input-host's canonical discovered-item type")
+if input_plugin["uses"].get("input-delegation") != "input-host":
+    raise SystemExit("input-plugin must reuse input-host's canonical input-delegation type")
+if "input-delegation" in input_plugin["records"]:
+    raise SystemExit("Input delegation identity must remain in the host-owned discovery boundary")
+
+delegation_resolver = next(
+    (function for function in input_plugin["functions"] if function["name"] == "resolve-delegation"),
+    None,
+)
+if delegation_resolver is None:
+    raise SystemExit("Input must expose the generic resolve-delegation entry point")
+if delegation_resolver["arguments"] != [
+    {"name": "reference", "type": {"kind": "scalar", "name": "string"}}
+]:
+    raise SystemExit("resolve-delegation must receive only an opaque reference")
+if delegation_resolver.get("result") != {
+    "kind": "result",
+    "ok": {"kind": "named", "name": "resolved-input"},
+    "error": {"kind": "named", "name": "plugin-error"},
+}:
+    raise SystemExit("resolve-delegation must use the generic Input resolution and error types")
+discover_function = next(
+    (function for function in input_plugin["functions"] if function["name"] == "discover"),
+    None,
+)
+if discover_function is None or discover_function.get("result") != {
+    "kind": "result",
+    "ok": {"kind": "list", "value": {"kind": "named", "name": "discovered-item"}},
+    "error": {"kind": "named", "name": "plugin-error"},
+}:
+    raise SystemExit("Input discovery must return the canonical discovered-item handoff boundary")
 
 for interface in (input_host, input_plugin):
     symbols = set(interface["records"]) | set(interface["variants"]) | set(interface["enums"])

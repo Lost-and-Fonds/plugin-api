@@ -90,6 +90,16 @@
                   }
                 },
                 {
+                  "name": "delegation",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "input-delegation"
+                    }
+                  }
+                },
+                {
                   "name": "size-bytes",
                   "type": {
                     "kind": "option",
@@ -236,6 +246,17 @@
                       "kind": "scalar",
                       "name": "u8"
                     }
+                  }
+                }
+              ]
+            },
+            "input-delegation": {
+              "fields": [
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
                   }
                 }
               ]
@@ -537,6 +558,29 @@
             {
               "arguments": [
                 {
+                  "name": "reference",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ],
+              "name": "resolve-delegation",
+              "result": {
+                "error": {
+                  "kind": "named",
+                  "name": "plugin-error"
+                },
+                "kind": "result",
+                "ok": {
+                  "kind": "named",
+                  "name": "resolved-input"
+                }
+              }
+            },
+            {
+              "arguments": [
+                {
                   "name": "input-id",
                   "type": {
                     "kind": "scalar",
@@ -784,6 +828,7 @@
           "resources": [],
           "uses": {
             "discovered-item": "input-host",
+            "input-delegation": "input-host",
             "plugin-metadata": "input-host",
             "staged-artifact": "input-host"
           },
@@ -869,7 +914,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.5.0",
+      "package": "stashd:plugin@0.6.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -1975,7 +2020,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.5.0",
+      "package": "stashd:plugin@0.6.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -2519,7 +2564,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.5.0",
+      "package": "stashd:plugin@0.6.0",
       "worlds": {
         "enrichment-world": {
           "exports": [
@@ -2816,7 +2861,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.5.0",
+      "package": "stashd:plugin@0.6.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2829,6 +2874,6 @@
       }
     }
   ],
-  "package": "stashd:plugin@0.5.0",
+  "package": "stashd:plugin@0.6.0",
   "schema_version": 1
 }

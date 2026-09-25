@@ -20,3 +20,6 @@ done
 python3 "$repo_root/tools/verify_generated_contract.py" \
     "$temporary_root/first/wit-schema.json" \
     "$temporary_root/first/plugin-package.schema.json"
+python3 "$repo_root/tools/test_contract_sensitivity.py" \
+    "$temporary_root/first/wit-schema.json" \
+    "$temporary_root/first/plugin-package.schema.json"

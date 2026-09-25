@@ -1,4 +1,4 @@
-package stashd:plugin@0.5.0;
+package stashd:plugin@0.6.0;
 
 interface input-host {
     enum http-method {
@@ -88,11 +88,19 @@ interface input-host {
         fraction: option<f64>,
     }
 
+    /// An opaque reference for another Input to resolve. The host retains the
+    /// discovered item as the source of this handoff and does not inspect the
+    /// reference's format or meaning.
+    record input-delegation {
+        reference: string,
+    }
+
     /// `id` is a stable plugin identity and `reference` is an opaque locator;
     /// neither implies a URL or a media type.
     record discovered-item {
         id: string,
         reference: string,
+        delegation: option<input-delegation>,
         size-bytes: option<u64>,
         size-estimated: bool,
         metadata: list<plugin-metadata>,
@@ -104,7 +112,7 @@ interface input-host {
 }
 
 interface input-plugin {
-    use input-host.{discovered-item, plugin-metadata, staged-artifact};
+    use input-host.{discovered-item, input-delegation, plugin-metadata, staged-artifact};
 
     variant option-value {
         boolean(bool),
@@ -168,6 +176,9 @@ interface input-plugin {
     }
 
     resolve: func(source: list<source-value>) -> result<resolved-input, plugin-error>;
+    /// Resolve a reference delegated by another Input. Inputs that cannot
+    /// handle it return `unsupported`; Core may probe other installed Inputs.
+    resolve-delegation: func(reference: string) -> result<resolved-input, plugin-error>;
     discover: func(input-id: string, intent: discovery-intent, options: list<input-option>) -> result<list<discovered-item>, plugin-error>;
     acquire: func(item: discovered-item, options: acquisition-options) -> result<acquisition-result, plugin-error>;
 }
