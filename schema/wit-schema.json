@@ -319,8 +319,8 @@
                   "type": {
                     "kind": "option",
                     "value": {
-                      "kind": "named",
-                      "name": "float64"
+                      "kind": "scalar",
+                      "name": "f64"
                     }
                   }
                 }
@@ -1013,6 +1013,7 @@
           },
           "resources": [],
           "uses": {
+            "artifact-role": "input-host",
             "staged-artifact": "input-host"
           },
           "variants": {
@@ -1155,8 +1156,8 @@
                   "type": {
                     "kind": "option",
                     "value": {
-                      "kind": "named",
-                      "name": "float32"
+                      "kind": "scalar",
+                      "name": "f32"
                     }
                   }
                 }

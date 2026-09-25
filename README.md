@@ -22,3 +22,9 @@ declare 0.2 and use the current SDK. Input acquisition may request a subset of
 generic artifact roles; the result can report a role as temporarily or
 permanently unavailable without implying that an existing Vault Asset should
 be removed.
+
+## Verify the contract
+
+Run `./bin/verify-contract` with Python 3 and `wasm-tools` 1.225.0 available on
+`PATH`. It validates the complete WIT package, checks generated artifacts for
+freshness and determinism, and verifies the two lifecycle world mappings.

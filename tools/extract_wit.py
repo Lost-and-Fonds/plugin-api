@@ -210,7 +210,10 @@ def main() -> None:
         parse_file(args.repo_root / "wit/input.wit", "wit/input.wit"),
         parse_file(args.repo_root / "wit/broadcast.wit", "wit/broadcast.wit"),
     ]
-    schema = {"schema_version": 1, "package": "stashd:plugin@0.2.0", "contracts": contracts}
+    packages = {contract["package"] for contract in contracts}
+    if None in packages or len(packages) != 1:
+        raise ValueError("WIT contract files must declare the same package and version")
+    schema = {"schema_version": 1, "package": packages.pop(), "contracts": contracts}
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "wit-schema.json").write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n")
     (args.output_dir / "compatibility-report.md").write_text(report(schema))

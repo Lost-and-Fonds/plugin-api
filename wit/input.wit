@@ -84,7 +84,7 @@ interface input-host {
 
     record progress {
         stage: string,
-        fraction: option<float64>,
+        fraction: option<f64>,
     }
 
     record discovered-item {
@@ -107,7 +107,7 @@ interface input-host {
 }
 
 interface input-plugin {
-    use input-host.{staged-artifact};
+    use input-host.{artifact-role, staged-artifact};
 
     variant option-value {
         boolean(bool),

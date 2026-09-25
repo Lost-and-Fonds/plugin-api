@@ -1,0 +1,15 @@
+name: Verify WIT contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bytecodealliance/actions/wasm-tools/setup@v1
+        with:
+          version: "1.225.0"
+      - run: ./bin/verify-contract

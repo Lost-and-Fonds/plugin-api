@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+temporary_root="$(mktemp -d)"
+trap 'rm -rf "$temporary_root"' EXIT
+
+wasm-tools component wit "$repo_root/wit" --json >/dev/null
+
+python3 "$repo_root/tools/extract_wit.py" \
+    --repo-root "$repo_root" --output-dir "$temporary_root/first"
+python3 "$repo_root/tools/extract_wit.py" \
+    --repo-root "$repo_root" --output-dir "$temporary_root/second"
+
+for artifact in wit-schema.json compatibility-report.md; do
+    diff -u "$repo_root/schema/$artifact" "$temporary_root/first/$artifact"
+    cmp "$temporary_root/first/$artifact" "$temporary_root/second/$artifact"
+done
+
+python3 - "$temporary_root/first/wit-schema.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as schema_file:
+    schema = json.load(schema_file)
+
+contracts = schema["contracts"]
+packages = {contract["package"] for contract in contracts}
+if packages != {schema["package"]}:
+    raise SystemExit("WIT package identity mismatch")
+
+expected_worlds = {
+    "input-world": {"imports": ["input-host"], "exports": ["input-plugin"]},
+    "broadcast-world": {"imports": ["broadcast-host"], "exports": ["broadcast-plugin"]},
+}
+actual_worlds = {name: world for contract in contracts for name, world in contract["worlds"].items()}
+if actual_worlds != expected_worlds:
+    raise SystemExit(f"WIT world mappings mismatch: {actual_worlds!r}")
+PY
