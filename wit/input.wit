@@ -1,6 +1,8 @@
-package stashd:plugin@0.6.0;
+package stashd:plugin@0.7.0;
 
 interface input-host {
+    use io-host.{byte-stream, plugin-metadata};
+
     enum http-method {
         get,
         post,
@@ -25,7 +27,7 @@ interface input-host {
     record http-response {
         status: u16,
         headers: list<http-header>,
-        body: list<u8>,
+        body: byte-stream,
     }
 
     variant http-error {
@@ -42,46 +44,6 @@ interface input-host {
     }
 
     open-http-client: func() -> http-client;
-
-    /// One plugin-owned metadata facet. `schema` is a stable, versioned
-    /// plugin schema identifier; `json` is its UTF-8 JSON object payload.
-    record plugin-metadata {
-        schema: string,
-        json: string,
-    }
-
-    record helper-result {
-        exit-code: s32,
-        stdout: string,
-        stderr: string,
-    }
-
-    variant helper-error {
-        denied,
-        unavailable(string),
-        failed(string),
-    }
-
-    /// A staged representation described without a domain-specific Asset role.
-    record staged-artifact {
-        reference: string,
-        media-type: option<string>,
-        size-bytes: u64,
-        metadata: list<plugin-metadata>,
-    }
-
-    variant staging-error {
-        invalid-reference,
-        missing,
-        failed(string),
-    }
-
-    resource staging-area {
-        run-helper: func(name: string, args: list<string>) -> result<helper-result, helper-error>;
-        stage: func(relative-path: string, media-type: option<string>) -> result<staged-artifact, staging-error>;
-    }
-
-    open-staging-area: func() -> staging-area;
 
     record progress {
         stage: string,
@@ -112,7 +74,8 @@ interface input-host {
 }
 
 interface input-plugin {
-    use input-host.{discovered-item, input-delegation, plugin-metadata, staged-artifact};
+    use input-host.{discovered-item, input-delegation};
+    use io-host.{plugin-metadata, staged-artifact};
 
     variant option-value {
         boolean(bool),
@@ -184,6 +147,7 @@ interface input-plugin {
 }
 
 world input-world {
+    import io-host;
     import input-host;
     export input-plugin;
 }

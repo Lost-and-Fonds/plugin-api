@@ -57,5 +57,5 @@
   ],
   "title": "Stashd Plugin Package Manifest",
   "type": "object",
-  "x-stashd-contract-package": "stashd:plugin@0.6.0"
+  "x-stashd-contract-package": "stashd:plugin@0.7.0"
 }

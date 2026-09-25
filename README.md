@@ -9,11 +9,13 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.6.0`. It describes invocation-scoped
-host capabilities for Input, Broadcast, Enrichment, and collection-export lifecycles. RPC
-v1 remains the native transport: four-byte big-endian length followed by a
-UTF-8 JSON object. Inline `list<u8>` values map to JSON arrays of unsigned byte
-values.
+The current contract is `stashd:plugin@0.7.0`. It describes invocation-scoped
+host capabilities for Input, Broadcast, Enrichment, and collection-export
+lifecycles. RPC v1 remains the native transport: four-byte big-endian length
+followed by a UTF-8 JSON object. Large byte streams use opaque host resources;
+each read returns at most a host-configured chunk as `list<u8>`, and writes
+append chunks no larger than the host-configured limit. A whole large object is
+never an inline byte list on these streaming paths.
 
 The generated `schema/plugin-package.schema.json` defines one deployable
 package identity (`id` and `version`) with a `components` object keyed by stable
@@ -32,8 +34,27 @@ when an enrichment result succeeds.
 Contract 0.4 added this package-level component model without changing the
 existing lifecycle interfaces. Consumers of the former single-role package
 manifest need a downstream migration to the identified `components` object.
-Contract 0.5 adds the Enrichment world; the package manifest keeps the same
-shape and can select `enrichment-world` as a component world.
+Contract 0.5 added the Enrichment world; contract 0.7 adds shared host-managed
+streaming and staged writing. The package manifest keeps the same shape and
+can select each canonical component world.
+
+Input, Broadcast, and Enrichment import the shared `io-host` interface. Its
+invocation-scoped streams keep the host in control of Asset access and staging.
+Plugins open staging, create a writer, append byte chunks, and call `finish` to
+receive the canonical `staged-artifact` descriptor. A writer dropped before
+`finish`, or whose invocation ends, is discarded. The host tracks size and
+keeps output unpublished until finalization succeeds. Completed artifacts stay
+invocation-scoped and are available to the host only when returned by a
+successful plugin result; other output is discarded. Enrichment can open an
+existing Asset at an offset with an optional length, then read bounded chunks.
+Input and Broadcast HTTP responses use the same stream resource; status,
+headers, and generic HTTP errors remain host mediated.
+
+The shared helper capability receives an optional borrowed staged writer
+explicitly. The host can stream helper stdout into that writer without exposing
+a mount or path. A plugin can call a helper once for each output stream when a
+helper produces multiple files, or copy a returned byte stream through the
+same writer API.
 
 The Input contract describes opaque plugin-owned source and Item references,
 generic byte sizes, and staged artifact descriptors (reference, media type, and
@@ -73,5 +94,7 @@ Run `./bin/verify-contract` with Python 3 and `wasm-tools` 1.225.0 available on
 `PATH`. It parses the complete WIT package, checks generated artifacts for
 freshness and determinism, verifies package/world identity, checks package
 component discovery against the declared WIT worlds, and enforces generic
-Input and Enrichment invariants. It also proves that the Input delegation
-checks reject provider-specific and missing-boundary regressions.
+Input, Enrichment, HTTP streaming, and staging invariants. It also proves that
+the semantic checks reject inline-only HTTP bodies, missing staged writers,
+implicit helper staging, filesystem paths in staging, and Input delegation
+regressions.

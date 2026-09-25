@@ -1,0 +1,78 @@
+package stashd:plugin@0.7.0;
+
+/// Generic, invocation-scoped byte streams and staged output. Resources are
+/// host-owned; references never expose filesystem paths or storage details.
+interface io-host {
+    /// A plugin-owned metadata facet. The host preserves its schema and JSON
+    /// without interpreting domain fields.
+    record plugin-metadata {
+        schema: string,
+        json: string,
+    }
+
+    /// A completed output in this invocation's staging area.
+    record staged-artifact {
+        reference: string,
+        media-type: option<string>,
+        size-bytes: u64,
+        metadata: list<plugin-metadata>,
+    }
+
+    variant stream-error {
+        denied,
+        missing,
+        failed(string),
+    }
+
+    variant staging-error {
+        denied,
+        failed(string),
+    }
+
+    record helper-result {
+        exit-code: s32,
+        stdout: string,
+        stderr: string,
+    }
+
+    variant helper-error {
+        denied,
+        unavailable(string),
+        failed(string),
+    }
+
+    /// Reads at most the host's configured chunk limit. `none` signals EOF.
+    /// The stream is scoped to the current invocation and is closed when
+    /// dropped or when the invocation ends.
+    resource byte-stream {
+        read: func() -> result<option<list<u8>>, stream-error>;
+    }
+
+    /// Appends one byte chunk up to the host-configured limit to an
+    /// unpublished staged output. Oversized chunks fail without partial writes;
+    /// any write error makes the writer unfinalizable so its partial output is
+    /// discarded when dropped.
+    /// `finish` is the only operation that creates a staged-artifact.
+    /// Dropping an unfinished writer discards its partial output. Completed
+    /// artifacts remain invocation-scoped; the host makes available only
+    /// artifacts returned by a successful plugin result and discards the rest.
+    resource staged-writer {
+        write: func(bytes: list<u8>) -> result<_, staging-error>;
+        finish: func() -> result<staged-artifact, staging-error>;
+    }
+
+    /// Starts a new output owned by this invocation. The host tracks its byte
+    /// size and keeps it unpublished until the writer is successfully finished.
+    resource staging-area {
+        create: func(media-type: option<string>, metadata: list<plugin-metadata>) -> result<staged-writer, staging-error>;
+    }
+
+    open-staging-area: func() -> staging-area;
+
+    /// Runs a host-approved helper. With `output`, stdout bytes are streamed
+    /// directly into that writer and the returned stdout is empty. A helper or
+    /// output-stream failure makes the writer unfinalizable. Otherwise
+    /// stdout and stderr are bounded diagnostic text. The host exposes no path
+    /// or implicit mount to the helper.
+    run-helper: func(name: string, args: list<string>, output: option<borrow<staged-writer>>) -> result<helper-result, helper-error>;
+}

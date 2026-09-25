@@ -79,6 +79,10 @@ if any(term in package_schema_text for term in implementation_terms):
 input_contract = next(contract for contract in contracts if contract["file"] == "wit/input.wit")
 input_host = input_contract["interfaces"]["input-host"]
 input_plugin = input_contract["interfaces"]["input-plugin"]
+io_contract = next((contract for contract in contracts if contract["file"] == "wit/io.wit"), None)
+if io_contract is None:
+    raise SystemExit("the shared host-managed I/O contract is missing")
+io_host = io_contract["interfaces"].get("io-host", {})
 
 
 def fields(interface: dict, record_name: str) -> dict[str, dict]:
@@ -101,18 +105,108 @@ def require_metadata_facet(interface: dict, record_name: str) -> None:
         raise SystemExit(f"{record_name} must retain extensible plugin metadata")
 
 
-metadata_fields = {
-    field["name"]: field["type"]
-    for field in input_host["records"].get("plugin-metadata", {}).get("fields", [])
-}
+metadata_fields = fields(io_host, "plugin-metadata")
 if not {"schema", "json"} <= metadata_fields.keys():
     raise SystemExit("plugin-metadata must retain its schema identifier and JSON payload")
 if any(metadata_fields[name] != {"kind": "scalar", "name": "string"} for name in ("schema", "json")):
     raise SystemExit("plugin-metadata schema identifier and JSON payload must remain strings")
 
 require_metadata_facet(input_host, "discovered-item")
-require_metadata_facet(input_host, "staged-artifact")
 require_metadata_facet(input_plugin, "resolved-input")
+if input_plugin["uses"].get("staged-artifact") != "io-host":
+    raise SystemExit("Input results must return the shared canonical artifact descriptor")
+acquisition_fields = fields(input_plugin, "acquisition-result")
+if "artifacts" not in acquisition_fields or not contains_named_type(acquisition_fields["artifacts"], "staged-artifact"):
+    raise SystemExit("Input acquisition must return completed outputs through the canonical staged-artifact descriptor")
+
+staged_fields = fields(io_host, "staged-artifact")
+if not {"reference", "media-type", "size-bytes", "metadata"} <= staged_fields.keys():
+    raise SystemExit("completed staged output must return the canonical generic staged-artifact descriptor")
+if not contains_named_type(staged_fields["metadata"], "plugin-metadata"):
+    raise SystemExit("staged artifacts must retain plugin-owned metadata")
+
+byte_stream = next((resource for resource in io_host.get("resources", []) if resource["name"] == "byte-stream"), None)
+if byte_stream is None:
+    raise SystemExit("host-managed I/O must expose a bounded byte-stream resource")
+stream_read = next((function for function in byte_stream["functions"] if function["name"] == "read"), None)
+if stream_read is None or stream_read.get("arguments") != [] or stream_read.get("result") != {
+    "kind": "result",
+    "ok": {"kind": "option", "value": {"kind": "list", "value": {"kind": "scalar", "name": "u8"}}},
+    "error": {"kind": "named", "name": "stream-error"},
+}:
+    raise SystemExit("byte-stream reads must return optional bounded chunks and typed stream errors")
+
+writer = next((resource for resource in io_host.get("resources", []) if resource["name"] == "staged-writer"), None)
+if writer is None:
+    raise SystemExit("host-managed I/O must expose a staged output writer")
+writer_functions = {function["name"]: function for function in writer["functions"]}
+write = writer_functions.get("write")
+finish = writer_functions.get("finish")
+if write is None or write["arguments"] != [{"name": "bytes", "type": {"kind": "list", "value": {"kind": "scalar", "name": "u8"}}}]:
+    raise SystemExit("staged output must accept explicit byte chunks")
+if write.get("result") != {
+    "kind": "result",
+    "ok": None,
+    "error": {"kind": "named", "name": "staging-error"},
+}:
+    raise SystemExit("staged chunk writes must report host staging errors")
+if finish is None or finish.get("result") != {
+    "kind": "result",
+    "ok": {"kind": "named", "name": "staged-artifact"},
+    "error": {"kind": "named", "name": "staging-error"},
+}:
+    raise SystemExit("only successful writer finalization may return a staged-artifact")
+staging_area = next((resource for resource in io_host.get("resources", []) if resource["name"] == "staging-area"), None)
+create = next((function for function in staging_area["functions"] if function["name"] == "create"), None) if staging_area else None
+if create is None or create.get("result") != {
+    "kind": "result",
+    "ok": {"kind": "named", "name": "staged-writer"},
+    "error": {"kind": "named", "name": "staging-error"},
+}:
+    raise SystemExit("the invocation staging area must explicitly create host-managed staged writers")
+if create.get("arguments") != [
+    {"name": "media-type", "type": {"kind": "option", "value": {"kind": "scalar", "name": "string"}}},
+    {"name": "metadata", "type": {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}}},
+]:
+    raise SystemExit("staged writers must be created with generic media type and metadata, without a path")
+open_staging = next((function for function in io_host.get("functions", []) if function["name"] == "open-staging-area"), None)
+if open_staging is None or open_staging.get("result") != {"kind": "named", "name": "staging-area"}:
+    raise SystemExit("plugins must explicitly open their invocation-scoped staging area")
+
+for filename, world_name in (("wit/input.wit", "input-world"), ("wit/enrichment.wit", "enrichment-world"), ("wit/broadcast.wit", "broadcast-world")):
+    contract = next(item for item in contracts if item["file"] == filename)
+    world = contract["worlds"].get(world_name, {})
+    if "io-host" not in world.get("imports", []):
+        raise SystemExit(f"{world_name} must import the shared host-managed I/O interface")
+
+def require_streamed_http_response(filename: str, interface_name: str) -> None:
+    contract = next(item for item in contracts if item["file"] == filename)
+    interface = contract["interfaces"][interface_name]
+    response_fields = fields(interface, "http-response")
+    if response_fields.get("body") != {"kind": "named", "name": "byte-stream"} or interface["uses"].get("byte-stream") != "io-host":
+        raise SystemExit(f"{filename} HTTP responses must expose bodies as bounded byte streams")
+
+
+require_streamed_http_response("wit/input.wit", "input-host")
+require_streamed_http_response("wit/broadcast.wit", "broadcast-host")
+
+helper = next((function for function in io_host.get("functions", []) if function["name"] == "run-helper"), None)
+output_argument = next((argument for argument in helper.get("arguments", []) if argument["name"] == "output"), None) if helper else None
+if output_argument is None or output_argument["type"] != {
+    "kind": "option",
+    "value": {"kind": "borrow", "value": {"kind": "named", "name": "staged-writer"}},
+}:
+    raise SystemExit("helper output must have an explicit staged-writer boundary")
+for filename in ("wit/io.wit", "wit/input.wit", "wit/enrichment.wit", "wit/broadcast.wit"):
+    contract = next(item for item in contracts if item["file"] == filename)
+    for interface in contract["interfaces"].values():
+        for resource in interface.get("resources", []):
+            if resource["name"] == "staging-area" and any(
+                argument["name"] in {"path", "relative-path", "filesystem-path", "host-path"}
+                for function in resource.get("functions", [])
+                for argument in function.get("arguments", [])
+            ):
+                raise SystemExit("host filesystem paths must not appear in staging operations")
 
 item_fields = fields(input_host, "discovered-item")
 if not {"id", "reference"} <= item_fields.keys():
@@ -189,8 +283,8 @@ if enrichment_contract is None:
 enrichment_host = enrichment_contract["interfaces"].get("enrichment-host", {})
 enrichment_plugin = enrichment_contract["interfaces"].get("enrichment-plugin", {})
 enrichment_world = enrichment_contract["worlds"].get("enrichment-world", {})
-if enrichment_world != {"imports": ["enrichment-host"], "exports": ["enrichment-plugin"]}:
-    raise SystemExit("enrichment-world must have its own enrichment-host import and enrichment-plugin export")
+if set(enrichment_world.get("imports", [])) != {"io-host", "enrichment-host"} or enrichment_world.get("exports") != ["enrichment-plugin"]:
+    raise SystemExit("enrichment-world must import shared I/O and its own host interface")
 
 
 def require_fields(interface: dict, record_name: str, expected: set[str]) -> dict[str, dict]:
@@ -202,10 +296,6 @@ def require_fields(interface: dict, record_name: str, expected: set[str]) -> dic
     return record_fields
 
 
-metadata_fields = require_fields(enrichment_host, "plugin-metadata", {"schema", "json"})
-if any(metadata_fields[name] != {"kind": "scalar", "name": "string"} for name in ("schema", "json")):
-    raise SystemExit("Enrichment metadata must retain its opaque schema identifier and JSON payload")
-
 asset_fields = require_fields(enrichment_host, "asset", {"id", "reference", "media-type", "size-bytes"})
 if "assets" not in fields(enrichment_host, "item-context"):
     raise SystemExit("Enrichment context must include the Item's Assets")
@@ -214,16 +304,17 @@ if not {"item-id", "assets", "metadata"} <= context_fields.keys():
     raise SystemExit("Enrichment context must expose generic Item identity, Assets, and metadata")
 if not contains_named_type(context_fields["assets"], "asset"):
     raise SystemExit("Enrichment context Assets must use the canonical Asset descriptor")
-asset_reader = next(
-    (resource for resource in enrichment_host.get("resources", []) if resource["name"] == "asset-reader"),
-    None,
-)
-if asset_reader is None or not any(function["name"] == "read" for function in asset_reader["functions"]):
-    raise SystemExit("Enrichment host must expose controlled reads of existing Asset bytes")
-if not any(function["name"] == "open-asset" for function in enrichment_host.get("functions", [])):
-    raise SystemExit("Enrichment host must open an existing Asset for reading")
-if not any(resource["name"] == "staging-area" for resource in enrichment_host.get("resources", [])):
-    raise SystemExit("Enrichment host must stage candidate output Assets")
+open_asset = next((function for function in enrichment_host.get("functions", []) if function["name"] == "open-asset"), None)
+if open_asset is None or not contains_named_type(open_asset.get("result"), "byte-stream") or enrichment_host["uses"].get("byte-stream") != "io-host":
+    raise SystemExit("Enrichment must open bounded streams over existing Asset bytes")
+if open_asset.get("arguments") != [
+    {"name": "reference", "type": {"kind": "scalar", "name": "string"}},
+    {"name": "offset", "type": {"kind": "scalar", "name": "u64"}},
+    {"name": "length", "type": {"kind": "option", "value": {"kind": "scalar", "name": "u64"}}},
+]:
+    raise SystemExit("Enrichment Asset streams must support explicit partial reads by byte range")
+if not any(function["name"] == "open-staging-area" for function in io_host.get("functions", [])):
+    raise SystemExit("Enrichment must use the shared host-managed staging boundary")
 
 capability_fields = require_fields(enrichment_plugin, "capability", {"id", "revision"})
 if not any(function["name"] == "capabilities" for function in enrichment_plugin.get("functions", [])):
@@ -244,6 +335,10 @@ if not contains_named_type(result_fields["metadata"], "plugin-metadata"):
     raise SystemExit("Enrichment results must support plugin-owned metadata facets")
 if not contains_named_type(result_fields["assets"], "derived-asset"):
     raise SystemExit("Enrichment results must support durable derived Assets")
+if enrichment_plugin["uses"].get("staged-artifact") != "io-host":
+    raise SystemExit("Enrichment results must return the shared canonical staged-artifact descriptor")
+if not contains_named_type(derived_fields["artifact"], "staged-artifact"):
+    raise SystemExit("Enrichment derived Assets must reference the completed generic staged artifact")
 if not any(
     function["name"] == "enrich" and contains_named_type(function.get("result"), "plugin-error")
     for function in enrichment_plugin.get("functions", [])

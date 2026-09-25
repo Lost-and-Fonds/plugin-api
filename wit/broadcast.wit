@@ -1,6 +1,7 @@
-package stashd:plugin@0.6.0;
+package stashd:plugin@0.7.0;
 
 interface broadcast-host {
+    use io-host.{byte-stream};
     enum http-method {
         get,
         post,
@@ -25,7 +26,7 @@ interface broadcast-host {
     record http-response {
         status: u16,
         headers: list<http-header>,
-        body: list<u8>,
+        body: byte-stream,
     }
 
     variant http-error {
@@ -43,43 +44,12 @@ interface broadcast-host {
 
     open-http-client: func() -> http-client;
 
-    record helper-result {
-        exit-code: s32,
-        stdout: string,
-        stderr: string,
-    }
-
-    variant helper-error {
-        denied,
-        unavailable(string),
-        failed(string),
-    }
-
-    record staged-artifact {
-        reference: string,
-        media-type: option<string>,
-        size-bytes: u64,
-    }
-
     record published-file {
         item-id: string,
         source-reference: string,
         relative-path: string,
     }
 
-    variant staging-error {
-        invalid-reference,
-        missing,
-        failed(string),
-    }
-
-    resource staging-area {
-        run-helper: func(name: string, args: list<string>) -> result<helper-result, helper-error>;
-        write: func(relative-path: string, content: list<u8>, media-type: option<string>) -> result<staged-artifact, staging-error>;
-        stage: func(relative-path: string, media-type: option<string>) -> result<staged-artifact, staging-error>;
-    }
-
-    open-staging-area: func() -> staging-area;
     report-progress: func(stage: string, fraction: option<f32>);
     log: func(message: string);
 }
@@ -197,6 +167,7 @@ interface broadcast-plugin {
 }
 
 world broadcast-world {
+    import io-host;
     import broadcast-host;
     export broadcast-plugin;
 }

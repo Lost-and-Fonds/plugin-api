@@ -51,7 +51,7 @@ def split_top_level(value: str, delimiter: str = ",") -> list[str]:
 
 def parse_type(value: str) -> dict:
     value = " ".join(value.strip().split())
-    for wrapper in ("list", "option"):
+    for wrapper in ("list", "option", "borrow"):
         prefix = f"{wrapper}<"
         if value.startswith(prefix) and value.endswith(">"):
             return {"kind": wrapper, "value": parse_type(value[len(prefix) : -1])}
@@ -213,7 +213,7 @@ def report(schema: dict) -> str:
             "- results map to exactly one of `{\"ok\": value}` or `{\"error\": value}`;",
             "- Component resources remain opaque invocation-scoped references; no ABI object is generated.",
             "",
-            "RPC v1 represents inline list<u8> values as JSON arrays of unsigned byte values. The generated schema has no Wasmtime or Component ABI dependency.",
+            "RPC v1 represents resource handles as opaque invocation-scoped references and byte chunks as JSON arrays of unsigned byte values. Large input and output objects using io-host are transported as bounded chunks, never in one RPC object. The generated schema has no Wasmtime or Component ABI dependency.",
         ]
     )
     return "\n".join(lines) + "\n"

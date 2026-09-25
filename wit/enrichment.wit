@@ -1,12 +1,7 @@
-package stashd:plugin@0.6.0;
+package stashd:plugin@0.7.0;
 
 interface enrichment-host {
-    /// A plugin-owned, versioned metadata facet. The host stores the schema
-    /// identifier and JSON object without interpreting domain fields.
-    record plugin-metadata {
-        schema: string,
-        json: string,
-    }
+    use io-host.{byte-stream, plugin-metadata};
 
     /// An existing durable Asset belonging to an Item. `reference` is an
     /// opaque host-issued locator and does not imply a filesystem path or URL.
@@ -30,39 +25,18 @@ interface enrichment-host {
         failed(string),
     }
 
-    /// Read access to an existing Asset. Reads are bounded by the host and
-    /// scoped to this enrichment invocation.
-    resource asset-reader {
-        read: func(offset: u64, length: u32) -> result<list<u8>, asset-error>;
-    }
-
-    open-asset: func(reference: string) -> result<asset-reader, asset-error>;
-
-    record staged-artifact {
-        reference: string,
-        media-type: option<string>,
-        size-bytes: u64,
-    }
-
-    variant staging-error {
-        invalid-reference,
-        missing,
-        failed(string),
-    }
-
-    /// The host adopts a referenced staged artifact into durable Vault storage
-    /// only when the enrichment result succeeds.
-    resource staging-area {
-        stage: func(relative-path: string, media-type: option<string>) -> result<staged-artifact, staging-error>;
-    }
-
-    open-staging-area: func() -> staging-area;
+    /// Opens a host-controlled bounded stream over an optional byte range of
+    /// an existing Asset, scoped to this enrichment invocation.
+    /// Supplying `offset` and `length` supports partial reads without random
+    /// access to a host path.
+    open-asset: func(reference: string, offset: u64, length: option<u64>) -> result<byte-stream, asset-error>;
     report-progress: func(stage: string, fraction: option<f32>);
     log: func(message: string);
 }
 
 interface enrichment-plugin {
-    use enrichment-host.{asset, item-context, plugin-metadata, staged-artifact};
+    use enrichment-host.{asset, item-context};
+    use io-host.{plugin-metadata, staged-artifact};
 
     /// An opaque, plugin-owned operation and revision that apply to the
     /// supplied Item/Asset context. The host does not interpret either value.
@@ -110,6 +84,7 @@ interface enrichment-plugin {
 }
 
 world enrichment-world {
+    import io-host;
     import enrichment-host;
     export enrichment-plugin;
 }
