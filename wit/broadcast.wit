@@ -1,4 +1,4 @@
-package stashd:plugin@0.8.0;
+package stashd:plugin@0.9.0;
 
 interface broadcast-host {
     use io-host.{byte-stream};

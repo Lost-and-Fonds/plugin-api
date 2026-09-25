@@ -793,7 +793,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.8.0",
+      "package": "stashd:plugin@0.9.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -1683,7 +1683,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.8.0",
+      "package": "stashd:plugin@0.9.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -1921,6 +1921,16 @@
                     "kind": "named",
                     "name": "capability"
                   }
+                },
+                {
+                  "name": "configuration",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "configuration-value"
+                    }
+                  }
                 }
               ],
               "name": "enrich",
@@ -1949,6 +1959,87 @@
                 },
                 {
                   "name": "revision",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "options",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "configuration-option"
+                    }
+                  }
+                }
+              ]
+            },
+            "configuration-choice": {
+              "fields": [
+                {
+                  "name": "value",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "label",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
+            "configuration-option": {
+              "fields": [
+                {
+                  "name": "key",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "label",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "required",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "bool"
+                  }
+                },
+                {
+                  "name": "choices",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "configuration-choice"
+                    }
+                  }
+                }
+              ]
+            },
+            "configuration-value": {
+              "fields": [
+                {
+                  "name": "key",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "value",
                   "type": {
                     "kind": "scalar",
                     "name": "string"
@@ -2080,6 +2171,13 @@
                   }
                 },
                 {
+                  "name": "invalid-configuration",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
                   "name": "invalid-data",
                   "type": {
                     "kind": "named",
@@ -2098,7 +2196,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.8.0",
+      "package": "stashd:plugin@0.9.0",
       "worlds": {
         "enrichment-world": {
           "exports": [
@@ -2396,7 +2494,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.8.0",
+      "package": "stashd:plugin@0.9.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2772,10 +2870,10 @@
           }
         }
       },
-      "package": "stashd:plugin@0.8.0",
+      "package": "stashd:plugin@0.9.0",
       "worlds": {}
     }
   ],
-  "package": "stashd:plugin@0.8.0",
+  "package": "stashd:plugin@0.9.0",
   "schema_version": 1
 }

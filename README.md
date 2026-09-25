@@ -9,7 +9,7 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.8.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.9.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and collection-export
 lifecycles. RPC v1 remains the native transport: four-byte big-endian length
 followed by a UTF-8 JSON object. Large byte streams use opaque host resources;
@@ -28,8 +28,26 @@ Enrichment, and Collection Export keep their separate interfaces and
 lifecycles. Enrichment inspects generic Item/Asset context, reports applicable
 plugin-owned capabilities, and returns opaque metadata facets and/or durable
 derived Assets with source Asset IDs and plugin activity/version provenance.
-The host controls reads of existing Asset bytes and adopts staged outputs only
-when an enrichment result succeeds.
+Capability `id` and `revision` identify the operation and its evolution. Each
+capability also advertises zero or more generic configuration options. An
+option has a stable plugin-owned key, a display label, a required flag, and
+accepted choices represented as opaque string values with display labels. An
+empty option list represents a fixed operation. Callers return selected key
+and value pairs to `enrich` separately from the capability. Plugins validate
+them and report invalid selections with `invalid-configuration`; the host
+transports the descriptors and values without interpreting their meaning.
+Plugins should change the capability revision when its accepted configuration
+contract changes incompatibly, and callers should submit selections for the
+revision they advertised. The host controls reads of existing Asset bytes and
+adopts staged outputs only when an enrichment result succeeds.
+
+This model covers optional OCR language (omit the optional selection to use
+the plugin default), required subtitle target language, independent
+transcription mode and model choices, artwork mode, a fixed
+metadata-identification operation with no options, and capabilities with
+multiple independent settings. Domain terms and values remain plugin owned;
+the universal contract defines only keys, labels, required choices, and string
+selections.
 
 Contract 0.4 added this package-level component model without changing the
 existing lifecycle interfaces. Consumers of the former single-role package
@@ -46,6 +64,10 @@ as opaque. References are not secrets and do not belong in source values,
 options, metadata, or delegation records. The host grants only references
 authorized for that invocation and checks availability when access is opened,
 so a credential revoked after discovery can be unavailable during acquisition.
+
+Contract 0.9 adds generic Enrichment configuration descriptors and a separate
+caller-selection argument to `enrich`. Capability IDs and revisions remain
+separate from selected values.
 
 Inputs can select the same reference on `http-request`; the HTTP host applies
 it without exposing secret material to the plugin. `run-helper` accepts the
@@ -123,8 +145,10 @@ Run `./bin/verify-contract` with Python 3 and `wasm-tools` 1.225.0 available on
 `PATH`. It parses the complete WIT package, checks generated artifacts for
 freshness and determinism, verifies package/world identity, checks package
 component discovery against the declared WIT worlds, and enforces generic
-Input credential lifecycle access, Enrichment, HTTP streaming, and staging
-invariants. It also proves that the semantic checks reject acquisition-only
-credentials, raw credentials in generic Input records, inline-only HTTP bodies,
-missing staged writers, implicit helper staging, filesystem paths in staging,
-and Input delegation regressions.
+Input credential lifecycle access, explicit generic Enrichment configuration,
+HTTP streaming, and staging invariants. It also proves that the semantic checks
+reject acquisition-only credentials, raw credentials in generic Input records,
+inline-only HTTP bodies, missing staged writers, implicit helper staging,
+filesystem paths in staging, Input delegation regressions, configuration
+encoded into capability identity, and removal of the Enrichment invocation
+configuration boundary.

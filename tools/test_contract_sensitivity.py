@@ -144,6 +144,24 @@ def embed_secret_in_credential_configuration(candidate: dict) -> None:
     record["fields"].append({"name": "secret", "type": {"kind": "scalar", "name": "string"}})
 
 
+def remove_enrichment_configuration(candidate: dict) -> None:
+    enrichment = interface(candidate, "wit/enrichment.wit", "enrichment-plugin")
+    enrich = next(function for function in enrichment["functions"] if function["name"] == "enrich")
+    enrich["arguments"] = [argument for argument in enrich["arguments"] if argument["name"] != "configuration"]
+
+
+def encode_enrichment_configuration_in_identity(candidate: dict) -> None:
+    enrichment = interface(candidate, "wit/enrichment.wit", "enrichment-plugin")
+    enrichment["records"]["capability"]["fields"] = [
+        {
+            "name": "id",
+            "type": {"kind": "list", "value": {"kind": "named", "name": "configuration-value"}},
+        }
+        if field["name"] == "id" else field
+        for field in enrichment["records"]["capability"]["fields"]
+    ]
+
+
 def restore_raw_acquisition_credentials(candidate: dict) -> None:
     interface = input_interface(candidate, "input-plugin")
     interface["records"]["acquisition-options"]["fields"] = [
@@ -178,3 +196,5 @@ expect_rejected("secret embedded in metadata", embed_secret_in_metadata)
 expect_rejected("credential embedded in delegation records", embed_secret_in_delegation)
 expect_rejected("secret embedded in opaque credential configuration", embed_secret_in_credential_configuration)
 expect_rejected("legacy raw acquisition credential model", restore_raw_acquisition_credentials)
+expect_rejected("Enrichment without explicit invocation configuration", remove_enrichment_configuration)
+expect_rejected("Enrichment configuration encoded in capability identity", encode_enrichment_configuration_in_identity)

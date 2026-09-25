@@ -1,4 +1,4 @@
-package stashd:plugin@0.8.0;
+package stashd:plugin@0.9.0;
 
 interface enrichment-host {
     use io-host.{byte-stream, plugin-metadata};
@@ -40,9 +40,32 @@ interface enrichment-plugin {
 
     /// An opaque, plugin-owned operation and revision that apply to the
     /// supplied Item/Asset context. The host does not interpret either value.
+    /// `options` describes accepted invocation settings; it is not part of
+    /// capability identity. An empty list represents a fixed capability.
     record capability {
         id: string,
         revision: string,
+        options: list<configuration-option>,
+    }
+
+    /// One generic caller-selectable setting advertised by a capability.
+    record configuration-option {
+        key: string,
+        label: string,
+        required: bool,
+        choices: list<configuration-choice>,
+    }
+
+    /// One accepted opaque string value and its human-readable label.
+    record configuration-choice {
+        value: string,
+        label: string,
+    }
+
+    /// A caller's selected value for one advertised configuration option.
+    record configuration-value {
+        key: string,
+        value: string,
     }
 
     /// A durable Asset derived from one or more existing Assets. Provenance
@@ -71,6 +94,7 @@ interface enrichment-plugin {
         authentication(error),
         rate-limited(error),
         unavailable(error),
+        invalid-configuration(error),
         invalid-data(error),
         failed(error),
     }
@@ -78,9 +102,11 @@ interface enrichment-plugin {
     /// Return the operations that are applicable to this Item/Asset context.
     capabilities: func(context: item-context) -> list<capability>;
 
-    /// Run one previously declared capability and return plugin-owned
-    /// metadata and/or durable derived Assets.
-    enrich: func(context: item-context, capability: capability) -> result<enrichment-result, plugin-error>;
+    /// Run one previously declared capability with the caller's selections
+    /// and return plugin-owned metadata and/or durable derived Assets. The
+    /// plugin validates selections against the capability's advertised
+    /// options and reports invalid values with `invalid-configuration`.
+    enrich: func(context: item-context, capability: capability, configuration: list<configuration-value>) -> result<enrichment-result, plugin-error>;
 }
 
 world enrichment-world {

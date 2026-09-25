@@ -396,6 +396,34 @@ if not any(function["name"] == "open-staging-area" for function in io_host.get("
     raise SystemExit("Enrichment must use the shared host-managed staging boundary")
 
 capability_fields = require_fields(enrichment_plugin, "capability", {"id", "revision"})
+if (
+    capability_fields["id"] != {"kind": "scalar", "name": "string"}
+    or capability_fields["revision"] != {"kind": "scalar", "name": "string"}
+):
+    raise SystemExit("Enrichment capability identity and revision must remain opaque strings")
+if capability_fields.get("options") != {
+    "kind": "list",
+    "value": {"kind": "named", "name": "configuration-option"},
+}:
+    raise SystemExit("Enrichment capabilities must describe accepted generic configuration options")
+option_fields = require_fields(enrichment_plugin, "configuration-option", {"key", "label", "required", "choices"})
+if option_fields["choices"] != {
+    "kind": "list",
+    "value": {"kind": "named", "name": "configuration-choice"},
+}:
+    raise SystemExit("Enrichment options must describe accepted choices")
+choice_fields = require_fields(enrichment_plugin, "configuration-choice", {"value", "label"})
+selection_fields = require_fields(enrichment_plugin, "configuration-value", {"key", "value"})
+if any(
+    field_type != {"kind": "scalar", "name": "string"}
+    for field_type in (
+        option_fields["key"], option_fields["label"], choice_fields["value"],
+        choice_fields["label"], selection_fields["key"], selection_fields["value"],
+    )
+):
+    raise SystemExit("Enrichment configuration keys, labels, and values must be generic strings")
+if option_fields["required"] != {"kind": "scalar", "name": "bool"}:
+    raise SystemExit("Enrichment options must express whether a selection is required")
 if not any(function["name"] == "capabilities" for function in enrichment_plugin.get("functions", [])):
     raise SystemExit("Enrichment must let a plugin declare applicable capabilities for Item/Asset context")
 enrich_function = next(
@@ -404,6 +432,16 @@ enrich_function = next(
 )
 if enrich_function is None or not contains_named_type(enrich_function.get("result"), "enrichment-result"):
     raise SystemExit("Enrichment must run a declared capability and return an enrichment-result")
+enrich_arguments = {argument["name"]: argument["type"] for argument in enrich_function.get("arguments", [])}
+if "capability" not in enrich_arguments or not contains_named_type(
+    enrich_arguments["capability"], "capability"
+):
+    raise SystemExit("Enrichment invocation must identify its capability separately from configuration")
+if enrich_arguments.get("configuration") != {
+    "kind": "list",
+    "value": {"kind": "named", "name": "configuration-value"},
+}:
+    raise SystemExit("Enrichment invocation must receive caller configuration explicitly")
 result_fields = require_fields(enrichment_plugin, "enrichment-result", {"metadata", "assets"})
 derived_fields = require_fields(
     enrichment_plugin,
@@ -423,6 +461,9 @@ if not any(
     for function in enrichment_plugin.get("functions", [])
 ):
     raise SystemExit("Enrichment execution must return typed plugin errors")
+plugin_errors = enrichment_plugin.get("variants", {}).get("plugin-error", {}).get("values", [])
+if not any(case.get("name") == "invalid-configuration" for case in plugin_errors):
+    raise SystemExit("Enrichment must report invalid caller selections explicitly")
 
 # Keep the universal Enrichment symbols domain-neutral. Examples belong in
 # architecture and issue documentation, not in the canonical wire contract.

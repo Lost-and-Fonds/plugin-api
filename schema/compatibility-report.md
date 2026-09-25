@@ -9,7 +9,7 @@ This file is generated from the active WIT files; it is not a second contract.
 | `wit/broadcast.wit` | `broadcast-host` | 4 | 1 | 1 | 1 | 3 |
 | `wit/broadcast.wit` | `broadcast-plugin` | 14 | 2 | 0 | 0 | 4 |
 | `wit/enrichment.wit` | `enrichment-host` | 2 | 1 | 0 | 0 | 3 |
-| `wit/enrichment.wit` | `enrichment-plugin` | 4 | 1 | 0 | 0 | 2 |
+| `wit/enrichment.wit` | `enrichment-plugin` | 7 | 1 | 0 | 0 | 2 |
 | `wit/collection-export.wit` | `collection-export-host` | 0 | 0 | 0 | 0 | 1 |
 | `wit/collection-export.wit` | `collection-export-plugin` | 5 | 2 | 0 | 0 | 1 |
 | `wit/io.wit` | `io-host` | 5 | 3 | 0 | 3 | 2 |
