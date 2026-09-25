@@ -14,7 +14,7 @@ package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
-expected_package = "stashd:plugin@0.14.0"
+expected_package = "stashd:plugin@0.15.0"
 if len(packages) != 1 or None in packages or packages != {schema["package"]} or schema["package"] != expected_package:
     raise SystemExit("WIT package identity mismatch")
 
@@ -449,6 +449,29 @@ for world_name in ("input-world", "broadcast-world", "enrichment-world"):
         raise SystemExit(f"{world_name} must import the shared progress capability")
 if "progress-host" in worlds["collection-export-world"]["imports"]:
     raise SystemExit("Collection Export must not gain progress solely for symmetry")
+
+# Collection Export is deliberately inline and bounded by host RPC message
+# limits; large catalogue publication belongs to Broadcast's streaming path.
+collection_export = interfaces["collection-export-plugin"]
+collection_fields = fields(collection_export, "collection")
+if collection_fields.get("entries") != {
+    "kind": "list", "value": {"kind": "named", "name": "collection-entry"}
+}:
+    raise SystemExit("Collection Export input must remain an inline entry list")
+artifact_fields = fields(collection_export, "exported-artifact")
+if artifact_fields.get("contents") != {
+    "kind": "list", "value": {"kind": "scalar", "name": "u8"}
+}:
+    raise SystemExit("Collection Export output must remain an inline byte list")
+limit_error = next(
+    (case for case in collection_export["variants"]["plugin-error"]["values"] if case["name"] == "limit-exceeded"),
+    None,
+)
+if limit_error is None or limit_error.get("type") != {"kind": "named", "name": "plugin-error-detail"}:
+    raise SystemExit("Collection Export must expose a typed host-enforced limit outcome")
+collection_world_imports = set(worlds["collection-export-world"]["imports"])
+if collection_world_imports != {"plugin-types", "logging-host"}:
+    raise SystemExit("bounded Collection Export must not import streaming, progress, or remote-publication capabilities")
 
 if logging_host.get("functions") != [{
     "name": "log",

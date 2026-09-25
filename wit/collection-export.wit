@@ -1,4 +1,4 @@
-package stashd:plugin@0.14.0;
+package stashd:plugin@0.15.0;
 
 interface collection-export-plugin {
     use plugin-types.{plugin-error-detail};
@@ -23,12 +23,16 @@ interface collection-export-plugin {
     record collection {
         reference: option<string>,
         title: option<string>,
+        /// Inline interchange input, bounded by the host's configured maximum
+        /// serialized invocation-message size; entry count is not universal.
         entries: list<collection-entry>,
     }
 
     record exported-artifact {
         filename: string,
         media-type: string,
+        /// Inline bytes, bounded by the host's configured maximum artifact
+        /// size. The complete serialized result must also fit the RPC limit.
         contents: list<u8>,
     }
 
@@ -39,9 +43,17 @@ interface collection-export-plugin {
         rate-limited(plugin-error-detail),
         unavailable(plugin-error-detail),
         invalid-data(plugin-error-detail),
+        /// Reserved for the host runtime when the input message, artifact bytes,
+        /// or serialized result exceeds its configured limit; plugins MUST NOT
+        /// return this case.
+        limit-exceeded(plugin-error-detail),
         failed(plugin-error-detail),
     }
 
+    /// One-shot bounded interchange. The host rejects input over its configured
+    /// request-message limit before invocation and output over its artifact or
+    /// response-message limit before accepting it, normalizing either case to
+    /// `limit-exceeded`.
     export-collection: func(exporter: string, collection: collection, options: list<setting>) -> result<exported-artifact, plugin-error>;
 }
 

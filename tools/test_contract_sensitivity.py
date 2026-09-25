@@ -336,6 +336,27 @@ def remove_collection_logging_import(candidate: dict) -> None:
     contract(candidate, "wit/collection-export.wit")["worlds"]["collection-export-world"]["imports"].remove("logging-host")
 
 
+def remove_collection_export_limit_error(candidate: dict) -> None:
+    owner = interface(candidate, "wit/collection-export.wit", "collection-export-plugin")
+    owner["variants"]["plugin-error"]["values"] = [
+        case for case in owner["variants"]["plugin-error"]["values"] if case["name"] != "limit-exceeded"
+    ]
+
+
+def stream_collection_export_input(candidate: dict) -> None:
+    owner = interface(candidate, "wit/collection-export.wit", "collection-export-plugin")
+    next(field for field in owner["records"]["collection"]["fields"] if field["name"] == "entries")["type"] = {
+        "kind": "named", "name": "byte-stream"
+    }
+
+
+def stream_collection_export_output(candidate: dict) -> None:
+    owner = interface(candidate, "wit/collection-export.wit", "collection-export-plugin")
+    next(field for field in owner["records"]["exported-artifact"]["fields"] if field["name"] == "contents")["type"] = {
+        "kind": "named", "name": "staged-artifact"
+    }
+
+
 def remove_input_http_import(candidate: dict) -> None:
     contract(candidate, "wit/input.wit")["worlds"]["input-world"]["imports"].remove("http-host")
 
@@ -439,6 +460,9 @@ expect_rejected("split progress precision", change_shared_progress_precision)
 expect_rejected("Broadcast without shared progress", remove_broadcast_progress_import)
 expect_rejected("Collection Export progress added for symmetry", add_progress_to_collection_export)
 expect_rejected("Collection Export without shared logging", remove_collection_logging_import)
+expect_rejected("Collection Export without typed size-limit outcome", remove_collection_export_limit_error)
+expect_rejected("streamed Collection Export input", stream_collection_export_input)
+expect_rejected("staged Collection Export output", stream_collection_export_output)
 expect_rejected("Input without canonical HTTP capability", remove_input_http_import)
 expect_rejected("raw Broadcast HTTP credential", make_broadcast_http_credential_raw)
 expect_rejected("Enrichment invocation without revision", remove_enrichment_revision)

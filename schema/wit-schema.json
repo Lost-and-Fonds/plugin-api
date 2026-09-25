@@ -554,7 +554,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.14.0",
+      "package": "stashd:plugin@0.15.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -1086,7 +1086,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.14.0",
+      "package": "stashd:plugin@0.15.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -1568,7 +1568,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.14.0",
+      "package": "stashd:plugin@0.15.0",
       "worlds": {
         "enrichment-world": {
           "exports": [
@@ -1821,6 +1821,13 @@
                   }
                 },
                 {
+                  "name": "limit-exceeded",
+                  "type": {
+                    "kind": "named",
+                    "name": "plugin-error-detail"
+                  }
+                },
+                {
                   "name": "failed",
                   "type": {
                     "kind": "named",
@@ -1832,7 +1839,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.14.0",
+      "package": "stashd:plugin@0.15.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2555,10 +2562,10 @@
           "variants": {}
         }
       },
-      "package": "stashd:plugin@0.14.0",
+      "package": "stashd:plugin@0.15.0",
       "worlds": {}
     }
   ],
-  "package": "stashd:plugin@0.14.0",
+  "package": "stashd:plugin@0.15.0",
   "schema_version": 1
 }

@@ -9,7 +9,7 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.14.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.15.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and collection-export
 lifecycles. RPC v1 remains the native transport: four-byte big-endian length
 followed by a UTF-8 JSON object. Large byte streams use opaque host resources;
@@ -239,6 +239,27 @@ Contract 0.14 removes Broadcast prepare/finalize wire methods and their
 prepared-output records. This is an incompatible WIT shape change and advances
 the pre-1.0 contract from 0.13.0 to 0.14.0; it does not change RPC framing,
 credential bindings, generic publication results, or shared staging.
+
+Contract 0.15 defines Collection Export as bounded, one-shot interchange. The
+collection entries and exported artifact bytes remain inline. Each host MUST
+configure and enforce a maximum serialized input-message size, maximum artifact
+`contents` byte size, and maximum serialized result-message size that fits its
+RPC transport. Message limits include all values and encoding overhead. This
+bounds entry count by encoded size without imposing an arbitrary universal
+count. The host rejects oversized input before plugin invocation and refuses
+oversized output, reporting either as the typed `limit-exceeded` outcome.
+Plugins cannot assume arbitrarily large inline lists. `limit-exceeded` is
+reserved for the host runtime; plugins must not use it for plugin failures.
+
+Small OPML and similarly sized JSON/XML interchange documents fit this
+one-shot contract. Large podcast subscription catalogues, book/document
+inventories, and catalogues with tens or hundreds of thousands of entries are
+not Collection Export just because they can be encoded as a file: when the goal
+is to generate or publish a large catalogue, use Broadcast and its canonical
+host-managed streaming/staging primitives. Collection Export adds no progress,
+credentials, HTTP, or publication behavior. Adding `limit-exceeded` changes the
+WIT variant shape, so the pre-1.0 package identity advances from 0.14.0 to
+0.15.0; RPC framing is unchanged.
 
 Inputs can select the same reference on `http-request`; the HTTP host applies
 it without exposing secret material to the plugin. `run-helper` accepts the
