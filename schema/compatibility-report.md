@@ -5,7 +5,7 @@ This file is generated from the active WIT files; it is not a second contract.
 | File | Interface | Records | Variants | Enums | Resources | Functions |
 |---|---|---:|---:|---:|---:|---:|
 | `wit/input.wit` | `input-host` | 8 | 3 | 1 | 2 | 5 |
-| `wit/input.wit` | `input-plugin` | 8 | 2 | 1 | 0 | 3 |
+| `wit/input.wit` | `input-plugin` | 7 | 2 | 1 | 0 | 3 |
 | `wit/broadcast.wit` | `broadcast-host` | 6 | 3 | 1 | 2 | 4 |
 | `wit/broadcast.wit` | `broadcast-plugin` | 14 | 2 | 0 | 0 | 4 |
 | `wit/collection-export.wit` | `collection-export-host` | 0 | 0 | 0 | 0 | 1 |

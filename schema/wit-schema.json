@@ -650,51 +650,6 @@
                 }
               ]
             },
-            "discovered-item": {
-              "fields": [
-                {
-                  "name": "id",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "reference",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "size-bytes",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "u64"
-                    }
-                  }
-                },
-                {
-                  "name": "size-estimated",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "bool"
-                  }
-                },
-                {
-                  "name": "metadata",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "plugin-metadata"
-                    }
-                  }
-                }
-              ]
-            },
             "error": {
               "fields": [
                 {
@@ -828,6 +783,7 @@
           },
           "resources": [],
           "uses": {
+            "discovered-item": "input-host",
             "plugin-metadata": "input-host",
             "staged-artifact": "input-host"
           },

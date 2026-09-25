@@ -104,7 +104,7 @@ interface input-host {
 }
 
 interface input-plugin {
-    use input-host.{plugin-metadata, staged-artifact};
+    use input-host.{discovered-item, plugin-metadata, staged-artifact};
 
     variant option-value {
         boolean(bool),
@@ -147,14 +147,6 @@ interface input-plugin {
         id: string,
         canonical-reference: option<string>,
         estimated-item-count: option<u32>,
-        size-bytes: option<u64>,
-        size-estimated: bool,
-        metadata: list<plugin-metadata>,
-    }
-
-    record discovered-item {
-        id: string,
-        reference: string,
         size-bytes: option<u64>,
         size-estimated: bool,
         metadata: list<plugin-metadata>,
