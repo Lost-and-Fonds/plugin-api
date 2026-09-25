@@ -1,4 +1,4 @@
-package stashd:plugin@0.11.0;
+package stashd:plugin@0.12.0;
 
 /// Lifecycle-independent plugin value contracts. Metadata facets remain in
 /// `io-host` with the shared host-managed I/O boundary.
@@ -27,8 +27,9 @@ interface logging-host {
     log: func(message: string);
 }
 
-/// Generic outbound HTTP capability shared by Input and Broadcast. The host
-/// applies opaque credential references without exposing secret material.
+/// Generic outbound HTTP capability shared by Input, Broadcast, and
+/// Enrichment. The host applies only references authorized for the current
+/// invocation and available at use time, without exposing secret material.
 interface http-host {
     use io-host.{byte-stream, credential-reference};
 
@@ -50,6 +51,8 @@ interface http-host {
     record http-request {
         method: http-method,
         url: string,
+        /// The host rejects references not granted to this invocation and
+        /// rechecks authorization and availability for each use.
         credential: option<credential-reference>,
         headers: list<http-header>,
         body: option<byte-stream>,
@@ -82,21 +85,25 @@ interface http-host {
 /// host-owned; references never expose filesystem paths or storage details.
 interface io-host {
     /// A plugin-owned metadata facet. The host preserves its schema and JSON
-    /// without interpreting domain fields.
+    /// without interpreting domain fields. Metadata must not contain
+    /// credential selectors or secret material.
     record plugin-metadata {
         schema: string,
         json: string,
     }
 
-    /// Opaque host-owned identity for a configured credential. Its contents
-    /// are not meaningful to the plugin or host beyond selecting that grant.
+    /// Opaque host-owned selector for a configured credential. Knowing its id
+    /// alone does not authorize use; the host requires an invocation grant and
+    /// rechecks authorization and availability when access is attempted.
     record credential-reference {
         id: string,
     }
 
-    /// A plugin-defined credential slot bound to one host-owned reference for
-    /// this invocation. Helper calls use the name as the helper environment
-    /// variable receiving that credential; the host does not infer semantics.
+    /// A plugin-defined credential slot bound by the host to one authorized
+    /// reference for this invocation. The host provides these bindings to
+    /// lifecycle calls and rechecks them when HTTP or helper access is used.
+    /// Helper calls use the name as the helper environment variable receiving
+    /// that credential; the host does not infer provider semantics.
     record credential-binding {
         name: string,
         reference: credential-reference,
@@ -171,8 +178,10 @@ interface io-host {
 
     /// Runs a host-approved helper. Named credentials are exposed to the helper
     /// as environment variables and never passed in `args` or returned to the
-    /// plugin. With `input`, the host streams the supplied bytes to stdin and
-    /// takes ownership of the stream until EOF or helper termination. With
+    /// plugin. Each selected binding must be authorized for this invocation
+    /// and available at use time. With `input`, the host streams the supplied
+    /// bytes to stdin and takes ownership of the stream until EOF or helper
+    /// termination. With
     /// `output`, stdout bytes are streamed
     /// directly into that writer and the returned stdout is empty. A helper or
     /// output-stream failure makes the writer unfinalizable. Otherwise

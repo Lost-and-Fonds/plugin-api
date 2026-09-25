@@ -121,6 +121,57 @@ def expose_broadcast_vault_path(candidate: dict) -> None:
     function["arguments"].append({"name": "vault-path", "type": {"kind": "scalar", "name": "string"}})
 
 
+def broadcast_credentials_only_during_publish(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    for name in ("prepare", "finalize", "operation"):
+        function = next(function for function in owner["functions"] if function["name"] == name)
+        function["arguments"] = [argument for argument in function["arguments"] if argument["name"] != "credentials"]
+
+
+def embed_credentials_in_broadcast_settings(candidate: dict) -> None:
+    record = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["setting"]
+    record["fields"].append({"name": "credentials", "type": {"kind": "list", "value": {"kind": "named", "name": "credential-binding"}}})
+
+
+def embed_credentials_in_enrichment_configuration(candidate: dict) -> None:
+    record = interface(candidate, "wit/enrichment.wit", "enrichment-plugin")["records"]["configuration-value"]
+    record["fields"].append({"name": "credentials", "type": {"kind": "list", "value": {"kind": "named", "name": "credential-binding"}}})
+
+
+def remove_enrichment_credentials(candidate: dict) -> None:
+    enrich = next(function for function in interface(candidate, "wit/enrichment.wit", "enrichment-plugin")["functions"] if function["name"] == "enrich")
+    enrich["arguments"] = [argument for argument in enrich["arguments"] if argument["name"] != "credentials"]
+
+
+def add_second_credential_type(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    owner["records"]["broadcast-credential"] = {"fields": [{"name": "id", "type": {"kind": "scalar", "name": "string"}}]}
+
+
+def add_raw_secret_to_enrichment_record(candidate: dict) -> None:
+    record = interface(candidate, "wit/enrichment.wit", "enrichment-plugin")["records"]["capability"]
+    record["fields"].append({"name": "api-key", "type": {"kind": "scalar", "name": "string"}})
+
+
+def pass_reference_without_binding(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    prepare = next(function for function in owner["functions"] if function["name"] == "prepare")
+    next(argument for argument in prepare["arguments"] if argument["name"] == "credentials")["type"] = {
+        "kind": "list", "value": {"kind": "named", "name": "credential-reference"}
+    }
+
+
+def remove_enrichment_shared_http(candidate: dict) -> None:
+    contract(candidate, "wit/enrichment.wit")["worlds"]["enrichment-world"]["imports"].remove("http-host")
+
+
+def expose_raw_credentials_through_shared_io(candidate: dict) -> None:
+    interface(candidate, "wit/io.wit", "io-host")["resources"].append({
+        "name": "credential-access",
+        "functions": [{"name": "read", "arguments": [], "result": {"kind": "result", "ok": {"kind": "scalar", "name": "string"}, "error": {"kind": "named", "name": "credential-error"}}}],
+    })
+
+
 def leak_host_path_into_staging(candidate: dict) -> None:
     io = interface(candidate, "wit/io.wit", "io-host")
     staging_area = next(resource for resource in io["resources"] if resource["name"] == "staging-area")
@@ -321,4 +372,13 @@ expect_rejected("Broadcast without preserved Asset reads", remove_broadcast_asse
 expect_rejected("helper without explicit streamed input", remove_helper_input)
 expect_rejected("duplicated Broadcast byte-stream abstraction", duplicate_byte_stream_for_broadcast)
 expect_rejected("Vault path exposed by Broadcast content boundary", expose_broadcast_vault_path)
-expect_rejected("contract package identity downgraded from 0.11.0", downgrade_contract_package_identity)
+expect_rejected("Broadcast credentials available only during publish", broadcast_credentials_only_during_publish)
+expect_rejected("credentials embedded in Broadcast settings", embed_credentials_in_broadcast_settings)
+expect_rejected("credentials embedded in Enrichment configuration", embed_credentials_in_enrichment_configuration)
+expect_rejected("Enrichment without invocation credential bindings", remove_enrichment_credentials)
+expect_rejected("unnecessary second credential type", add_second_credential_type)
+expect_rejected("raw secret field in an Enrichment plugin record", add_raw_secret_to_enrichment_record)
+expect_rejected("credential reference used without host-granted binding", pass_reference_without_binding)
+expect_rejected("Enrichment without canonical shared HTTP", remove_enrichment_shared_http)
+expect_rejected("raw credential access exposed through shared I/O", expose_raw_credentials_through_shared_io)
+expect_rejected("contract package identity downgraded from 0.12.0", downgrade_contract_package_identity)

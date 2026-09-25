@@ -1,4 +1,4 @@
-package stashd:plugin@0.11.0;
+package stashd:plugin@0.12.0;
 
 interface enrichment-host {
     use io-host.{byte-stream, plugin-metadata};
@@ -35,7 +35,7 @@ interface enrichment-host {
 interface enrichment-plugin {
     use plugin-types.{plugin-error-detail};
     use enrichment-host.{asset, item-context};
-    use io-host.{plugin-metadata, staged-artifact};
+    use io-host.{credential-binding, plugin-metadata, staged-artifact};
 
     /// An opaque, plugin-owned operation and revision that apply to the
     /// supplied Item/Asset context. The host does not interpret either value.
@@ -64,6 +64,7 @@ interface enrichment-plugin {
     /// A caller's selected value for one advertised configuration option.
     record configuration-value {
         key: string,
+        /// Configuration selections must not carry credentials or secrets.
         value: string,
     }
 
@@ -100,12 +101,13 @@ interface enrichment-plugin {
     /// and return plugin-owned metadata and/or durable derived Assets. The
     /// plugin validates selections against the capability's advertised
     /// options and reports invalid values with `invalid-configuration`.
-    enrich: func(context: item-context, capability-id: string, capability-revision: string, configuration: list<configuration-value>) -> result<enrichment-result, plugin-error>;
+    enrich: func(context: item-context, capability-id: string, capability-revision: string, configuration: list<configuration-value>, credentials: list<credential-binding>) -> result<enrichment-result, plugin-error>;
 }
 
 world enrichment-world {
     import io-host;
     import enrichment-host;
+    import http-host;
     import progress-host;
     import plugin-types;
     import logging-host;

@@ -9,7 +9,7 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.11.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.12.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and collection-export
 lifecycles. RPC v1 remains the native transport: four-byte big-endian length
 followed by a UTF-8 JSON object. Large byte streams use opaque host resources;
@@ -97,6 +97,28 @@ staged writers. Completed staged artifacts can be reopened only during their
 own invocation; only artifacts returned by a successful plugin result become
 available to Core.
 
+Contract 0.12 extends the canonical `credential-binding` model to all
+potentially authenticated Broadcast phases (`prepare`, `publish`, `finalize`,
+and `operation`) and Enrichment execution (`enrich`). Each receives a list of
+bindings authorized for that invocation, separate from settings, metadata,
+capability identity, and Enrichment configuration. A phase that needs no
+credential receives an empty list. Enrichment imports the existing `http-host`
+for remote OCR, translation, transcription, and identification services; it
+does not define an Enrichment-specific HTTP client. The shared helper accepts
+the same binding type for approved helper-backed work.
+
+Credential reference IDs are opaque selectors, never bearer capabilities. An
+ID alone does not authorize access. The host validates each binding against the
+current invocation's grants and rechecks authorization and availability when
+HTTP or helper access is used. A denied or ungranted credential and a credential
+that has become unavailable remain distinct host errors. HTTP authentication
+rejection remains distinct from transport failure and from lifecycle plugin
+errors. Credential material must not be placed in Broadcast settings,
+publication metadata, Enrichment configuration, metadata facets, source or
+Asset references, or capability IDs/revisions. HTTP and approved helper
+mediation cover these use cases; Broadcast and Enrichment do not receive raw
+secret access.
+
 Inputs can select the same reference on `http-request`; the HTTP host applies
 it without exposing secret material to the plugin. `run-helper` accepts the
 same bindings and supplies selected credentials to the helper as named
@@ -153,9 +175,9 @@ The `plugin-types` interface owns shared `plugin-error-detail` (`message` and
 `retryable`) without merging the separate lifecycle error variants. Every world
 uses one `logging-host` message callback for invocation diagnostics.
 
-Input and Broadcast use the same generic outbound HTTP capability, request,
-response stream, transport errors, and opaque credential reference through
-`http-host`. Enrichment and Collection Export do not import HTTP. Input,
+Input, Broadcast, and Enrichment use the same generic outbound HTTP capability,
+request, response stream, transport errors, and opaque credential reference
+through `http-host`. Collection Export does not import HTTP. Input,
 Broadcast, Enrichment, and Collection Export share only plugin error detail;
 each retains its own `plugin-error` cases because unsupported operations,
 configuration validation, credential outcomes, and lifecycle failures differ.
@@ -216,16 +238,17 @@ Run `./bin/verify-contract` with Python 3 and `wasm-tools` 1.225.0 available on
 freshness and determinism, verifies package/world identity, checks package
 component discovery against the declared WIT worlds, and enforces generic
 Input credential lifecycle access, explicit generic Enrichment configuration,
-shared progress precision, shared Input/Broadcast HTTP types, shared plugin
+shared progress precision, shared Input/Broadcast/Enrichment HTTP types, shared plugin
 error detail, shared logging, revision-aware Enrichment invocation, HTTP
 request and response streaming, Broadcast Asset reads, staged-artifact reads,
-helper stdin, and staging invariants. It also proves that the semantic checks
-reject acquisition-only credentials, raw credentials in generic Input records,
-inline-only HTTP request or response bodies, missing Broadcast Asset streaming,
-missing helper stdin, duplicate stream abstractions, missing staged writers,
-implicit helper staging, filesystem or Vault paths in content boundaries,
-Input delegation regressions, configuration
-encoded into capability identity, split shared progress precision, a raw HTTP
-credential, missing capability revision, the discovery descriptor passed to
-Enrichment execution, duplicated plugin error detail, and removal of the
-Enrichment invocation configuration boundary, plus missing shared logging.
+helper stdin, host-granted Broadcast/Enrichment credentials, Enrichment's
+shared HTTP import, and staging invariants. It also proves that the semantic
+checks reject acquisition-only credentials, raw credentials in generic Input
+records, inline-only HTTP request or response bodies, missing Broadcast Asset
+streaming, missing helper stdin, duplicate stream abstractions, missing staged
+writers, implicit helper staging, filesystem or Vault paths in content
+boundaries, credentials outside explicit lifecycle bindings, an unnecessary
+second credential type, and raw-secret fields in plugin records. It also checks
+Input delegation, configuration identity, shared progress precision, HTTP
+credentials and errors, Enrichment revision-aware execution, shared plugin
+error detail, and logging.

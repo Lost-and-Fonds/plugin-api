@@ -14,7 +14,7 @@ package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
-expected_package = "stashd:plugin@0.11.0"
+expected_package = "stashd:plugin@0.12.0"
 if len(packages) != 1 or None in packages or packages != {schema["package"]} or schema["package"] != expected_package:
     raise SystemExit("WIT package identity mismatch")
 
@@ -149,6 +149,28 @@ if set(credential_refs) != {"id"} or credential_refs["id"] != {"kind": "scalar",
 credential_bindings = fields(io_host, "credential-binding")
 if set(credential_bindings) != {"name", "reference"} or credential_bindings["name"] != {"kind": "scalar", "name": "string"} or credential_bindings["reference"] != credential_reference:
     raise SystemExit("credential bindings must map a plugin-defined slot to an opaque host reference")
+
+allowed_credential_records = {("io-host", "credential-reference"), ("io-host", "credential-binding")}
+for interface_name, interface in interfaces.items():
+    for record_name in interface.get("records", {}):
+        if "credential" in record_name and (interface_name, record_name) not in allowed_credential_records:
+            raise SystemExit("credential selectors and bindings must use the existing canonical io-host records")
+
+secret_field_names = {
+    "credential", "credentials", "password", "secret", "token", "access-token",
+    "refresh-token", "api-key", "private-key", "bearer",
+}
+
+def require_no_embedded_credentials(owner: str, record_set: dict) -> None:
+    for record_name, record in record_set.items():
+        for field in record["fields"]:
+            if field["name"] in secret_field_names:
+                raise SystemExit(f"{owner}.{record_name} must not carry credentials or raw secret fields")
+            if any(contains_named_type(field["type"], name) for name in ("credential-reference", "credential-binding", "credential-access", "input-credential")):
+                raise SystemExit(f"{owner}.{record_name} must keep credentials separate from generic data")
+
+require_no_embedded_credentials("Input", input_host["records"])
+require_no_embedded_credentials("plugin metadata", {"plugin-metadata": io_host["records"]["plugin-metadata"]})
 credential_error = {"kind": "named", "name": "credential-error"}
 credential_access = next((resource for resource in input_host.get("resources", []) if resource["name"] == "credential-access"), None)
 credential_read = next((function for function in credential_access.get("functions", []) if function["name"] == "read"), None) if credential_access else None
@@ -166,6 +188,8 @@ if open_credential is None or open_credential.get("arguments") != [
 credential_errors = input_host["variants"].get("credential-error", {}).get("values", [])
 if {value["name"] for value in credential_errors} != {"denied", "unavailable"}:
     raise SystemExit("credential denial and unavailability must remain distinguishable")
+if any(resource["name"] == "credential-access" for resource in io_host.get("resources", [])):
+    raise SystemExit("raw credential access must not become a shared host capability")
 
 input_http_credential = fields(http_host, "http-request").get("credential")
 if input_http_credential != {"kind": "option", "value": credential_reference}:
@@ -209,6 +233,19 @@ if input_plugin["variants"].get("plugin-error", {}).get("values") is None:
 error_cases = {value["name"] for value in input_plugin["variants"]["plugin-error"]["values"]}
 if not {"credential-denied", "credential-unavailable", "authentication"} <= error_cases:
     raise SystemExit("Input must preserve credential denial, unavailability, and authentication failure distinctions")
+
+broadcast_contract = next(contract for contract in contracts if contract["file"] == "wit/broadcast.wit")
+broadcast_plugin = broadcast_contract["interfaces"].get("broadcast-plugin", {})
+if broadcast_plugin.get("uses", {}).get("credential-binding") != "io-host":
+    raise SystemExit("Broadcast must reuse io-host.credential-binding")
+for phase in ("prepare", "publish", "finalize", "operation"):
+    require_credential_bindings(phase, broadcast_plugin)
+require_no_embedded_credentials("Broadcast", broadcast_plugin.get("records", {}))
+require_no_embedded_credentials("Broadcast host", broadcast_contract["interfaces"].get("broadcast-host", {}).get("records", {}))
+if not {"authentication", "unavailable", "failed"} <= {
+    value["name"] for value in broadcast_plugin.get("variants", {}).get("plugin-error", {}).get("values", [])
+}:
+    raise SystemExit("Broadcast must retain authentication and ordinary service failure outcomes")
 
 helper = next((function for function in io_host.get("functions", []) if function["name"] == "run-helper"), None)
 helper_credentials = next((argument for argument in helper["arguments"] if argument["name"] == "credentials"), None) if helper else None
@@ -303,6 +340,8 @@ for interface in (broadcast_host, http_host, io_host):
     for function in interface.get("functions", []):
         if path_names & {argument["name"] for argument in function["arguments"]}:
             raise SystemExit("filesystem and Vault paths must not appear in content transport boundaries")
+if any(resource["name"] == "credential-access" for resource in broadcast_host.get("resources", [])):
+    raise SystemExit("Broadcast must use mediated credentials rather than raw-secret access")
 
 if fields(http_host, "http-response").get("body") != {"kind": "named", "name": "byte-stream"}:
     raise SystemExit("shared HTTP responses must expose bodies as bounded byte streams")
@@ -320,8 +359,10 @@ for filename, world_name in (("wit/input.wit", "input-world"), ("wit/broadcast.w
     host_interface = contract["interfaces"]["input-host" if world_name == "input-world" else "broadcast-host"]
     if any(name in host_interface.get("records", {}) for name in ("http-request", "http-response", "http-header")):
         raise SystemExit(f"{world_name} must not redeclare shared HTTP value types")
-if "http-host" in worlds["enrichment-world"]["imports"] or "http-host" in worlds["collection-export-world"]["imports"]:
-    raise SystemExit("HTTP capability must remain limited to lifecycles that need it")
+if "http-host" not in worlds["enrichment-world"]["imports"]:
+    raise SystemExit("Enrichment must use the canonical shared HTTP capability for authenticated remote services")
+if "http-host" in worlds["collection-export-world"]["imports"]:
+    raise SystemExit("Collection Export must not gain HTTP solely for symmetry")
 
 # The same invocation progress contract applies to Input, Broadcast, and
 # Enrichment. Collection Export intentionally has no progress lifecycle.
@@ -468,8 +509,14 @@ if enrichment_contract is None:
 enrichment_host = enrichment_contract["interfaces"].get("enrichment-host", {})
 enrichment_plugin = enrichment_contract["interfaces"].get("enrichment-plugin", {})
 enrichment_world = enrichment_contract["worlds"].get("enrichment-world", {})
-if set(enrichment_world.get("imports", [])) != {"io-host", "enrichment-host", "progress-host", "plugin-types", "logging-host"} or enrichment_world.get("exports") != ["enrichment-plugin"]:
+if set(enrichment_world.get("imports", [])) != {"io-host", "enrichment-host", "http-host", "progress-host", "plugin-types", "logging-host"} or enrichment_world.get("exports") != ["enrichment-plugin"]:
     raise SystemExit("enrichment-world must import only its own host and the applicable shared interfaces")
+if enrichment_plugin.get("uses", {}).get("credential-binding") != "io-host":
+    raise SystemExit("Enrichment must reuse io-host.credential-binding")
+require_no_embedded_credentials("Enrichment", enrichment_plugin.get("records", {}))
+require_no_embedded_credentials("Enrichment context", enrichment_host.get("records", {}))
+if any(resource["name"] == "credential-access" for resource in enrichment_host.get("resources", [])):
+    raise SystemExit("Enrichment must use mediated credentials rather than raw-secret access")
 
 
 def require_fields(interface: dict, record_name: str, expected: set[str]) -> dict[str, dict]:
@@ -552,6 +599,8 @@ if enrich_arguments.get("configuration") != {
     "value": {"kind": "named", "name": "configuration-value"},
 }:
     raise SystemExit("Enrichment invocation must receive caller configuration explicitly")
+if enrich_arguments.get("credentials") != {"kind": "list", "value": credential_binding}:
+    raise SystemExit("Enrichment execution must receive explicit host-granted credential bindings")
 result_fields = require_fields(enrichment_plugin, "enrichment-result", {"metadata", "assets"})
 derived_fields = require_fields(
     enrichment_plugin,
@@ -574,6 +623,8 @@ if not any(
 plugin_errors = enrichment_plugin.get("variants", {}).get("plugin-error", {}).get("values", [])
 if not any(case.get("name") == "invalid-configuration" for case in plugin_errors):
     raise SystemExit("Enrichment must report invalid caller selections explicitly")
+if not {"authentication", "unavailable", "failed"} <= {case["name"] for case in plugin_errors}:
+    raise SystemExit("Enrichment must retain authentication and ordinary service failure outcomes")
 
 # Keep the universal Enrichment symbols domain-neutral. Examples belong in
 # architecture and issue documentation, not in the canonical wire contract.

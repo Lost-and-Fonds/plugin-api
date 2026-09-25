@@ -25,7 +25,7 @@ The plugin-package schema lists canonical WIT worlds as the available component 
 |---|---|---|
 | `input-world` | `io-host`, `input-host`, `http-host`, `progress-host`, `plugin-types`, `logging-host` | `input-plugin` |
 | `broadcast-world` | `io-host`, `broadcast-host`, `http-host`, `progress-host`, `plugin-types`, `logging-host` | `broadcast-plugin` |
-| `enrichment-world` | `io-host`, `enrichment-host`, `progress-host`, `plugin-types`, `logging-host` | `enrichment-plugin` |
+| `enrichment-world` | `io-host`, `enrichment-host`, `http-host`, `progress-host`, `plugin-types`, `logging-host` | `enrichment-plugin` |
 | `collection-export-world` | `plugin-types`, `logging-host` | `collection-export-plugin` |
 
 ## Native mapping

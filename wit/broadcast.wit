@@ -1,4 +1,4 @@
-package stashd:plugin@0.11.0;
+package stashd:plugin@0.12.0;
 
 interface broadcast-host {
     use io-host.{byte-stream, stream-error};
@@ -15,7 +15,7 @@ interface broadcast-host {
 }
 
 interface broadcast-plugin {
-    use io-host.{staged-artifact};
+    use io-host.{credential-binding, staged-artifact};
     use plugin-types.{plugin-error-detail};
     use broadcast-host.{published-file};
     variant option-value {
@@ -24,6 +24,8 @@ interface broadcast-plugin {
         text(string),
     }
 
+    /// Provider-owned settings carry configuration only, never credential
+    /// references or secret material; use the invocation credential bindings.
     record setting {
         key: string,
         value: option-value,
@@ -111,10 +113,13 @@ interface broadcast-plugin {
         failed(plugin-error-detail),
     }
 
-    prepare: func(request: publish-request) -> result<preparation, plugin-error>;
-    publish: func(request: publish-request) -> result<publication, plugin-error>;
-    finalize: func(request: finalization-request) -> result<publication, plugin-error>;
-    operation: func(request: operation-request) -> result<operation-result, plugin-error>;
+    /// Credentials are host-granted for this invocation. All phases receive
+    /// the same model because preparation, publication, finalization, or
+    /// destination operations may need authenticated access.
+    prepare: func(request: publish-request, credentials: list<credential-binding>) -> result<preparation, plugin-error>;
+    publish: func(request: publish-request, credentials: list<credential-binding>) -> result<publication, plugin-error>;
+    finalize: func(request: finalization-request, credentials: list<credential-binding>) -> result<publication, plugin-error>;
+    operation: func(request: operation-request, credentials: list<credential-binding>) -> result<operation-result, plugin-error>;
 }
 
 world broadcast-world {
