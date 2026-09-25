@@ -139,9 +139,9 @@ delegation_resolver = next(
 if delegation_resolver is None:
     raise SystemExit("Input must expose the generic resolve-delegation entry point")
 if delegation_resolver["arguments"] != [
-    {"name": "reference", "type": {"kind": "scalar", "name": "string"}}
+    {"name": "delegation", "type": delegation_type["value"]}
 ]:
-    raise SystemExit("resolve-delegation must receive only an opaque reference")
+    raise SystemExit("resolve-delegation must receive discovered-item's canonical input-delegation type")
 if delegation_resolver.get("result") != {
     "kind": "result",
     "ok": {"kind": "named", "name": "resolved-input"},

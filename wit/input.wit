@@ -176,9 +176,9 @@ interface input-plugin {
     }
 
     resolve: func(source: list<source-value>) -> result<resolved-input, plugin-error>;
-    /// Resolve a reference delegated by another Input. Inputs that cannot
+    /// Resolve a handoff delegated by another Input. Inputs that cannot
     /// handle it return `unsupported`; Core may probe other installed Inputs.
-    resolve-delegation: func(reference: string) -> result<resolved-input, plugin-error>;
+    resolve-delegation: func(delegation: input-delegation) -> result<resolved-input, plugin-error>;
     discover: func(input-id: string, intent: discovery-intent, options: list<input-option>) -> result<list<discovered-item>, plugin-error>;
     acquire: func(item: discovered-item, options: acquisition-options) -> result<acquisition-result, plugin-error>;
 }

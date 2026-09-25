@@ -558,10 +558,10 @@
             {
               "arguments": [
                 {
-                  "name": "reference",
+                  "name": "delegation",
                   "type": {
-                    "kind": "scalar",
-                    "name": "string"
+                    "kind": "named",
+                    "name": "input-delegation"
                   }
                 }
               ],
