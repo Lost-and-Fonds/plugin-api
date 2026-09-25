@@ -187,8 +187,8 @@ def report(schema: dict) -> str:
             "",
             "## Component worlds",
             "",
-            "The plugin-package schema uses these WIT worlds as the package's "
-            "discoverable component roles:",
+            "The plugin-package schema lists canonical WIT worlds as the "
+            "available component implementations:",
             "",
             "| World | Imports | Exports |",
             "|---|---|---|",
@@ -222,13 +222,18 @@ def report(schema: dict) -> str:
 def package_manifest_schema(package: str, worlds: dict[str, dict]) -> dict:
     component = {
         "type": "object",
-        "required": ["artifact"],
+        "required": ["world", "artifact"],
         "additionalProperties": False,
         "properties": {
+            "world": {
+                "type": "string",
+                "enum": sorted(worlds),
+                "description": "Canonical WIT world implemented by this component.",
+            },
             "artifact": {
                 "type": "string",
                 "minLength": 1,
-                "description": "Package-relative path to a component implementing this WIT world.",
+                "description": "Package-relative path to a component artifact implementing the declared WIT world.",
             }
         },
     }
@@ -236,7 +241,7 @@ def package_manifest_schema(package: str, worlds: dict[str, dict]) -> dict:
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": "https://stashd.dev/schemas/plugin-package.schema.json",
         "title": "Stashd Plugin Package Manifest",
-        "description": "One deployable package identity may expose any non-empty subset of the listed WIT component worlds.",
+        "description": "One deployable package identity may contain one or more identified components implementing canonical WIT worlds.",
         "x-stashd-contract-package": package,
         "type": "object",
         "required": ["id", "version", "components"],
@@ -247,10 +252,8 @@ def package_manifest_schema(package: str, worlds: dict[str, dict]) -> dict:
             "components": {
                 "type": "object",
                 "minProperties": 1,
-                "additionalProperties": False,
-                "properties": {
-                    name: {"$ref": "#/$defs/component"} for name in sorted(worlds)
-                },
+                "propertyNames": {"pattern": "^[a-z0-9][a-z0-9._-]*$"},
+                "additionalProperties": {"$ref": "#/$defs/component"},
             },
         },
         "$defs": {"component": component},

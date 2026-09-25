@@ -13,7 +13,7 @@ This file is generated from the active WIT files; it is not a second contract.
 
 ## Component worlds
 
-The plugin-package schema uses these WIT worlds as the package's discoverable component roles:
+The plugin-package schema lists canonical WIT worlds as the available component implementations:
 
 | World | Imports | Exports |
 |---|---|---|

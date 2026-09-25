@@ -16,17 +16,17 @@ UTF-8 JSON object. Inline `list<u8>` values map to JSON arrays of unsigned byte
 values.
 
 The generated `schema/plugin-package.schema.json` defines one deployable
-package identity (`id` and `version`) with a `components` object keyed by the
-WIT worlds the package exposes. Each key names a package-relative component
-artifact. Packages may include any non-empty combination of supported worlds;
-the key set is derived from the worlds in this package, so adding a future role
-starts by adding its WIT world. Package tooling must verify that each artifact
-implements the world named by its key. Input, Broadcast, and Collection Export
-keep their separate interfaces and lifecycles.
+package identity (`id` and `version`) with a `components` object keyed by stable
+component IDs. Each component declares a canonical WIT `world` and a
+package-relative `artifact`. Multiple component IDs may declare the same world.
+The allowed world values are generated from this package's WIT declarations;
+the manifest selects those worlds and cannot add new ones. Package tooling can
+validate each artifact against its declared world. Input, Broadcast, and
+Collection Export keep their separate interfaces and lifecycles.
 
-Contract 0.4 adds this package-level role model without changing the existing
-role interfaces. Consumers of the former single-role package manifest need a
-downstream migration to the world-keyed `components` object.
+Contract 0.4 adds this package-level component model without changing the
+existing lifecycle interfaces. Consumers of the former single-role package
+manifest need a downstream migration to the identified `components` object.
 
 The Input contract describes opaque plugin-owned source and Item references,
 generic byte sizes, and staged artifact descriptors (reference, media type, and

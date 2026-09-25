@@ -51,21 +51,25 @@ if {"role", "kind"} & package_properties.keys():
     raise SystemExit("plugin package schema must not encode a singular role or kind")
 components_schema = package_properties.get("components", {})
 if components_schema.get("type") != "object":
-    raise SystemExit("plugin package components must be an explicit world-keyed object")
+    raise SystemExit("plugin package components must be an object keyed by component identity")
+if components_schema.get("minProperties", 0) < 1:
+    raise SystemExit("plugin package must contain at least one component")
 if components_schema.get("maxProperties") is not None:
-    raise SystemExit("plugin package schema must permit multiple component worlds")
-component_worlds = components_schema.get("properties", {})
-if set(component_worlds) != set(worlds):
-    raise SystemExit("package role discovery does not match the WIT package's declared worlds")
-if len(component_worlds) < 2:
-    raise SystemExit("the package model must permit a multi-role package")
+    raise SystemExit("plugin package schema must permit multiple components")
+if "properties" in components_schema or components_schema.get("additionalProperties") != {"$ref": "#/$defs/component"}:
+    raise SystemExit("plugin package components must be independently identified by object key")
+if components_schema.get("propertyNames", {}).get("pattern") != "^[a-z0-9][a-z0-9._-]*$":
+    raise SystemExit("component identities must use the stable component-ID pattern")
 component_definition = package_schema.get("$defs", {}).get("component", {})
-if not {"artifact"} <= set(component_definition.get("required", [])):
-    raise SystemExit("each declared world must identify its component artifact")
-if component_definition.get("properties", {}).keys() != {"artifact"}:
-    raise SystemExit("component declarations must not duplicate package identity or role")
-if any(value.get("$ref") != "#/$defs/component" for value in component_worlds.values()):
-    raise SystemExit("every package component role must reference the common component declaration")
+if not {"world", "artifact"} <= set(component_definition.get("required", [])):
+    raise SystemExit("each identified component must declare its WIT world and artifact")
+component_properties = component_definition.get("properties", {})
+if set(component_properties) != {"world", "artifact"}:
+    raise SystemExit("component declarations must contain only world and artifact")
+if component_properties["world"].get("enum") != sorted(worlds):
+    raise SystemExit("component world choices must match the canonical WIT worlds exactly")
+if component_definition.get("additionalProperties") is not False:
+    raise SystemExit("component declarations must reject unspecified fields")
 
 package_schema_text = json.dumps(package_schema, sort_keys=True).lower()
 implementation_terms = ("php", "composer", "class-name", "entrypoint", "implementation-language")

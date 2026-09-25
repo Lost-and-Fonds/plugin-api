@@ -4,12 +4,22 @@
       "additionalProperties": false,
       "properties": {
         "artifact": {
-          "description": "Package-relative path to a component implementing this WIT world.",
+          "description": "Package-relative path to a component artifact implementing the declared WIT world.",
           "minLength": 1,
+          "type": "string"
+        },
+        "world": {
+          "description": "Canonical WIT world implemented by this component.",
+          "enum": [
+            "broadcast-world",
+            "collection-export-world",
+            "input-world"
+          ],
           "type": "string"
         }
       },
       "required": [
+        "world",
         "artifact"
       ],
       "type": "object"
@@ -18,21 +28,15 @@
   "$id": "https://stashd.dev/schemas/plugin-package.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "One deployable package identity may expose any non-empty subset of the listed WIT component worlds.",
+  "description": "One deployable package identity may contain one or more identified components implementing canonical WIT worlds.",
   "properties": {
     "components": {
-      "additionalProperties": false,
+      "additionalProperties": {
+        "$ref": "#/$defs/component"
+      },
       "minProperties": 1,
-      "properties": {
-        "broadcast-world": {
-          "$ref": "#/$defs/component"
-        },
-        "collection-export-world": {
-          "$ref": "#/$defs/component"
-        },
-        "input-world": {
-          "$ref": "#/$defs/component"
-        }
+      "propertyNames": {
+        "pattern": "^[a-z0-9][a-z0-9._-]*$"
       },
       "type": "object"
     },
