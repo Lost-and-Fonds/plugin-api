@@ -869,7 +869,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.3.0",
+      "package": "stashd:plugin@0.4.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -1975,7 +1975,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.3.0",
+      "package": "stashd:plugin@0.4.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -2272,7 +2272,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.3.0",
+      "package": "stashd:plugin@0.4.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2285,6 +2285,6 @@
       }
     }
   ],
-  "package": "stashd:plugin@0.3.0",
+  "package": "stashd:plugin@0.4.0",
   "schema_version": 1
 }

@@ -1,4 +1,4 @@
-# Generated M3 WIT compatibility report
+# Generated WIT compatibility report
 
 This file is generated from the active WIT files; it is not a second contract.
 
@@ -10,6 +10,16 @@ This file is generated from the active WIT files; it is not a second contract.
 | `wit/broadcast.wit` | `broadcast-plugin` | 14 | 2 | 0 | 0 | 4 |
 | `wit/collection-export.wit` | `collection-export-host` | 0 | 0 | 0 | 0 | 1 |
 | `wit/collection-export.wit` | `collection-export-plugin` | 5 | 2 | 0 | 0 | 1 |
+
+## Component worlds
+
+The plugin-package schema uses these WIT worlds as the package's discoverable component roles:
+
+| World | Imports | Exports |
+|---|---|---|
+| `input-world` | `input-host` | `input-plugin` |
+| `broadcast-world` | `broadcast-host` | `broadcast-plugin` |
+| `collection-export-world` | `collection-export-host` | `collection-export-plugin` |
 
 ## Native mapping
 

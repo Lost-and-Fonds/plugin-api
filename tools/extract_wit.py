@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract the active M0 WIT subset into deterministic transport metadata."""
+"""Extract WIT contracts and package role declarations deterministically."""
 
 from __future__ import annotations
 
@@ -168,7 +168,7 @@ def parse_file(path: Path, relative: str) -> dict:
 
 def report(schema: dict) -> str:
     lines = [
-        "# Generated M3 WIT compatibility report",
+        "# Generated WIT compatibility report",
         "",
         "This file is generated from the active WIT files; it is not a second contract.",
         "",
@@ -185,6 +185,24 @@ def report(schema: dict) -> str:
     lines.extend(
         [
             "",
+            "## Component worlds",
+            "",
+            "The plugin-package schema uses these WIT worlds as the package's "
+            "discoverable component roles:",
+            "",
+            "| World | Imports | Exports |",
+            "|---|---|---|",
+        ]
+    )
+    for contract in schema["contracts"]:
+        for name, world in contract["worlds"].items():
+            lines.append(
+                f"| `{name}` | {', '.join(f'`{value}`' for value in world['imports'])} | "
+                f"{', '.join(f'`{value}`' for value in world['exports'])} |"
+            )
+    lines.extend(
+        [
+            "",
             "## Native mapping",
             "",
             "- scalar values map to JSON scalars;",
@@ -193,12 +211,50 @@ def report(schema: dict) -> str:
             "- enums map to strings;",
             "- variants map to `{\"tag\": string, \"value\": value}` when a payload exists;",
             "- results map to exactly one of `{\"ok\": value}` or `{\"error\": value}`;",
-        "- Component resources remain opaque invocation-scoped references; no ABI object is generated.",
-        "",
-        "RPC v1 represents inline list<u8> values as JSON arrays of unsigned byte values. The generated schema has no Wasmtime or Component ABI dependency.",
+            "- Component resources remain opaque invocation-scoped references; no ABI object is generated.",
+            "",
+            "RPC v1 represents inline list<u8> values as JSON arrays of unsigned byte values. The generated schema has no Wasmtime or Component ABI dependency.",
         ]
     )
     return "\n".join(lines) + "\n"
+
+
+def package_manifest_schema(package: str, worlds: dict[str, dict]) -> dict:
+    component = {
+        "type": "object",
+        "required": ["artifact"],
+        "additionalProperties": False,
+        "properties": {
+            "artifact": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Package-relative path to a component implementing this WIT world.",
+            }
+        },
+    }
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://stashd.dev/schemas/plugin-package.schema.json",
+        "title": "Stashd Plugin Package Manifest",
+        "description": "One deployable package identity may expose any non-empty subset of the listed WIT component worlds.",
+        "x-stashd-contract-package": package,
+        "type": "object",
+        "required": ["id", "version", "components"],
+        "additionalProperties": False,
+        "properties": {
+            "id": {"type": "string", "minLength": 1},
+            "version": {"type": "string", "minLength": 1},
+            "components": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": False,
+                "properties": {
+                    name: {"$ref": "#/$defs/component"} for name in sorted(worlds)
+                },
+            },
+        },
+        "$defs": {"component": component},
+    }
 
 
 def main() -> None:
@@ -206,18 +262,40 @@ def main() -> None:
     parser.add_argument("--repo-root", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
+    wit_root = args.repo_root / "wit"
+    stable_file_order = ("input.wit", "broadcast.wit", "collection-export.wit")
+    paths = sorted(
+        wit_root.glob("*.wit"),
+        key=lambda path: (
+            stable_file_order.index(path.name) if path.name in stable_file_order else len(stable_file_order),
+            path.name,
+        ),
+    )
     contracts = [
-        parse_file(args.repo_root / "wit/input.wit", "wit/input.wit"),
-        parse_file(args.repo_root / "wit/broadcast.wit", "wit/broadcast.wit"),
-        parse_file(args.repo_root / "wit/collection-export.wit", "wit/collection-export.wit"),
+        parse_file(path, path.relative_to(args.repo_root).as_posix())
+        for path in paths
     ]
+    if not contracts:
+        raise ValueError("the WIT package must contain at least one contract file")
     packages = {contract["package"] for contract in contracts}
     if None in packages or len(packages) != 1:
         raise ValueError("WIT contract files must declare the same package and version")
-    schema = {"schema_version": 1, "package": packages.pop(), "contracts": contracts}
+    worlds = {
+        name: world
+        for contract in contracts
+        for name, world in contract["worlds"].items()
+    }
+    world_count = sum(len(contract["worlds"]) for contract in contracts)
+    if len(worlds) != world_count:
+        raise ValueError("WIT world names must be unique across the package")
+    package = packages.pop()
+    schema = {"schema_version": 1, "package": package, "contracts": contracts}
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "wit-schema.json").write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n")
     (args.output_dir / "compatibility-report.md").write_text(report(schema))
+    (args.output_dir / "plugin-package.schema.json").write_text(
+        json.dumps(package_manifest_schema(package, worlds), indent=2, sort_keys=True) + "\n"
+    )
 
 
 if __name__ == "__main__":

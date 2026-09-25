@@ -1,4 +1,4 @@
-package stashd:plugin@0.3.0;
+package stashd:plugin@0.4.0;
 
 interface broadcast-host {
     enum http-method {

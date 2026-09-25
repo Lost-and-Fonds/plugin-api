@@ -12,101 +12,11 @@ python3 "$repo_root/tools/extract_wit.py" \
 python3 "$repo_root/tools/extract_wit.py" \
     --repo-root "$repo_root" --output-dir "$temporary_root/second"
 
-for artifact in wit-schema.json compatibility-report.md; do
+for artifact in wit-schema.json compatibility-report.md plugin-package.schema.json; do
     diff -u "$repo_root/schema/$artifact" "$temporary_root/first/$artifact"
     cmp "$temporary_root/first/$artifact" "$temporary_root/second/$artifact"
 done
 
-python3 - "$temporary_root/first/wit-schema.json" <<'PY'
-import json
-import sys
-
-with open(sys.argv[1], encoding="utf-8") as schema_file:
-    schema = json.load(schema_file)
-
-contracts = schema["contracts"]
-packages = {contract["package"] for contract in contracts}
-if len(packages) != 1 or None in packages or packages != {schema["package"]}:
-    raise SystemExit("WIT package identity mismatch")
-
-input_contract = next(contract for contract in contracts if contract["file"] == "wit/input.wit")
-input_host = input_contract["interfaces"]["input-host"]
-input_plugin = input_contract["interfaces"]["input-plugin"]
-
-
-def fields(interface, record_name):
-    return {field["name"]: field["type"] for field in interface["records"][record_name]["fields"]}
-
-
-def contains_named_type(value, name):
-    if isinstance(value, dict):
-        return (value.get("kind") == "named" and value.get("name") == name) or any(
-            contains_named_type(child, name) for child in value.values()
-        )
-    return isinstance(value, list) and any(contains_named_type(child, name) for child in value)
-
-
-def require_metadata_facet(interface, record_name):
-    if record_name not in interface["records"]:
-        raise SystemExit(f"Input record missing: {record_name}")
-    record_fields = fields(interface, record_name)
-    if "metadata" not in record_fields or not contains_named_type(record_fields["metadata"], "plugin-metadata"):
-        raise SystemExit(f"{record_name} must retain extensible plugin metadata")
-
-
-metadata_fields = {
-    field["name"]: field["type"]
-    for field in input_host["records"].get("plugin-metadata", {}).get("fields", [])
-}
-if not {"schema", "json"} <= metadata_fields.keys():
-    raise SystemExit("plugin-metadata must retain its schema identifier and JSON payload")
-if any(metadata_fields[name] != {"kind": "scalar", "name": "string"} for name in ("schema", "json")):
-    raise SystemExit("plugin-metadata schema identifier and JSON payload must remain strings")
-
-
-require_metadata_facet(input_host, "discovered-item")
-require_metadata_facet(input_host, "staged-artifact")
-require_metadata_facet(input_plugin, "resolved-input")
-
-
-item_fields = fields(input_host, "discovered-item")
-if not {"id", "reference"} <= item_fields.keys():
-    raise SystemExit("discovered-item must retain its stable identity and opaque reference")
-
-
-if input_plugin["uses"].get("discovered-item") != "input-host":
-    raise SystemExit("input-plugin must reuse input-host's canonical discovered-item type")
-
-for interface in (input_host, input_plugin):
-    symbols = set(interface["records"]) | set(interface["variants"]) | set(interface["enums"])
-    for record in interface["records"].values():
-        symbols.update(field["name"] for field in record["fields"])
-    for enum in interface["enums"].values():
-        symbols.update(enum["values"])
-    for variant in interface["variants"].values():
-        symbols.update(value["name"] for value in variant["values"])
-    for function in interface["functions"]:
-        symbols.add(function["name"])
-        symbols.update(argument["name"] for argument in function["arguments"])
-    symbols = {symbol.lower() for symbol in symbols}
-    forbidden = {
-        "video", "audio", "media-kind", "artifact-role", "role", "requested-roles",
-        "unavailable-artifact", "primary", "captions", "caption", "subtitles", "subtitle",
-        "artwork", "artwork-reference", "thumbnail", "duration", "duration-seconds",
-        "creator", "title", "description", "published-at", "kind", "upstream-state",
-    } & symbols
-    if forbidden:
-        raise SystemExit(f"domain-specific Input concepts returned to the universal contract: {sorted(forbidden)!r}")
-
-expected_worlds = {
-    "input-world": {"imports": ["input-host"], "exports": ["input-plugin"]},
-    "broadcast-world": {"imports": ["broadcast-host"], "exports": ["broadcast-plugin"]},
-    "collection-export-world": {
-        "imports": ["collection-export-host"],
-        "exports": ["collection-export-plugin"],
-    },
-}
-actual_worlds = {name: world for contract in contracts for name, world in contract["worlds"].items()}
-if actual_worlds != expected_worlds:
-    raise SystemExit(f"WIT world mappings mismatch: {actual_worlds!r}")
-PY
+python3 "$repo_root/tools/verify_generated_contract.py" \
+    "$temporary_root/first/wit-schema.json" \
+    "$temporary_root/first/plugin-package.schema.json"

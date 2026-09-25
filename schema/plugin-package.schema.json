@@ -1,0 +1,56 @@
+{
+  "$defs": {
+    "component": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "description": "Package-relative path to a component implementing this WIT world.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://stashd.dev/schemas/plugin-package.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One deployable package identity may expose any non-empty subset of the listed WIT component worlds.",
+  "properties": {
+    "components": {
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "broadcast-world": {
+          "$ref": "#/$defs/component"
+        },
+        "collection-export-world": {
+          "$ref": "#/$defs/component"
+        },
+        "input-world": {
+          "$ref": "#/$defs/component"
+        }
+      },
+      "type": "object"
+    },
+    "id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "version": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "components"
+  ],
+  "title": "Stashd Plugin Package Manifest",
+  "type": "object",
+  "x-stashd-contract-package": "stashd:plugin@0.4.0"
+}
