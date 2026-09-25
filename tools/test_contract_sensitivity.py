@@ -172,6 +172,45 @@ def expose_raw_credentials_through_shared_io(candidate: dict) -> None:
     })
 
 
+def restore_broadcast_duration(candidate: dict) -> None:
+    item = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["item"]
+    item["fields"].append({"name": "duration-seconds", "type": {"kind": "option", "value": {"kind": "scalar", "name": "u32"}}})
+
+
+def remove_broadcast_item_metadata(candidate: dict) -> None:
+    item = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["item"]
+    item["fields"] = [field for field in item["fields"] if field["name"] != "metadata"]
+
+
+def require_fake_artifact_for_publication(candidate: dict) -> None:
+    publication = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["publication"]
+    next(field for field in publication["fields"] if field["name"] == "artifact")["type"] = {"kind": "named", "name": "staged-artifact"}
+
+
+def require_filesystem_result_for_publication(candidate: dict) -> None:
+    publication = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["publication"]
+    next(field for field in publication["fields"] if field["name"] == "files")["type"] = {
+        "kind": "list", "value": {"kind": "named", "name": "published-file"}
+    }
+
+
+def restore_asset_kind_taxonomy(candidate: dict) -> None:
+    asset = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["asset"]
+    asset["fields"].append({"name": "kind", "type": {"kind": "scalar", "name": "string"}})
+
+
+def replace_destination_receipts_with_settings(candidate: dict) -> None:
+    publication = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["publication"]
+    next(field for field in publication["fields"] if field["name"] == "destination-metadata")["type"] = {
+        "kind": "list", "value": {"kind": "named", "name": "setting"}
+    }
+
+
+def embed_credentials_in_publication(candidate: dict) -> None:
+    publication = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["publication"]
+    publication["fields"].append({"name": "credential", "type": {"kind": "scalar", "name": "string"}})
+
+
 def leak_host_path_into_staging(candidate: dict) -> None:
     io = interface(candidate, "wit/io.wit", "io-host")
     staging_area = next(resource for resource in io["resources"] if resource["name"] == "staging-area")
@@ -381,4 +420,11 @@ expect_rejected("raw secret field in an Enrichment plugin record", add_raw_secre
 expect_rejected("credential reference used without host-granted binding", pass_reference_without_binding)
 expect_rejected("Enrichment without canonical shared HTTP", remove_enrichment_shared_http)
 expect_rejected("raw credential access exposed through shared I/O", expose_raw_credentials_through_shared_io)
-expect_rejected("contract package identity downgraded from 0.12.0", downgrade_contract_package_identity)
+expect_rejected("Broadcast Item has a universal duration field", restore_broadcast_duration)
+expect_rejected("Broadcast Item without canonical metadata facets", remove_broadcast_item_metadata)
+expect_rejected("remote publication requires a fake staged artifact", require_fake_artifact_for_publication)
+expect_rejected("publication requires filesystem paths", require_filesystem_result_for_publication)
+expect_rejected("Asset kind restored as a universal taxonomy", restore_asset_kind_taxonomy)
+expect_rejected("destination receipts lose opaque plugin metadata", replace_destination_receipts_with_settings)
+expect_rejected("credentials embedded in Broadcast publication results", embed_credentials_in_publication)
+expect_rejected("contract package identity downgraded from 0.13.0", downgrade_contract_package_identity)

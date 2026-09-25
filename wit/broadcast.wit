@@ -1,11 +1,13 @@
-package stashd:plugin@0.12.0;
+package stashd:plugin@0.13.0;
 
 interface broadcast-host {
     use io-host.{byte-stream, stream-error};
 
+    /// A path reported by a filesystem-oriented destination, relative to that
+    /// destination's namespace; it is never a Vault or host filesystem path.
     record published-file {
-        item-id: string,
-        source-reference: string,
+        item-id: option<string>,
+        asset-id: option<string>,
         relative-path: string,
     }
 
@@ -15,7 +17,7 @@ interface broadcast-host {
 }
 
 interface broadcast-plugin {
-    use io-host.{credential-binding, staged-artifact};
+    use io-host.{credential-binding, plugin-metadata, staged-artifact};
     use plugin-types.{plugin-error-detail};
     use broadcast-host.{published-file};
     variant option-value {
@@ -31,23 +33,24 @@ interface broadcast-plugin {
         value: option-value,
     }
 
-    record item-resource {
+    /// A concrete preserved representation. `reference` is opaque and is
+    /// opened only through the host's bounded Asset stream.
+    record asset {
+        id: string,
+        /// Opaque host-issued locator used only by `open-asset`.
         reference: string,
-        kind: string,
-        derivation-key: option<string>,
-        url: option<string>,
         media-type: option<string>,
         size-bytes: u64,
+        metadata: list<plugin-metadata>,
     }
 
+    /// Stable preserved Item identity, its concrete Assets, and plugin-owned
+    /// metadata facets. Domain fields remain inside those facets.
     record item {
+        /// Stable host identity for the preserved logical Item.
         id: string,
-        source-reference: option<string>,
-        title: string,
-        description: option<string>,
-        published-at: option<string>,
-        duration-seconds: option<u32>,
-        resources: list<item-resource>,
+        assets: list<asset>,
+        metadata: list<plugin-metadata>,
     }
 
     record source {
@@ -63,9 +66,13 @@ interface broadcast-plugin {
     }
 
     record publication {
-        artifact: staged-artifact,
-        files: list<published-file>,
-        published-metadata: list<setting>,
+        /// Optional local staged output; remote-only publication uses `none`.
+        artifact: option<staged-artifact>,
+        /// Present only when the destination exposes filesystem-relative paths.
+        files: option<list<published-file>>,
+        /// Opaque plugin-owned destination receipts, including multiple remote
+        /// objects or records where needed.
+        destination-metadata: list<plugin-metadata>,
     }
 
     record finalization-request {
@@ -89,14 +96,16 @@ interface broadcast-plugin {
         values: list<setting>,
     }
 
+    /// A prepared derived output associated with an Item. Provenance names
+    /// preserved Asset IDs; provider-specific derivation details stay in its
+    /// metadata facets.
     record derived-artifact {
         item-id: string,
         reference: string,
-        derived-from-reference: string,
-        derivation-key: string,
-        kind: string,
+        derived-from: list<string>,
         media-type: option<string>,
         size-bytes: u64,
+        metadata: list<plugin-metadata>,
     }
 
     record preparation {

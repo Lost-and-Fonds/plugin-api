@@ -1,4 +1,4 @@
-package stashd:plugin@0.12.0;
+package stashd:plugin@0.13.0;
 
 interface collection-export-plugin {
     use plugin-types.{plugin-error-detail};

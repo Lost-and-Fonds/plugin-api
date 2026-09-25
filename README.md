@@ -9,7 +9,7 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.12.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.13.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and collection-export
 lifecycles. RPC v1 remains the native transport: four-byte big-endian length
 followed by a UTF-8 JSON object. Large byte streams use opaque host resources;
@@ -119,6 +119,43 @@ Asset references, or capability IDs/revisions. HTTP and approved helper
 mediation cover these use cases; Broadcast and Enrichment do not receive raw
 secret access.
 
+Contract 0.13 makes Broadcast Items generic: an Item contains its stable ID,
+concrete Assets, and canonical `plugin-metadata` facets. Assets contain a stable
+Asset ID, an opaque host reference, optional media type, byte size, and their
+own metadata facets. The host opens Asset bytes only through `open-asset` and
+the shared bounded `byte-stream`. Asset `kind`, derivation key, and URL were
+removed: they do not have one universal Broadcast meaning, and an Asset need
+not have a public URL. Media type and size describe a concrete representation
+without classifying its domain. Prepared derived outputs likewise identify
+their source through preserved Asset IDs and carry plugin metadata instead of
+an output `kind` or provider derivation key.
+
+Broadcast no longer requires Item `source-reference`, `title`, `description`,
+`published-at`, or `duration-seconds`. Source provenance belongs to the
+preservation model; titles, descriptions, dates, durations, and domain fields
+remain available in plugin-owned metadata facets rather than fixed protocol
+columns. This includes video/audio, books, wiki revisions, archive items, and
+future domains without adding a normalized media schema. Facet schemas can
+identify data such as `youtube.video@…`, `podcast.episode@…`,
+`books.publication@…`, `mediawiki.revision@…`, or
+`internet-archive.item@…`; Core transports their JSON without interpreting it.
+
+A `publication` has an optional staged `artifact`, optional filesystem
+`files`, and a list of canonical `destination-metadata` facets. Remote-only
+success returns no artifact and can put one or more receipts—such as remote
+object IDs, URLs, ETags, infohashes, or destination revisions—in opaque
+plugin-owned metadata. Filesystem-relative paths appear only inside the
+optional `files` result; no empty path stands for a non-filesystem result.
+`published-file` keeps optional Item and Asset IDs for correlation and a
+relative path, while removing the provider-specific source reference.
+
+This shape covers generated Podcast feed artifacts with enclosure Assets and
+metadata-provided titles/dates; Jellyfin/Plex Asset publication with optional
+filesystem or destination records; Internet Archive and S3/WebDAV remote-only
+receipts; BitTorrent publication that returns both a local torrent artifact
+and destination metadata; OPDS catalogue artifacts built from document
+metadata; and arbitrary document/binary Assets without audiovisual fields.
+
 Inputs can select the same reference on `http-request`; the HTTP host applies
 it without exposing secret material to the plugin. `run-helper` accepts the
 same bindings and supplies selected credentials to the helper as named
@@ -162,8 +199,9 @@ returned byte stream through the same writer API.
 ## Shared primitive decisions
 
 `plugin-metadata` and `staged-artifact` remain canonical in `io-host`. Input
-acquisition, Broadcast publication, and Enrichment derived Assets return the
-same staged output descriptor. Collection Export's named inline file result
+acquisition and Enrichment derived Assets return the shared staged output
+descriptor; Broadcast may return one as an optional local publication
+artifact. Collection Export's named inline file result
 has a different transport and stays separate. The `progress-host` interface
 owns the shared `progress` value (`stage` plus an optional `f64` fraction) and
 callback. Input, Broadcast, and Enrichment report the same kind of invocation
@@ -238,17 +276,21 @@ Run `./bin/verify-contract` with Python 3 and `wasm-tools` 1.225.0 available on
 freshness and determinism, verifies package/world identity, checks package
 component discovery against the declared WIT worlds, and enforces generic
 Input credential lifecycle access, explicit generic Enrichment configuration,
-shared progress precision, shared Input/Broadcast/Enrichment HTTP types, shared plugin
-error detail, shared logging, revision-aware Enrichment invocation, HTTP
-request and response streaming, Broadcast Asset reads, staged-artifact reads,
-helper stdin, host-granted Broadcast/Enrichment credentials, Enrichment's
-shared HTTP import, and staging invariants. It also proves that the semantic
-checks reject acquisition-only credentials, raw credentials in generic Input
-records, inline-only HTTP request or response bodies, missing Broadcast Asset
-streaming, missing helper stdin, duplicate stream abstractions, missing staged
-writers, implicit helper staging, filesystem or Vault paths in content
-boundaries, credentials outside explicit lifecycle bindings, an unnecessary
-second credential type, and raw-secret fields in plugin records. It also checks
-Input delegation, configuration identity, shared progress precision, HTTP
+shared progress precision, shared Input/Broadcast/Enrichment HTTP types, shared
+plugin error detail, shared logging, revision-aware Enrichment invocation, HTTP
+request and response streaming, Broadcast Item/Asset metadata, optional staged
+and filesystem publication results, opaque destination receipts, Broadcast
+Asset reads, staged-artifact reads, helper stdin, host-granted
+Broadcast/Enrichment credentials, Enrichment's shared HTTP import, and staging
+invariants. It also proves that the semantic checks reject acquisition-only
+credentials, raw credentials in generic Input records, inline-only HTTP request
+or response bodies, missing Broadcast Asset streaming, missing helper stdin,
+duplicate stream abstractions, missing staged writers, implicit helper staging,
+filesystem or Vault paths in content boundaries, credentials outside explicit
+lifecycle bindings, an unnecessary second credential type, raw-secret fields
+in plugin records, universal Broadcast duration/kind fields, missing Item
+metadata facets, mandatory local artifacts or filesystem paths, and receipts
+that lose the canonical plugin-metadata representation. It also checks Input
+delegation, configuration identity, shared progress precision, HTTP
 credentials and errors, Enrichment revision-aware execution, shared plugin
 error detail, and logging.

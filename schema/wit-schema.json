@@ -554,7 +554,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.12.0",
+      "package": "stashd:plugin@0.13.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -624,15 +624,21 @@
                 {
                   "name": "item-id",
                   "type": {
-                    "kind": "scalar",
-                    "name": "string"
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
                   }
                 },
                 {
-                  "name": "source-reference",
+                  "name": "asset-id",
                   "type": {
-                    "kind": "scalar",
-                    "name": "string"
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
                   }
                 },
                 {
@@ -789,6 +795,51 @@
             }
           ],
           "records": {
+            "asset": {
+              "fields": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "media-type",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "size-bytes",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "u64"
+                  }
+                },
+                {
+                  "name": "metadata",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "plugin-metadata"
+                    }
+                  }
+                }
+              ]
+            },
             "choice": {
               "fields": [
                 {
@@ -824,24 +875,13 @@
                   }
                 },
                 {
-                  "name": "derived-from-reference",
+                  "name": "derived-from",
                   "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "derivation-key",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "kind",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
+                    "kind": "list",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
                   }
                 },
                 {
@@ -859,6 +899,16 @@
                   "type": {
                     "kind": "scalar",
                     "name": "u64"
+                  }
+                },
+                {
+                  "name": "metadata",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "plugin-metadata"
+                    }
                   }
                 }
               ]
@@ -891,115 +941,23 @@
                   }
                 },
                 {
-                  "name": "source-reference",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "title",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "description",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "published-at",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "duration-seconds",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "u32"
-                    }
-                  }
-                },
-                {
-                  "name": "resources",
+                  "name": "assets",
                   "type": {
                     "kind": "list",
                     "value": {
                       "kind": "named",
-                      "name": "item-resource"
+                      "name": "asset"
                     }
                   }
-                }
-              ]
-            },
-            "item-resource": {
-              "fields": [
-                {
-                  "name": "reference",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
                 },
                 {
-                  "name": "kind",
+                  "name": "metadata",
                   "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "derivation-key",
-                  "type": {
-                    "kind": "option",
+                    "kind": "list",
                     "value": {
-                      "kind": "scalar",
-                      "name": "string"
+                      "kind": "named",
+                      "name": "plugin-metadata"
                     }
-                  }
-                },
-                {
-                  "name": "url",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "media-type",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "size-bytes",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "u64"
                   }
                 }
               ]
@@ -1078,27 +1036,33 @@
                 {
                   "name": "artifact",
                   "type": {
-                    "kind": "named",
-                    "name": "staged-artifact"
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "staged-artifact"
+                    }
                   }
                 },
                 {
                   "name": "files",
                   "type": {
-                    "kind": "list",
+                    "kind": "option",
                     "value": {
-                      "kind": "named",
-                      "name": "published-file"
+                      "kind": "list",
+                      "value": {
+                        "kind": "named",
+                        "name": "published-file"
+                      }
                     }
                   }
                 },
                 {
-                  "name": "published-metadata",
+                  "name": "destination-metadata",
                   "type": {
                     "kind": "list",
                     "value": {
                       "kind": "named",
-                      "name": "setting"
+                      "name": "plugin-metadata"
                     }
                   }
                 }
@@ -1189,6 +1153,7 @@
           "uses": {
             "credential-binding": "io-host",
             "plugin-error-detail": "plugin-types",
+            "plugin-metadata": "io-host",
             "published-file": "broadcast-host",
             "staged-artifact": "io-host"
           },
@@ -1274,7 +1239,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.12.0",
+      "package": "stashd:plugin@0.13.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -1756,7 +1721,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.12.0",
+      "package": "stashd:plugin@0.13.0",
       "worlds": {
         "enrichment-world": {
           "exports": [
@@ -2020,7 +1985,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.12.0",
+      "package": "stashd:plugin@0.13.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2743,10 +2708,10 @@
           "variants": {}
         }
       },
-      "package": "stashd:plugin@0.12.0",
+      "package": "stashd:plugin@0.13.0",
       "worlds": {}
     }
   ],
-  "package": "stashd:plugin@0.12.0",
+  "package": "stashd:plugin@0.13.0",
   "schema_version": 1
 }

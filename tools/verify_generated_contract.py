@@ -14,7 +14,7 @@ package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
-expected_package = "stashd:plugin@0.12.0"
+expected_package = "stashd:plugin@0.13.0"
 if len(packages) != 1 or None in packages or packages != {schema["package"]} or schema["package"] != expected_package:
     raise SystemExit("WIT package identity mismatch")
 
@@ -126,10 +126,58 @@ acquisition_fields = fields(input_plugin, "acquisition-result")
 if "artifacts" not in acquisition_fields or not contains_named_type(acquisition_fields["artifacts"], "staged-artifact"):
     raise SystemExit("Input acquisition must return completed outputs through the canonical staged-artifact descriptor")
 
-broadcast_plugin = next(contract for contract in contracts if contract["file"] == "wit/broadcast.wit")["interfaces"]["broadcast-plugin"]
-publication_artifact = fields(broadcast_plugin, "publication").get("artifact")
-if publication_artifact != {"kind": "named", "name": "staged-artifact"} or broadcast_plugin["uses"].get("staged-artifact") != "io-host":
-    raise SystemExit("Broadcast publications must return the canonical host-staged artifact descriptor")
+broadcast_contract = next(contract for contract in contracts if contract["file"] == "wit/broadcast.wit")
+broadcast_plugin = broadcast_contract["interfaces"]["broadcast-plugin"]
+item_fields = fields(broadcast_plugin, "item")
+if not {"id", "assets", "metadata"} <= item_fields.keys():
+    raise SystemExit("Broadcast Items must carry stable identity, preserved Assets, and plugin metadata facets")
+if item_fields["metadata"] != {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}} or broadcast_plugin["uses"].get("plugin-metadata") != "io-host":
+    raise SystemExit("Broadcast Items must use the canonical io-host.plugin-metadata facets")
+if item_fields["assets"] != {"kind": "list", "value": {"kind": "named", "name": "asset"}}:
+    raise SystemExit("Broadcast Items must expose a generic list of preserved Assets")
+legacy_item_fields = {"source-reference", "title", "description", "published-at", "duration-seconds", "resources"}
+domain_item_fields = {
+    "kind", "audio", "video", "author", "artist", "season", "episode", "language", "genre",
+    "duration", "thumbnail", "publication-date", "published-date",
+}
+if (legacy_item_fields | domain_item_fields) & item_fields.keys():
+    raise SystemExit("Broadcast Items must keep source/domain fields in plugin-owned metadata facets")
+asset_fields = fields(broadcast_plugin, "asset")
+if not {"id", "reference", "media-type", "size-bytes", "metadata"} <= asset_fields.keys():
+    raise SystemExit("Broadcast Assets must retain generic identity, opaque reference, media type, size, and metadata")
+if asset_fields["id"] != {"kind": "scalar", "name": "string"} or asset_fields["reference"] != {"kind": "scalar", "name": "string"}:
+    raise SystemExit("Broadcast Asset identity and host locator must remain opaque strings")
+if asset_fields["media-type"] != {"kind": "option", "value": {"kind": "scalar", "name": "string"}} or asset_fields["size-bytes"] != {"kind": "scalar", "name": "u64"}:
+    raise SystemExit("Broadcast Asset media type and size must remain generic representation facts")
+if asset_fields["metadata"] != {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}}:
+    raise SystemExit("Broadcast Assets must use canonical plugin metadata facets")
+if {"kind", "derivation-key", "url"} & asset_fields.keys():
+    raise SystemExit("Broadcast Assets must not impose a kind taxonomy, derivation key, or public URL")
+prepared_fields = fields(broadcast_plugin, "derived-artifact")
+if not {"item-id", "reference", "derived-from", "media-type", "size-bytes", "metadata"} <= prepared_fields.keys():
+    raise SystemExit("prepared derived outputs must retain generic Item, Asset provenance, representation, and metadata")
+if {"kind", "derivation-key", "derived-from-reference"} & prepared_fields.keys() or prepared_fields["metadata"] != {
+    "kind": "list", "value": {"kind": "named", "name": "plugin-metadata"},
+}:
+    raise SystemExit("prepared outputs must not expose provider derivation taxonomies outside plugin metadata")
+
+publication_fields = fields(broadcast_plugin, "publication")
+publication_artifact = publication_fields.get("artifact")
+if publication_artifact != {"kind": "option", "value": {"kind": "named", "name": "staged-artifact"}} or broadcast_plugin["uses"].get("staged-artifact") != "io-host":
+    raise SystemExit("Broadcast publication must allow no local artifact or the canonical staged artifact")
+if publication_fields.get("files") != {"kind": "option", "value": {"kind": "list", "value": {"kind": "named", "name": "published-file"}}}:
+    raise SystemExit("filesystem-specific published files must be optional and scoped")
+if publication_fields.get("destination-metadata") != {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}}:
+    raise SystemExit("destination receipts must use canonical opaque plugin metadata facets")
+if broadcast_plugin["uses"].get("plugin-metadata") != "io-host":
+    raise SystemExit("Broadcast results must reuse canonical io-host.plugin-metadata")
+published_file_fields = fields(next(contract for contract in contracts if contract["file"] == "wit/broadcast.wit")["interfaces"]["broadcast-host"], "published-file")
+if published_file_fields.get("relative-path") != {"kind": "scalar", "name": "string"} or "source-reference" in published_file_fields:
+    raise SystemExit("filesystem result paths must stay inside published-file without provider source references")
+for value_interface in (broadcast_plugin, broadcast_contract["interfaces"].get("broadcast-host", {})):
+    for record_name, record in value_interface.get("records", {}).items():
+        if record_name != "published-file" and "relative-path" in {field["name"] for field in record["fields"]}:
+            raise SystemExit("filesystem paths must remain scoped to optional published-file results")
 if "artifact" in broadcast_plugin.get("records", {}):
     raise SystemExit("Broadcast must not duplicate the shared staged-artifact descriptor")
 
