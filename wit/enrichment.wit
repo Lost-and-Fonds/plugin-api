@@ -1,0 +1,115 @@
+package stashd:plugin@0.5.0;
+
+interface enrichment-host {
+    /// A plugin-owned, versioned metadata facet. The host stores the schema
+    /// identifier and JSON object without interpreting domain fields.
+    record plugin-metadata {
+        schema: string,
+        json: string,
+    }
+
+    /// An existing durable Asset belonging to an Item. `reference` is an
+    /// opaque host-issued locator and does not imply a filesystem path or URL.
+    record asset {
+        id: string,
+        reference: string,
+        media-type: option<string>,
+        size-bytes: u64,
+        metadata: list<plugin-metadata>,
+    }
+
+    record item-context {
+        item-id: string,
+        assets: list<asset>,
+        metadata: list<plugin-metadata>,
+    }
+
+    variant asset-error {
+        denied,
+        missing,
+        failed(string),
+    }
+
+    /// Read access to an existing Asset. Reads are bounded by the host and
+    /// scoped to this enrichment invocation.
+    resource asset-reader {
+        read: func(offset: u64, length: u32) -> result<list<u8>, asset-error>;
+    }
+
+    open-asset: func(reference: string) -> result<asset-reader, asset-error>;
+
+    record staged-artifact {
+        reference: string,
+        media-type: option<string>,
+        size-bytes: u64,
+    }
+
+    variant staging-error {
+        invalid-reference,
+        missing,
+        failed(string),
+    }
+
+    /// The host adopts a referenced staged artifact into durable Vault storage
+    /// only when the enrichment result succeeds.
+    resource staging-area {
+        stage: func(relative-path: string, media-type: option<string>) -> result<staged-artifact, staging-error>;
+    }
+
+    open-staging-area: func() -> staging-area;
+    report-progress: func(stage: string, fraction: option<f32>);
+    log: func(message: string);
+}
+
+interface enrichment-plugin {
+    use enrichment-host.{asset, item-context, plugin-metadata, staged-artifact};
+
+    /// An opaque, plugin-owned operation and revision that apply to the
+    /// supplied Item/Asset context. The host does not interpret either value.
+    record capability {
+        id: string,
+        revision: string,
+    }
+
+    /// A durable Asset derived from one or more existing Assets. Provenance
+    /// names the plugin-owned activity and its version; source IDs refer to
+    /// Assets in the supplied context.
+    record derived-asset {
+        artifact: staged-artifact,
+        derived-from: list<string>,
+        activity: string,
+        activity-version: string,
+    }
+
+    record enrichment-result {
+        metadata: list<plugin-metadata>,
+        assets: list<derived-asset>,
+    }
+
+    record error {
+        message: string,
+        retryable: bool,
+    }
+
+    variant plugin-error {
+        unsupported(error),
+        not-found(error),
+        authentication(error),
+        rate-limited(error),
+        unavailable(error),
+        invalid-data(error),
+        failed(error),
+    }
+
+    /// Return the operations that are applicable to this Item/Asset context.
+    capabilities: func(context: item-context) -> list<capability>;
+
+    /// Run one previously declared capability and return plugin-owned
+    /// metadata and/or durable derived Assets.
+    enrich: func(context: item-context, capability: capability) -> result<enrichment-result, plugin-error>;
+}
+
+world enrichment-world {
+    import enrichment-host;
+    export enrichment-plugin;
+}

@@ -8,6 +8,8 @@ This file is generated from the active WIT files; it is not a second contract.
 | `wit/input.wit` | `input-plugin` | 7 | 2 | 1 | 0 | 3 |
 | `wit/broadcast.wit` | `broadcast-host` | 6 | 3 | 1 | 2 | 4 |
 | `wit/broadcast.wit` | `broadcast-plugin` | 14 | 2 | 0 | 0 | 4 |
+| `wit/enrichment.wit` | `enrichment-host` | 4 | 2 | 0 | 2 | 4 |
+| `wit/enrichment.wit` | `enrichment-plugin` | 4 | 1 | 0 | 0 | 2 |
 | `wit/collection-export.wit` | `collection-export-host` | 0 | 0 | 0 | 0 | 1 |
 | `wit/collection-export.wit` | `collection-export-plugin` | 5 | 2 | 0 | 0 | 1 |
 
@@ -19,6 +21,7 @@ The plugin-package schema lists canonical WIT worlds as the available component 
 |---|---|---|
 | `input-world` | `input-host` | `input-plugin` |
 | `broadcast-world` | `broadcast-host` | `broadcast-plugin` |
+| `enrichment-world` | `enrichment-host` | `enrichment-plugin` |
 | `collection-export-world` | `collection-export-host` | `collection-export-plugin` |
 
 ## Native mapping

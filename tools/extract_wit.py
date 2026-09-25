@@ -266,7 +266,7 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     wit_root = args.repo_root / "wit"
-    stable_file_order = ("input.wit", "broadcast.wit", "collection-export.wit")
+    stable_file_order = ("input.wit", "broadcast.wit", "enrichment.wit", "collection-export.wit")
     paths = sorted(
         wit_root.glob("*.wit"),
         key=lambda path: (

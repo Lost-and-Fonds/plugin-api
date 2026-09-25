@@ -1,4 +1,4 @@
-package stashd:plugin@0.4.0;
+package stashd:plugin@0.5.0;
 
 interface input-host {
     enum http-method {

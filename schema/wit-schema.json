@@ -869,7 +869,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.4.0",
+      "package": "stashd:plugin@0.5.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -1975,7 +1975,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.4.0",
+      "package": "stashd:plugin@0.5.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -1983,6 +1983,550 @@
           ],
           "imports": [
             "broadcast-host"
+          ]
+        }
+      }
+    },
+    {
+      "file": "wit/enrichment.wit",
+      "interfaces": {
+        "enrichment-host": {
+          "enums": {},
+          "functions": [
+            {
+              "arguments": [
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ],
+              "name": "open-asset",
+              "result": {
+                "error": {
+                  "kind": "named",
+                  "name": "asset-error"
+                },
+                "kind": "result",
+                "ok": {
+                  "kind": "named",
+                  "name": "asset-reader"
+                }
+              }
+            },
+            {
+              "arguments": [],
+              "name": "open-staging-area",
+              "result": {
+                "kind": "named",
+                "name": "staging-area"
+              }
+            },
+            {
+              "arguments": [
+                {
+                  "name": "stage",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "fraction",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "f32"
+                    }
+                  }
+                }
+              ],
+              "name": "report-progress",
+              "result": null
+            },
+            {
+              "arguments": [
+                {
+                  "name": "message",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ],
+              "name": "log",
+              "result": null
+            }
+          ],
+          "records": {
+            "asset": {
+              "fields": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "media-type",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "size-bytes",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "u64"
+                  }
+                },
+                {
+                  "name": "metadata",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "plugin-metadata"
+                    }
+                  }
+                }
+              ]
+            },
+            "item-context": {
+              "fields": [
+                {
+                  "name": "item-id",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "assets",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "asset"
+                    }
+                  }
+                },
+                {
+                  "name": "metadata",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "plugin-metadata"
+                    }
+                  }
+                }
+              ]
+            },
+            "plugin-metadata": {
+              "fields": [
+                {
+                  "name": "schema",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "json",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
+            "staged-artifact": {
+              "fields": [
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "media-type",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "size-bytes",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "u64"
+                  }
+                }
+              ]
+            }
+          },
+          "resources": [
+            {
+              "functions": [
+                {
+                  "arguments": [
+                    {
+                      "name": "offset",
+                      "type": {
+                        "kind": "scalar",
+                        "name": "u64"
+                      }
+                    },
+                    {
+                      "name": "length",
+                      "type": {
+                        "kind": "scalar",
+                        "name": "u32"
+                      }
+                    }
+                  ],
+                  "name": "read",
+                  "result": {
+                    "error": {
+                      "kind": "named",
+                      "name": "asset-error"
+                    },
+                    "kind": "result",
+                    "ok": {
+                      "kind": "list",
+                      "value": {
+                        "kind": "scalar",
+                        "name": "u8"
+                      }
+                    }
+                  }
+                }
+              ],
+              "name": "asset-reader"
+            },
+            {
+              "functions": [
+                {
+                  "arguments": [
+                    {
+                      "name": "relative-path",
+                      "type": {
+                        "kind": "scalar",
+                        "name": "string"
+                      }
+                    },
+                    {
+                      "name": "media-type",
+                      "type": {
+                        "kind": "option",
+                        "value": {
+                          "kind": "scalar",
+                          "name": "string"
+                        }
+                      }
+                    }
+                  ],
+                  "name": "stage",
+                  "result": {
+                    "error": {
+                      "kind": "named",
+                      "name": "staging-error"
+                    },
+                    "kind": "result",
+                    "ok": {
+                      "kind": "named",
+                      "name": "staged-artifact"
+                    }
+                  }
+                }
+              ],
+              "name": "staging-area"
+            }
+          ],
+          "uses": {},
+          "variants": {
+            "asset-error": {
+              "values": [
+                {
+                  "name": "denied",
+                  "type": null
+                },
+                {
+                  "name": "missing",
+                  "type": null
+                },
+                {
+                  "name": "failed",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
+            "staging-error": {
+              "values": [
+                {
+                  "name": "invalid-reference",
+                  "type": null
+                },
+                {
+                  "name": "missing",
+                  "type": null
+                },
+                {
+                  "name": "failed",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "enrichment-plugin": {
+          "enums": {},
+          "functions": [
+            {
+              "arguments": [
+                {
+                  "name": "context",
+                  "type": {
+                    "kind": "named",
+                    "name": "item-context"
+                  }
+                }
+              ],
+              "name": "capabilities",
+              "result": {
+                "kind": "list",
+                "value": {
+                  "kind": "named",
+                  "name": "capability"
+                }
+              }
+            },
+            {
+              "arguments": [
+                {
+                  "name": "context",
+                  "type": {
+                    "kind": "named",
+                    "name": "item-context"
+                  }
+                },
+                {
+                  "name": "capability",
+                  "type": {
+                    "kind": "named",
+                    "name": "capability"
+                  }
+                }
+              ],
+              "name": "enrich",
+              "result": {
+                "error": {
+                  "kind": "named",
+                  "name": "plugin-error"
+                },
+                "kind": "result",
+                "ok": {
+                  "kind": "named",
+                  "name": "enrichment-result"
+                }
+              }
+            }
+          ],
+          "records": {
+            "capability": {
+              "fields": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "revision",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
+            "derived-asset": {
+              "fields": [
+                {
+                  "name": "artifact",
+                  "type": {
+                    "kind": "named",
+                    "name": "staged-artifact"
+                  }
+                },
+                {
+                  "name": "derived-from",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "activity",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "activity-version",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
+            "enrichment-result": {
+              "fields": [
+                {
+                  "name": "metadata",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "plugin-metadata"
+                    }
+                  }
+                },
+                {
+                  "name": "assets",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "derived-asset"
+                    }
+                  }
+                }
+              ]
+            },
+            "error": {
+              "fields": [
+                {
+                  "name": "message",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "retryable",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "bool"
+                  }
+                }
+              ]
+            }
+          },
+          "resources": [],
+          "uses": {
+            "asset": "enrichment-host",
+            "item-context": "enrichment-host",
+            "plugin-metadata": "enrichment-host",
+            "staged-artifact": "enrichment-host"
+          },
+          "variants": {
+            "plugin-error": {
+              "values": [
+                {
+                  "name": "unsupported",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "not-found",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "authentication",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "rate-limited",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "unavailable",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "invalid-data",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "failed",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "package": "stashd:plugin@0.5.0",
+      "worlds": {
+        "enrichment-world": {
+          "exports": [
+            "enrichment-plugin"
+          ],
+          "imports": [
+            "enrichment-host"
           ]
         }
       }
@@ -2272,7 +2816,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.4.0",
+      "package": "stashd:plugin@0.5.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2285,6 +2829,6 @@
       }
     }
   ],
-  "package": "stashd:plugin@0.4.0",
+  "package": "stashd:plugin@0.5.0",
   "schema_version": 1
 }
