@@ -1,4 +1,4 @@
-package stashd:plugin@0.7.0;
+package stashd:plugin@0.8.0;
 
 /// Generic, invocation-scoped byte streams and staged output. Resources are
 /// host-owned; references never expose filesystem paths or storage details.
@@ -8,6 +8,20 @@ interface io-host {
     record plugin-metadata {
         schema: string,
         json: string,
+    }
+
+    /// Opaque host-owned identity for a configured credential. Its contents
+    /// are not meaningful to the plugin or host beyond selecting that grant.
+    record credential-reference {
+        id: string,
+    }
+
+    /// A plugin-defined credential slot bound to one host-owned reference for
+    /// this invocation. Helper calls use the name as the helper environment
+    /// variable receiving that credential; the host does not infer semantics.
+    record credential-binding {
+        name: string,
+        reference: credential-reference,
     }
 
     /// A completed output in this invocation's staging area.
@@ -37,6 +51,8 @@ interface io-host {
 
     variant helper-error {
         denied,
+        credential-denied,
+        credential-unavailable,
         unavailable(string),
         failed(string),
     }
@@ -69,10 +85,12 @@ interface io-host {
 
     open-staging-area: func() -> staging-area;
 
-    /// Runs a host-approved helper. With `output`, stdout bytes are streamed
+    /// Runs a host-approved helper. Named credentials are exposed to the helper
+    /// as environment variables and never passed in `args` or returned to the
+    /// plugin. With `output`, stdout bytes are streamed
     /// directly into that writer and the returned stdout is empty. A helper or
     /// output-stream failure makes the writer unfinalizable. Otherwise
     /// stdout and stderr are bounded diagnostic text. The host exposes no path
     /// or implicit mount to the helper.
-    run-helper: func(name: string, args: list<string>, output: option<borrow<staged-writer>>) -> result<helper-result, helper-error>;
+    run-helper: func(name: string, args: list<string>, output: option<borrow<staged-writer>>, credentials: list<credential-binding>) -> result<helper-result, helper-error>;
 }

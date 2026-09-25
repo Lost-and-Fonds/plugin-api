@@ -104,6 +104,62 @@ def leak_host_path_into_staging(candidate: dict) -> None:
     create["arguments"].append({"name": "relative-path", "type": {"kind": "scalar", "name": "string"}})
 
 
+def remove_early_credential_access(candidate: dict) -> None:
+    interface = input_interface(candidate, "input-plugin")
+    for function_name in ("resolve", "resolve-delegation", "discover"):
+        function = next(function for function in interface["functions"] if function["name"] == function_name)
+        function["arguments"] = [argument for argument in function["arguments"] if argument["name"] != "credentials"]
+
+
+def remove_helper_credential_mediation(candidate: dict) -> None:
+    helper = next(
+        function for function in interface(candidate, "wit/io.wit", "io-host")["functions"]
+        if function["name"] == "run-helper"
+    )
+    helper["arguments"] = [argument for argument in helper["arguments"] if argument["name"] != "credentials"]
+
+
+def embed_secret_in_source(candidate: dict) -> None:
+    record = input_interface(candidate, "input-plugin")["records"]["source-value"]
+    record["fields"].append({"name": "password", "type": {"kind": "scalar", "name": "string"}})
+
+
+def embed_secret_in_option(candidate: dict) -> None:
+    record = input_interface(candidate, "input-plugin")["records"]["input-option"]
+    record["fields"].append({"name": "token", "type": {"kind": "scalar", "name": "string"}})
+
+
+def embed_secret_in_metadata(candidate: dict) -> None:
+    record = interface(candidate, "wit/io.wit", "io-host")["records"]["plugin-metadata"]
+    record["fields"].append({"name": "secret", "type": {"kind": "scalar", "name": "string"}})
+
+
+def embed_secret_in_delegation(candidate: dict) -> None:
+    record = input_interface(candidate, "input-host")["records"]["input-delegation"]
+    record["fields"].append({"name": "credential", "type": {"kind": "scalar", "name": "string"}})
+
+
+def embed_secret_in_credential_configuration(candidate: dict) -> None:
+    record = interface(candidate, "wit/io.wit", "io-host")["records"]["credential-reference"]
+    record["fields"].append({"name": "secret", "type": {"kind": "scalar", "name": "string"}})
+
+
+def restore_raw_acquisition_credentials(candidate: dict) -> None:
+    interface = input_interface(candidate, "input-plugin")
+    interface["records"]["acquisition-options"]["fields"] = [
+        field for field in interface["records"]["acquisition-options"]["fields"] if field["name"] != "credentials"
+    ]
+    interface["records"]["acquisition-options"]["fields"].append(
+        {"name": "credentials", "type": {"kind": "option", "value": {"kind": "list", "value": {"kind": "named", "name": "input-credential"}}}}
+    )
+    interface["records"]["input-credential"] = {
+        "fields": [
+            {"name": "key", "type": {"kind": "scalar", "name": "string"}},
+            {"name": "value", "type": {"kind": "scalar", "name": "string"}},
+        ]
+    }
+
+
 expect_rejected("provider-specific delegation", add_provider_field)
 expect_rejected("loss of the discovered-item delegation boundary", remove_discovery_boundary)
 expect_rejected("raw-string receiving boundary", replace_resolver_type_with_string)
@@ -114,3 +170,11 @@ expect_rejected("helper without explicit staging capability", remove_helper_stag
 expect_rejected("host path exposed by staging", leak_host_path_into_staging)
 expect_rejected("Input without the shared I/O import", lambda candidate: remove_world_io_import(candidate, "wit/input.wit", "input-world"))
 expect_rejected("Enrichment without the shared I/O import", lambda candidate: remove_world_io_import(candidate, "wit/enrichment.wit", "enrichment-world"))
+expect_rejected("acquisition-only credential access", remove_early_credential_access)
+expect_rejected("helper without host-mediated credentials", remove_helper_credential_mediation)
+expect_rejected("raw password embedded in source values", embed_secret_in_source)
+expect_rejected("raw token embedded in Input options", embed_secret_in_option)
+expect_rejected("secret embedded in metadata", embed_secret_in_metadata)
+expect_rejected("credential embedded in delegation records", embed_secret_in_delegation)
+expect_rejected("secret embedded in opaque credential configuration", embed_secret_in_credential_configuration)
+expect_rejected("legacy raw acquisition credential model", restore_raw_acquisition_credentials)

@@ -17,6 +17,29 @@
           },
           "functions": [
             {
+              "arguments": [
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "named",
+                    "name": "credential-reference"
+                  }
+                }
+              ],
+              "name": "open-credential",
+              "result": {
+                "error": {
+                  "kind": "named",
+                  "name": "credential-error"
+                },
+                "kind": "result",
+                "ok": {
+                  "kind": "named",
+                  "name": "credential-access"
+                }
+              }
+            },
+            {
               "arguments": [],
               "name": "open-http-client",
               "result": {
@@ -159,8 +182,8 @@
                   "type": {
                     "kind": "option",
                     "value": {
-                      "kind": "scalar",
-                      "name": "string"
+                      "kind": "named",
+                      "name": "credential-reference"
                     }
                   }
                 },
@@ -251,6 +274,26 @@
             {
               "functions": [
                 {
+                  "arguments": [],
+                  "name": "read",
+                  "result": {
+                    "error": {
+                      "kind": "named",
+                      "name": "credential-error"
+                    },
+                    "kind": "result",
+                    "ok": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                }
+              ],
+              "name": "credential-access"
+            },
+            {
+              "functions": [
+                {
                   "arguments": [
                     {
                       "name": "request",
@@ -279,9 +322,22 @@
           ],
           "uses": {
             "byte-stream": "io-host",
+            "credential-reference": "io-host",
             "plugin-metadata": "io-host"
           },
           "variants": {
+            "credential-error": {
+              "values": [
+                {
+                  "name": "denied",
+                  "type": null
+                },
+                {
+                  "name": "unavailable",
+                  "type": null
+                }
+              ]
+            },
             "http-error": {
               "values": [
                 {
@@ -339,6 +395,16 @@
                       "name": "source-value"
                     }
                   }
+                },
+                {
+                  "name": "credentials",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "credential-binding"
+                    }
+                  }
                 }
               ],
               "name": "resolve",
@@ -361,6 +427,16 @@
                   "type": {
                     "kind": "named",
                     "name": "input-delegation"
+                  }
+                },
+                {
+                  "name": "credentials",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "credential-binding"
+                    }
                   }
                 }
               ],
@@ -400,6 +476,16 @@
                     "value": {
                       "kind": "named",
                       "name": "input-option"
+                    }
+                  }
+                },
+                {
+                  "name": "credentials",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "credential-binding"
                     }
                   }
                 }
@@ -467,13 +553,10 @@
                 {
                   "name": "credentials",
                   "type": {
-                    "kind": "option",
+                    "kind": "list",
                     "value": {
-                      "kind": "list",
-                      "value": {
-                        "kind": "named",
-                        "name": "input-credential"
-                      }
+                      "kind": "named",
+                      "name": "credential-binding"
                     }
                   }
                 }
@@ -507,24 +590,6 @@
                   "type": {
                     "kind": "scalar",
                     "name": "bool"
-                  }
-                }
-              ]
-            },
-            "input-credential": {
-              "fields": [
-                {
-                  "name": "key",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "value",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
                   }
                 }
               ]
@@ -626,6 +691,7 @@
           },
           "resources": [],
           "uses": {
+            "credential-binding": "io-host",
             "discovered-item": "input-host",
             "input-delegation": "input-host",
             "plugin-metadata": "io-host",
@@ -674,6 +740,20 @@
                   }
                 },
                 {
+                  "name": "credential-denied",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
+                  "name": "credential-unavailable",
+                  "type": {
+                    "kind": "named",
+                    "name": "error"
+                  }
+                },
+                {
                   "name": "authentication",
                   "type": {
                     "kind": "named",
@@ -713,7 +793,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.7.0",
+      "package": "stashd:plugin@0.8.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -1603,7 +1683,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.7.0",
+      "package": "stashd:plugin@0.8.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -2018,7 +2098,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.7.0",
+      "package": "stashd:plugin@0.8.0",
       "worlds": {
         "enrichment-world": {
           "exports": [
@@ -2316,7 +2396,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.7.0",
+      "package": "stashd:plugin@0.8.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2373,6 +2453,16 @@
                       }
                     }
                   }
+                },
+                {
+                  "name": "credentials",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "credential-binding"
+                    }
+                  }
                 }
               ],
               "name": "run-helper",
@@ -2390,6 +2480,35 @@
             }
           ],
           "records": {
+            "credential-binding": {
+              "fields": [
+                {
+                  "name": "name",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "named",
+                    "name": "credential-reference"
+                  }
+                }
+              ]
+            },
+            "credential-reference": {
+              "fields": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
             "helper-result": {
               "fields": [
                 {
@@ -2593,6 +2712,14 @@
                   "type": null
                 },
                 {
+                  "name": "credential-denied",
+                  "type": null
+                },
+                {
+                  "name": "credential-unavailable",
+                  "type": null
+                },
+                {
                   "name": "unavailable",
                   "type": {
                     "kind": "scalar",
@@ -2645,10 +2772,10 @@
           }
         }
       },
-      "package": "stashd:plugin@0.7.0",
+      "package": "stashd:plugin@0.8.0",
       "worlds": {}
     }
   ],
-  "package": "stashd:plugin@0.7.0",
+  "package": "stashd:plugin@0.8.0",
   "schema_version": 1
 }

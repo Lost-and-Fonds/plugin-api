@@ -125,6 +125,85 @@ if not {"reference", "media-type", "size-bytes", "metadata"} <= staged_fields.ke
 if not contains_named_type(staged_fields["metadata"], "plugin-metadata"):
     raise SystemExit("staged artifacts must retain plugin-owned metadata")
 
+# Inputs receive configured opaque credential bindings on every lifecycle call.
+# The host owns the references and grants access only to the active invocation.
+credential_reference = {"kind": "named", "name": "credential-reference"}
+credential_binding = {"kind": "named", "name": "credential-binding"}
+credential_refs = fields(io_host, "credential-reference")
+if set(credential_refs) != {"id"} or credential_refs["id"] != {"kind": "scalar", "name": "string"}:
+    raise SystemExit("credential references must remain opaque, language-neutral host identities")
+credential_bindings = fields(io_host, "credential-binding")
+if set(credential_bindings) != {"name", "reference"} or credential_bindings["name"] != {"kind": "scalar", "name": "string"} or credential_bindings["reference"] != credential_reference:
+    raise SystemExit("credential bindings must map a plugin-defined slot to an opaque host reference")
+credential_error = {"kind": "named", "name": "credential-error"}
+credential_access = next((resource for resource in input_host.get("resources", []) if resource["name"] == "credential-access"), None)
+credential_read = next((function for function in credential_access.get("functions", []) if function["name"] == "read"), None) if credential_access else None
+if credential_read is None or credential_read.get("result") != {
+    "kind": "result", "ok": {"kind": "scalar", "name": "string"}, "error": credential_error,
+}:
+    raise SystemExit("raw credential access must be an explicit, typed, invocation-scoped escape hatch")
+open_credential = next((function for function in input_host.get("functions", []) if function["name"] == "open-credential"), None)
+if open_credential is None or open_credential.get("arguments") != [
+    {"name": "reference", "type": credential_reference},
+] or open_credential.get("result") != {
+    "kind": "result", "ok": {"kind": "named", "name": "credential-access"}, "error": credential_error,
+}:
+    raise SystemExit("credential access must resolve an opaque reference through the shared host boundary")
+credential_errors = input_host["variants"].get("credential-error", {}).get("values", [])
+if {value["name"] for value in credential_errors} != {"denied", "unavailable"}:
+    raise SystemExit("credential denial and unavailability must remain distinguishable")
+
+input_http_credential = fields(input_host, "http-request").get("credential")
+if input_http_credential != {"kind": "option", "value": credential_reference}:
+    raise SystemExit("Input HTTP must select credentials through the shared opaque reference model")
+http_errors = {value["name"] for value in input_host["variants"].get("http-error", {}).get("values", [])}
+if not {"denied", "credential-unavailable", "authentication-rejected"} <= http_errors:
+    raise SystemExit("Input HTTP must distinguish access denial, unavailable credentials, and authentication rejection")
+source_value_fields = fields(input_plugin, "source-value")
+option_fields = fields(input_plugin, "input-option")
+for record_name, record_fields in (("source-value", source_value_fields), ("input-option", option_fields)):
+    if any(contains_named_type(value, "input-credential") or contains_named_type(value, "credential-access") for value in record_fields.values()):
+        raise SystemExit(f"{record_name} must not carry raw or access-handle credential material")
+    credentialish = {"credential", "credentials", "password", "secret", "token", "api-key", "private-key"}
+    if credentialish & record_fields.keys():
+        raise SystemExit(f"{record_name} must not grow direct credential or secret fields")
+metadata_record = io_contract["interfaces"]["io-host"]["records"]["plugin-metadata"]
+delegation_record = input_host["records"]["input-delegation"]
+for record_name, record in (("plugin-metadata", metadata_record), ("input-delegation", delegation_record)):
+    record_names = {field["name"] for field in record["fields"]}
+    if credentialish & record_names:
+        raise SystemExit(f"{record_name} must not become a credential transport")
+if "input-credential" in input_plugin["records"]:
+    raise SystemExit("the acquisition-only raw Input credential model must be removed")
+
+def require_credential_bindings(function_name: str, interface: dict = input_plugin) -> None:
+    function = next((function for function in interface["functions"] if function["name"] == function_name), None)
+    if function is None or not any(
+        argument["name"] == "credentials"
+        and argument["type"] == {"kind": "list", "value": credential_binding}
+        for argument in function["arguments"]
+    ):
+        raise SystemExit(f"Input {function_name} must receive host-authorized credential bindings")
+
+for lifecycle_phase in ("resolve", "resolve-delegation", "discover"):
+    require_credential_bindings(lifecycle_phase)
+acquisition_credentials = fields(input_plugin, "acquisition-options").get("credentials")
+if acquisition_credentials != {"kind": "list", "value": credential_binding}:
+    raise SystemExit("Input acquisition must use the same host-managed credential bindings as other phases")
+if input_plugin["variants"].get("plugin-error", {}).get("values") is None:
+    raise SystemExit("Input must retain typed lifecycle errors")
+error_cases = {value["name"] for value in input_plugin["variants"]["plugin-error"]["values"]}
+if not {"credential-denied", "credential-unavailable", "authentication"} <= error_cases:
+    raise SystemExit("Input must preserve credential denial, unavailability, and authentication failure distinctions")
+
+helper = next((function for function in io_host.get("functions", []) if function["name"] == "run-helper"), None)
+helper_credentials = next((argument for argument in helper["arguments"] if argument["name"] == "credentials"), None) if helper else None
+if helper_credentials is None or helper_credentials["type"] != {"kind": "list", "value": credential_binding}:
+    raise SystemExit("helpers must be able to consume the same credentials through host mediation")
+helper_errors = {value["name"] for value in io_host["variants"].get("helper-error", {}).get("values", [])}
+if not {"credential-denied", "credential-unavailable"} <= helper_errors:
+    raise SystemExit("helper credential denial and unavailability must remain distinguishable")
+
 byte_stream = next((resource for resource in io_host.get("resources", []) if resource["name"] == "byte-stream"), None)
 if byte_stream is None:
     raise SystemExit("host-managed I/O must expose a bounded byte-stream resource")
@@ -232,9 +311,9 @@ delegation_resolver = next(
 )
 if delegation_resolver is None:
     raise SystemExit("Input must expose the generic resolve-delegation entry point")
-if delegation_resolver["arguments"] != [
-    {"name": "delegation", "type": delegation_type["value"]}
-]:
+if not delegation_resolver["arguments"] or delegation_resolver["arguments"][0] != {
+    "name": "delegation", "type": delegation_type["value"]
+}:
     raise SystemExit("resolve-delegation must receive discovered-item's canonical input-delegation type")
 if delegation_resolver.get("result") != {
     "kind": "result",

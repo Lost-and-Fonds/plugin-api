@@ -9,7 +9,7 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.7.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.8.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and collection-export
 lifecycles. RPC v1 remains the native transport: four-byte big-endian length
 followed by a UTF-8 JSON object. Large byte streams use opaque host resources;
@@ -37,6 +37,35 @@ manifest need a downstream migration to the identified `components` object.
 Contract 0.5 added the Enrichment world; contract 0.7 adds shared host-managed
 streaming and staged writing. The package manifest keeps the same shape and
 can select each canonical component world.
+
+Contract 0.8 gives Input credentials one host-managed model across `resolve`,
+`resolve-delegation`, `discover`, and `acquire`. Each call receives named,
+plugin-defined bindings to opaque host credential references. A binding name
+identifies the plugin's configured slot; Core treats both it and the reference
+as opaque. References are not secrets and do not belong in source values,
+options, metadata, or delegation records. The host grants only references
+authorized for that invocation and checks availability when access is opened,
+so a credential revoked after discovery can be unavailable during acquisition.
+
+Inputs can select the same reference on `http-request`; the HTTP host applies
+it without exposing secret material to the plugin. `run-helper` accepts the
+same bindings and supplies selected credentials to the helper as named
+environment variables without putting them in helper arguments or plugin
+memory. For protocol clients that cannot use host-mediated HTTP or helper
+access, the Input host can open an invocation-scoped `credential-access` resource.
+Reading it exposes the raw secret to the plugin and should be limited to those
+clients. Denial and unavailable credentials have separate host errors; HTTP
+authentication rejection and the Input `authentication` error remain distinct
+from those access failures.
+
+The binding travels with each phase that may need authentication: bucket or
+remote path resolution and listing use it during resolve/discover; acquisition
+receives the same model again and the host can deny or report an unavailable
+reference if it was revoked since discovery. HTTP sources use it on each
+request, delegated references can be resolved with it, and helper-backed
+discovery passes it to the helper without first acquiring content. S3, SFTP,
+WebDAV, private HTTP/API, and arbitrary host-approved helpers therefore share
+this boundary without a provider-specific credential schema.
 
 Input, Broadcast, and Enrichment import the shared `io-host` interface. Its
 invocation-scoped streams keep the host in control of Asset access and staging.
@@ -94,7 +123,8 @@ Run `./bin/verify-contract` with Python 3 and `wasm-tools` 1.225.0 available on
 `PATH`. It parses the complete WIT package, checks generated artifacts for
 freshness and determinism, verifies package/world identity, checks package
 component discovery against the declared WIT worlds, and enforces generic
-Input, Enrichment, HTTP streaming, and staging invariants. It also proves that
-the semantic checks reject inline-only HTTP bodies, missing staged writers,
-implicit helper staging, filesystem paths in staging, and Input delegation
-regressions.
+Input credential lifecycle access, Enrichment, HTTP streaming, and staging
+invariants. It also proves that the semantic checks reject acquisition-only
+credentials, raw credentials in generic Input records, inline-only HTTP bodies,
+missing staged writers, implicit helper staging, filesystem paths in staging,
+and Input delegation regressions.
