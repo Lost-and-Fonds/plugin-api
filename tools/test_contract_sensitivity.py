@@ -68,8 +68,8 @@ def replace_resolver_type_with_string(candidate: dict) -> None:
 
 
 def inline_http_body(candidate: dict) -> None:
-    response = interface(candidate, "wit/io.wit", "http-host")["records"]["http-response"]
-    next(field for field in response["fields"] if field["name"] == "body")["type"] = {
+    request = interface(candidate, "wit/io.wit", "http-host")["records"]["http-request"]
+    next(field for field in request["fields"] if field["name"] == "body")["type"] = {
         "kind": "list",
         "value": {"kind": "scalar", "name": "u8"},
     }
@@ -96,6 +96,29 @@ def remove_world_io_import(candidate: dict, filename: str, world_name: str) -> N
 def remove_helper_staging_capability(candidate: dict) -> None:
     helper = next(function for function in interface(candidate, "wit/io.wit", "io-host")["functions"] if function["name"] == "run-helper")
     helper["arguments"] = [argument for argument in helper["arguments"] if argument["name"] != "output"]
+
+
+def remove_broadcast_asset_stream(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-host")
+    owner["functions"] = [function for function in owner["functions"] if function["name"] != "open-asset"]
+
+
+def remove_helper_input(candidate: dict) -> None:
+    helper = next(function for function in interface(candidate, "wit/io.wit", "io-host")["functions"] if function["name"] == "run-helper")
+    helper["arguments"] = [argument for argument in helper["arguments"] if argument["name"] != "input"]
+
+
+def duplicate_byte_stream_for_broadcast(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-host")
+    owner["uses"].pop("byte-stream", None)
+    owner["resources"].append({"name": "asset-byte-stream", "functions": [{"name": "read", "arguments": [], "result": {"kind": "result", "ok": {"kind": "option", "value": {"kind": "list", "value": {"kind": "scalar", "name": "u8"}}}, "error": {"kind": "named", "name": "stream-error"}}}]})
+    function = next(function for function in owner["functions"] if function["name"] == "open-asset")
+    function["result"]["ok"] = {"kind": "named", "name": "asset-byte-stream"}
+
+
+def expose_broadcast_vault_path(candidate: dict) -> None:
+    function = next(function for function in interface(candidate, "wit/broadcast.wit", "broadcast-host")["functions"] if function["name"] == "open-asset")
+    function["arguments"].append({"name": "vault-path", "type": {"kind": "scalar", "name": "string"}})
 
 
 def leak_host_path_into_staging(candidate: dict) -> None:
@@ -267,8 +290,8 @@ def restore_raw_acquisition_credentials(candidate: dict) -> None:
 expect_rejected("provider-specific delegation", add_provider_field)
 expect_rejected("loss of the discovered-item delegation boundary", remove_discovery_boundary)
 expect_rejected("raw-string receiving boundary", replace_resolver_type_with_string)
-expect_rejected("inline-only HTTP response body", inline_http_body)
-expect_rejected("inline-only Broadcast HTTP response body", inline_broadcast_http_body)
+expect_rejected("inline-only HTTP request body", inline_http_body)
+expect_rejected("inline-only HTTP response body", inline_broadcast_http_body)
 expect_rejected("missing staged output writer", remove_staged_writer)
 expect_rejected("helper without explicit staging capability", remove_helper_staging_capability)
 expect_rejected("host path exposed by staging", leak_host_path_into_staging)
@@ -294,4 +317,8 @@ expect_rejected("Enrichment invocation without revision", remove_enrichment_revi
 expect_rejected("Enrichment invocation consuming discovery descriptor", restore_enrichment_discovery_descriptor)
 expect_rejected("duplicated Broadcast error detail", duplicate_broadcast_error_detail)
 expect_rejected("duplicated Broadcast staged artifact", duplicate_broadcast_staged_artifact)
-expect_rejected("contract package identity downgraded from 0.10.0", downgrade_contract_package_identity)
+expect_rejected("Broadcast without preserved Asset reads", remove_broadcast_asset_stream)
+expect_rejected("helper without explicit streamed input", remove_helper_input)
+expect_rejected("duplicated Broadcast byte-stream abstraction", duplicate_byte_stream_for_broadcast)
+expect_rejected("Vault path exposed by Broadcast content boundary", expose_broadcast_vault_path)
+expect_rejected("contract package identity downgraded from 0.11.0", downgrade_contract_package_identity)

@@ -14,7 +14,7 @@ package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
-expected_package = "stashd:plugin@0.10.0"
+expected_package = "stashd:plugin@0.11.0"
 if len(packages) != 1 or None in packages or packages != {schema["package"]} or schema["package"] != expected_package:
     raise SystemExit("WIT package identity mismatch")
 
@@ -217,6 +217,11 @@ if helper_credentials is None or helper_credentials["type"] != {"kind": "list", 
 helper_errors = {value["name"] for value in io_host["variants"].get("helper-error", {}).get("values", [])}
 if not {"credential-denied", "credential-unavailable"} <= helper_errors:
     raise SystemExit("helper credential denial and unavailability must remain distinguishable")
+helper_input = next((argument for argument in helper.get("arguments", []) if argument["name"] == "input"), None) if helper else None
+if helper_input is None or helper_input["type"] != {"kind": "option", "value": {"kind": "named", "name": "byte-stream"}}:
+    raise SystemExit("helpers must accept explicit streamed stdin through the canonical byte-stream")
+if "input-failed" not in helper_errors:
+    raise SystemExit("helper stdin read failures must have an explicit typed outcome")
 
 byte_stream = next((resource for resource in io_host.get("resources", []) if resource["name"] == "byte-stream"), None)
 if byte_stream is None:
@@ -228,6 +233,11 @@ if stream_read is None or stream_read.get("arguments") != [] or stream_read.get(
     "error": {"kind": "named", "name": "stream-error"},
 }:
     raise SystemExit("byte-stream reads must return optional bounded chunks and typed stream errors")
+open_staged = next((function for function in io_host.get("functions", []) if function["name"] == "open-staged-artifact"), None)
+if open_staged is None or open_staged.get("result") != {
+    "kind": "result", "ok": {"kind": "named", "name": "byte-stream"}, "error": {"kind": "named", "name": "stream-error"},
+} or not any(argument["type"] == {"kind": "named", "name": "staged-artifact"} for argument in open_staged["arguments"]):
+    raise SystemExit("completed staged artifacts must reopen through the canonical byte-stream")
 
 writer = next((resource for resource in io_host.get("resources", []) if resource["name"] == "staged-writer"), None)
 if writer is None:
@@ -272,10 +282,36 @@ for filename, world_name in (("wit/input.wit", "input-world"), ("wit/enrichment.
     if "io-host" not in world.get("imports", []):
         raise SystemExit(f"{world_name} must import the shared host-managed I/O interface")
 
+broadcast_contract = next(contract for contract in contracts if contract["file"] == "wit/broadcast.wit")
+broadcast_host = broadcast_contract["interfaces"].get("broadcast-host", {})
+open_broadcast_asset = next((function for function in broadcast_host.get("functions", []) if function["name"] == "open-asset"), None)
+if open_broadcast_asset is None or broadcast_host.get("uses", {}).get("byte-stream") != "io-host" or open_broadcast_asset.get("result") != {
+    "kind": "result", "ok": {"kind": "named", "name": "byte-stream"}, "error": {"kind": "named", "name": "stream-error"},
+}:
+    raise SystemExit("Broadcast must open preserved content as the canonical host-managed byte-stream")
+if open_broadcast_asset.get("arguments") != [
+    {"name": "reference", "type": {"kind": "scalar", "name": "string"}},
+    {"name": "offset", "type": {"kind": "scalar", "name": "u64"}},
+    {"name": "length", "type": {"kind": "option", "value": {"kind": "scalar", "name": "u64"}}},
+]:
+    raise SystemExit("Broadcast Asset reads must use opaque references and explicit bounded ranges")
+path_names = {"filesystem-path", "host-path", "vault-path", "filesystem-location", "vault-location"}
+for interface in (broadcast_host, http_host, io_host):
+    for record in interface.get("records", {}).values():
+        if path_names & {field["name"] for field in record["fields"]}:
+            raise SystemExit("filesystem and Vault paths must not appear in content transport boundaries")
+    for function in interface.get("functions", []):
+        if path_names & {argument["name"] for argument in function["arguments"]}:
+            raise SystemExit("filesystem and Vault paths must not appear in content transport boundaries")
+
 if fields(http_host, "http-response").get("body") != {"kind": "named", "name": "byte-stream"}:
     raise SystemExit("shared HTTP responses must expose bodies as bounded byte streams")
+if fields(http_host, "http-request").get("body") != {"kind": "option", "value": {"kind": "named", "name": "byte-stream"}}:
+    raise SystemExit("shared HTTP request bodies must be absent or streamed through the canonical byte-stream")
 if http_host.get("uses", {}).get("byte-stream") != "io-host":
-    raise SystemExit("shared HTTP responses must use the canonical host byte stream")
+    raise SystemExit("shared HTTP request and response bodies must use the canonical host byte stream")
+if "body-failed" not in {value["name"] for value in http_host.get("variants", {}).get("http-error", {}).get("values", [])}:
+    raise SystemExit("HTTP request-body stream failures must have an explicit typed outcome")
 for filename, world_name in (("wit/input.wit", "input-world"), ("wit/broadcast.wit", "broadcast-world")):
     contract = next(item for item in contracts if item["file"] == filename)
     world = contract["worlds"].get(world_name, {})

@@ -1,11 +1,17 @@
-package stashd:plugin@0.10.0;
+package stashd:plugin@0.11.0;
 
 interface broadcast-host {
+    use io-host.{byte-stream, stream-error};
+
     record published-file {
         item-id: string,
         source-reference: string,
         relative-path: string,
     }
+
+    /// Opens bounded chunks from a preserved resource using its opaque
+    /// reference. The host retains control of storage and path resolution.
+    open-asset: func(reference: string, offset: u64, length: option<u64>) -> result<byte-stream, stream-error>;
 }
 
 interface broadcast-plugin {

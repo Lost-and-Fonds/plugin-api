@@ -554,7 +554,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.10.0",
+      "package": "stashd:plugin@0.11.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -576,7 +576,48 @@
       "interfaces": {
         "broadcast-host": {
           "enums": {},
-          "functions": [],
+          "functions": [
+            {
+              "arguments": [
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "offset",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "u64"
+                  }
+                },
+                {
+                  "name": "length",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "u64"
+                    }
+                  }
+                }
+              ],
+              "name": "open-asset",
+              "result": {
+                "error": {
+                  "kind": "named",
+                  "name": "stream-error"
+                },
+                "kind": "result",
+                "ok": {
+                  "kind": "named",
+                  "name": "byte-stream"
+                }
+              }
+            }
+          ],
           "records": {
             "published-file": {
               "fields": [
@@ -605,7 +646,10 @@
             }
           },
           "resources": [],
-          "uses": {},
+          "uses": {
+            "byte-stream": "io-host",
+            "stream-error": "io-host"
+          },
           "variants": {}
         },
         "broadcast-plugin": {
@@ -1189,7 +1233,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.10.0",
+      "package": "stashd:plugin@0.11.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -1660,7 +1704,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.10.0",
+      "package": "stashd:plugin@0.11.0",
       "worlds": {
         "enrichment-world": {
           "exports": [
@@ -1923,7 +1967,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.10.0",
+      "package": "stashd:plugin@0.11.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2019,10 +2063,10 @@
                 {
                   "name": "body",
                   "type": {
-                    "kind": "list",
+                    "kind": "option",
                     "value": {
-                      "kind": "scalar",
-                      "name": "u8"
+                      "kind": "named",
+                      "name": "byte-stream"
                     }
                   }
                 }
@@ -2111,6 +2155,13 @@
                   "type": null
                 },
                 {
+                  "name": "body-failed",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
                   "name": "unavailable",
                   "type": {
                     "kind": "scalar",
@@ -2131,6 +2182,46 @@
         "io-host": {
           "enums": {},
           "functions": [
+            {
+              "arguments": [
+                {
+                  "name": "artifact",
+                  "type": {
+                    "kind": "named",
+                    "name": "staged-artifact"
+                  }
+                },
+                {
+                  "name": "offset",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "u64"
+                  }
+                },
+                {
+                  "name": "length",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "u64"
+                    }
+                  }
+                }
+              ],
+              "name": "open-staged-artifact",
+              "result": {
+                "error": {
+                  "kind": "named",
+                  "name": "stream-error"
+                },
+                "kind": "result",
+                "ok": {
+                  "kind": "named",
+                  "name": "byte-stream"
+                }
+              }
+            },
             {
               "arguments": [],
               "name": "open-staging-area",
@@ -2155,6 +2246,16 @@
                     "value": {
                       "kind": "scalar",
                       "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "input",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "byte-stream"
                     }
                   }
                 },
@@ -2437,6 +2538,13 @@
                   "type": null
                 },
                 {
+                  "name": "input-failed",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
                   "name": "unavailable",
                   "type": {
                     "kind": "scalar",
@@ -2582,10 +2690,10 @@
           "variants": {}
         }
       },
-      "package": "stashd:plugin@0.10.0",
+      "package": "stashd:plugin@0.11.0",
       "worlds": {}
     }
   ],
-  "package": "stashd:plugin@0.10.0",
+  "package": "stashd:plugin@0.11.0",
   "schema_version": 1
 }

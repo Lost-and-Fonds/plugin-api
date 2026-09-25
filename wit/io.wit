@@ -1,4 +1,4 @@
-package stashd:plugin@0.10.0;
+package stashd:plugin@0.11.0;
 
 /// Lifecycle-independent plugin value contracts. Metadata facets remain in
 /// `io-host` with the shared host-managed I/O boundary.
@@ -45,12 +45,14 @@ interface http-host {
         value: string,
     }
 
+    /// A request body is absent or is consumed from one invocation-scoped
+    /// host byte stream. The host takes ownership and reads chunks until EOF.
     record http-request {
         method: http-method,
         url: string,
         credential: option<credential-reference>,
         headers: list<http-header>,
-        body: list<u8>,
+        body: option<byte-stream>,
     }
 
     record http-response {
@@ -64,6 +66,7 @@ interface http-host {
         credential-unavailable,
         authentication-rejected,
         rate-limited,
+        body-failed(string),
         unavailable(string),
         failed(string),
     }
@@ -128,6 +131,7 @@ interface io-host {
         denied,
         credential-denied,
         credential-unavailable,
+        input-failed(string),
         unavailable(string),
         failed(string),
     }
@@ -138,6 +142,11 @@ interface io-host {
     resource byte-stream {
         read: func() -> result<option<list<u8>>, stream-error>;
     }
+
+    /// Opens a reader over a completed artifact produced in this invocation.
+    /// The optional range is bounded by the artifact size. The returned
+    /// reader is the same canonical byte-stream used for preserved Assets.
+    open-staged-artifact: func(artifact: staged-artifact, offset: u64, length: option<u64>) -> result<byte-stream, stream-error>;
 
     /// Appends one byte chunk up to the host-configured limit to an
     /// unpublished staged output. Oversized chunks fail without partial writes;
@@ -162,10 +171,12 @@ interface io-host {
 
     /// Runs a host-approved helper. Named credentials are exposed to the helper
     /// as environment variables and never passed in `args` or returned to the
-    /// plugin. With `output`, stdout bytes are streamed
+    /// plugin. With `input`, the host streams the supplied bytes to stdin and
+    /// takes ownership of the stream until EOF or helper termination. With
+    /// `output`, stdout bytes are streamed
     /// directly into that writer and the returned stdout is empty. A helper or
     /// output-stream failure makes the writer unfinalizable. Otherwise
     /// stdout and stderr are bounded diagnostic text. The host exposes no path
     /// or implicit mount to the helper.
-    run-helper: func(name: string, args: list<string>, output: option<borrow<staged-writer>>, credentials: list<credential-binding>) -> result<helper-result, helper-error>;
+    run-helper: func(name: string, args: list<string>, input: option<byte-stream>, output: option<borrow<staged-writer>>, credentials: list<credential-binding>) -> result<helper-result, helper-error>;
 }

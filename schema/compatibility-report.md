@@ -6,7 +6,7 @@ This file is generated from the active WIT files; it is not a second contract.
 |---|---|---:|---:|---:|---:|---:|
 | `wit/input.wit` | `input-host` | 2 | 1 | 0 | 1 | 2 |
 | `wit/input.wit` | `input-plugin` | 5 | 2 | 1 | 0 | 4 |
-| `wit/broadcast.wit` | `broadcast-host` | 1 | 0 | 0 | 0 | 0 |
+| `wit/broadcast.wit` | `broadcast-host` | 1 | 0 | 0 | 0 | 1 |
 | `wit/broadcast.wit` | `broadcast-plugin` | 12 | 2 | 0 | 0 | 4 |
 | `wit/enrichment.wit` | `enrichment-host` | 2 | 1 | 0 | 0 | 1 |
 | `wit/enrichment.wit` | `enrichment-plugin` | 6 | 1 | 0 | 0 | 2 |
@@ -15,7 +15,7 @@ This file is generated from the active WIT files; it is not a second contract.
 | `wit/io.wit` | `progress-host` | 1 | 0 | 0 | 0 | 1 |
 | `wit/io.wit` | `logging-host` | 0 | 0 | 0 | 0 | 1 |
 | `wit/io.wit` | `http-host` | 3 | 1 | 1 | 1 | 1 |
-| `wit/io.wit` | `io-host` | 5 | 3 | 0 | 3 | 2 |
+| `wit/io.wit` | `io-host` | 5 | 3 | 0 | 3 | 3 |
 
 ## Component worlds
 

@@ -9,7 +9,7 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.10.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.11.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and collection-export
 lifecycles. RPC v1 remains the native transport: four-byte big-endian length
 followed by a UTF-8 JSON object. Large byte streams use opaque host resources;
@@ -76,6 +76,27 @@ requests, and staged output, while retaining lifecycle-specific error and
 configuration models. Enrichment execution receives capability identity and
 revision separately from its advertised descriptor.
 
+Contract 0.11 makes Broadcast content-capable. `broadcast-host.open-asset`
+opens bounded reads from an opaque preserved reference as the shared
+`io-host.byte-stream`; it never returns a Vault or filesystem path. The shared
+HTTP request body is absent or an owned byte stream, so it can carry preserved
+Asset bytes or a completed staged artifact reopened with
+`io-host.open-staged-artifact`. `run-helper` can likewise take an owned stream
+for helper stdin while retaining its optional staged-writer stdout. All of
+these paths use the canonical byte-stream and preserve chunked transport for
+large objects.
+
+Opening a missing or unauthorized Asset fails with the existing `stream-error`;
+read failures use that same typed error and terminate the stream. HTTP reports a
+request-body read failure as `body-failed`; the host closes the stream when the
+request completes or fails, and the remote destination may have received a
+partial body if transport failed after sending began. Helpers report stdin
+stream failures as `input-failed`, terminate the helper, and close the stream.
+An invocation ending closes any remaining streams and discards unfinished
+staged writers. Completed staged artifacts can be reopened only during their
+own invocation; only artifacts returned by a successful plugin result become
+available to Core.
+
 Inputs can select the same reference on `http-request`; the HTTP host applies
 it without exposing secret material to the plugin. `run-helper` accepts the
 same bindings and supplies selected credentials to the helper as named
@@ -102,17 +123,19 @@ Plugins open staging, create a writer, append byte chunks, and call `finish` to
 receive the canonical `staged-artifact` descriptor. A writer dropped before
 `finish`, or whose invocation ends, is discarded. The host tracks size and
 keeps output unpublished until finalization succeeds. Completed artifacts stay
-invocation-scoped and are available to the host only when returned by a
-successful plugin result; other output is discarded. Enrichment can open an
-existing Asset at an offset with an optional length, then read bounded chunks.
-Input and Broadcast HTTP responses use the same stream resource; status,
-headers, and generic HTTP errors remain host mediated.
+invocation-scoped: plugins may reopen them as streams during that invocation,
+and Core adopts them only when returned by a successful plugin result.
+Enrichment and Broadcast each open an existing Asset at an offset with an
+optional length, then read bounded chunks using the same canonical stream.
+Input and Broadcast HTTP responses use the same stream resource; HTTP request
+bodies may also consume it. Status, headers, credentials, and generic HTTP
+errors remain host mediated.
 
-The shared helper capability receives an optional borrowed staged writer
-explicitly. The host can stream helper stdout into that writer without exposing
-a mount or path. A plugin can call a helper once for each output stream when a
-helper produces multiple files, or copy a returned byte stream through the
-same writer API.
+The shared helper capability receives an optional owned byte stream for stdin
+and an optional borrowed staged writer for stdout. The host streams helper
+input and output without exposing a mount or path. A plugin can call a helper
+once for each output stream when a helper produces multiple files, or copy a
+returned byte stream through the same writer API.
 
 ## Shared primitive decisions
 
@@ -195,10 +218,13 @@ component discovery against the declared WIT worlds, and enforces generic
 Input credential lifecycle access, explicit generic Enrichment configuration,
 shared progress precision, shared Input/Broadcast HTTP types, shared plugin
 error detail, shared logging, revision-aware Enrichment invocation, HTTP
-streaming, and staging invariants. It also proves that the semantic checks
+request and response streaming, Broadcast Asset reads, staged-artifact reads,
+helper stdin, and staging invariants. It also proves that the semantic checks
 reject acquisition-only credentials, raw credentials in generic Input records,
-inline-only HTTP bodies, missing staged writers, implicit helper staging,
-filesystem paths in staging, Input delegation regressions, configuration
+inline-only HTTP request or response bodies, missing Broadcast Asset streaming,
+missing helper stdin, duplicate stream abstractions, missing staged writers,
+implicit helper staging, filesystem or Vault paths in content boundaries,
+Input delegation regressions, configuration
 encoded into capability identity, split shared progress precision, a raw HTTP
 credential, missing capability revision, the discovery descriptor passed to
 Enrichment execution, duplicated plugin error detail, and removal of the
