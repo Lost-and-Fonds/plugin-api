@@ -1,4 +1,4 @@
-package stashd:plugin@0.2.0;
+package stashd:plugin@0.3.0;
 
 interface input-host {
     enum http-method {
@@ -43,11 +43,11 @@ interface input-host {
 
     open-http-client: func() -> http-client;
 
-    enum artifact-role {
-        primary,
-        captions,
-        artwork,
-        metadata,
+    /// One plugin-owned metadata facet. `schema` is a stable, versioned
+    /// plugin schema identifier; `json` is its UTF-8 JSON object payload.
+    record plugin-metadata {
+        schema: string,
+        json: string,
     }
 
     record helper-result {
@@ -62,11 +62,12 @@ interface input-host {
         failed(string),
     }
 
+    /// A staged representation described without a domain-specific Asset role.
     record staged-artifact {
         reference: string,
-        role: option<artifact-role>,
         media-type: option<string>,
         size-bytes: u64,
+        metadata: list<plugin-metadata>,
     }
 
     variant staging-error {
@@ -87,18 +88,14 @@ interface input-host {
         fraction: option<f64>,
     }
 
+    /// `id` is a stable plugin identity and `reference` is an opaque locator;
+    /// neither implies a URL or a media type.
     record discovered-item {
         id: string,
         reference: string,
-        title: string,
-        description: option<string>,
-        published-at: option<string>,
-        artwork-reference: option<string>,
-        duration-seconds: option<u32>,
-        kind: option<string>,
         size-bytes: option<u64>,
         size-estimated: bool,
-        upstream-state: option<string>,
+        metadata: list<plugin-metadata>,
     }
 
     report-progress: func(progress: progress);
@@ -107,7 +104,7 @@ interface input-host {
 }
 
 interface input-plugin {
-    use input-host.{artifact-role, staged-artifact};
+    use input-host.{plugin-metadata, staged-artifact};
 
     variant option-value {
         boolean(bool),
@@ -136,52 +133,31 @@ interface input-plugin {
         complete,
     }
 
-    enum media-kind {
-        video,
-        audio,
-    }
-
     record acquisition-options {
-        media-kind: media-kind,
         options: list<input-option>,
-        requested-roles: option<list<artifact-role>>,
         credentials: option<list<input-credential>>,
-    }
-
-    record unavailable-artifact {
-        role: artifact-role,
-        permanent: bool,
-        message: string,
     }
 
     record acquisition-result {
         artifacts: list<staged-artifact>,
-        unavailable: list<unavailable-artifact>,
     }
 
+    /// `canonical-reference`, when present, is an opaque plugin reference.
     record resolved-input {
         id: string,
         canonical-reference: option<string>,
-        kind: option<string>,
-        title: option<string>,
-        artwork-reference: option<string>,
         estimated-item-count: option<u32>,
         size-bytes: option<u64>,
         size-estimated: bool,
+        metadata: list<plugin-metadata>,
     }
 
     record discovered-item {
         id: string,
         reference: string,
-        title: string,
-        description: option<string>,
-        published-at: option<string>,
-        artwork-reference: option<string>,
-        duration-seconds: option<u32>,
-        kind: option<string>,
         size-bytes: option<u64>,
         size-estimated: bool,
-        upstream-state: option<string>,
+        metadata: list<plugin-metadata>,
     }
 
     record error {

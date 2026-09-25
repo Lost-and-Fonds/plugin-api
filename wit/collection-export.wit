@@ -1,4 +1,4 @@
-package stashd:plugin@0.2.0;
+package stashd:plugin@0.3.0;
 
 interface collection-export-host {
     log: func(message: string);

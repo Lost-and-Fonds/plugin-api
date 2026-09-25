@@ -28,6 +28,119 @@ contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
 if packages != {schema["package"]}:
     raise SystemExit("WIT package identity mismatch")
+if schema["package"] != "stashd:plugin@0.3.0":
+    raise SystemExit(f"unexpected WIT package version: {schema['package']!r}")
+
+input_contract = next(contract for contract in contracts if contract["file"] == "wit/input.wit")
+input_host = input_contract["interfaces"]["input-host"]
+input_plugin = input_contract["interfaces"]["input-plugin"]
+
+
+def record_fields(interface, name):
+    return {field["name"]: field["type"] for field in interface["records"][name]["fields"]}
+
+
+def expect_fields(interface, record, expected):
+    actual = record_fields(interface, record)
+    if set(actual) != set(expected):
+        raise SystemExit(
+            f"{record} fields drifted: expected {sorted(expected)!r}, got {sorted(actual)!r}"
+        )
+    return actual
+
+
+def scalar(name):
+    return {"kind": "scalar", "name": name}
+
+
+def named(name):
+    return {"kind": "named", "name": name}
+
+
+def list_of(value):
+    return {"kind": "list", "value": value}
+
+
+def optional(value):
+    return {"kind": "option", "value": value}
+
+
+metadata_type = list_of(named("plugin-metadata"))
+host_artifact = expect_fields(
+    input_host,
+    "staged-artifact",
+    {"reference", "media-type", "size-bytes", "metadata"},
+)
+if host_artifact != {
+    "reference": scalar("string"),
+    "media-type": optional(scalar("string")),
+    "size-bytes": scalar("u64"),
+    "metadata": metadata_type,
+}:
+    raise SystemExit(f"staged-artifact is not a generic artifact descriptor: {host_artifact!r}")
+
+plugin_metadata = expect_fields(input_host, "plugin-metadata", {"schema", "json"})
+if plugin_metadata != {"schema": scalar("string"), "json": scalar("string")}:
+    raise SystemExit(f"plugin-metadata must carry a schema id and JSON string: {plugin_metadata!r}")
+
+for interface in (input_host, input_plugin):
+    item = expect_fields(
+        interface,
+        "discovered-item",
+        {"id", "reference", "size-bytes", "size-estimated", "metadata"},
+    )
+    if item != {
+        "id": scalar("string"),
+        "reference": scalar("string"),
+        "size-bytes": optional(scalar("u64")),
+        "size-estimated": scalar("bool"),
+        "metadata": metadata_type,
+    }:
+        raise SystemExit(f"{interface!r} discovered-item drifted from the generic model: {item!r}")
+
+resolved = expect_fields(
+    input_plugin,
+    "resolved-input",
+    {"id", "canonical-reference", "estimated-item-count", "size-bytes", "size-estimated", "metadata"},
+)
+if resolved != {
+    "id": scalar("string"),
+    "canonical-reference": optional(scalar("string")),
+    "estimated-item-count": optional(scalar("u32")),
+    "size-bytes": optional(scalar("u64")),
+    "size-estimated": scalar("bool"),
+    "metadata": metadata_type,
+}:
+    raise SystemExit(f"resolved-input drifted from the generic model: {resolved!r}")
+
+expect_fields(input_plugin, "acquisition-options", {"options", "credentials"})
+acquisition_result = expect_fields(input_plugin, "acquisition-result", {"artifacts"})
+if acquisition_result != {"artifacts": list_of(named("staged-artifact"))}:
+    raise SystemExit(f"acquisition-result must contain generic staged artifacts: {acquisition_result!r}")
+if "unavailable-artifact" in input_plugin["records"]:
+    raise SystemExit("role-specific unavailable-artifact must not appear in the generic Input contract")
+
+for interface in (input_host, input_plugin):
+    domain_fields = {
+        field
+        for record in interface["records"].values()
+        for field in (entry["name"] for entry in record["fields"])
+    }
+    forbidden = {
+        "title", "creator", "description", "published-at", "artwork", "artwork-reference",
+        "thumbnail", "duration", "duration-seconds", "kind", "upstream-state",
+        "captions", "subtitles", "media-kind", "artifact-role", "requested-roles",
+    } & domain_fields
+    if forbidden:
+        raise SystemExit(f"domain-specific fields returned to the generic Input contract: {sorted(forbidden)!r}")
+if set(input_host["enums"]) != {"http-method"}:
+    raise SystemExit(f"unexpected Input host taxonomy: {sorted(input_host['enums'])!r}")
+if set(input_plugin["enums"]) != {"discovery-intent"}:
+    raise SystemExit(f"unexpected Input plugin taxonomy: {sorted(input_plugin['enums'])!r}")
+if input_host["enums"]["http-method"]["values"] != ["get", "post", "put", "patch", "delete"]:
+    raise SystemExit("HTTP method values drifted")
+if input_plugin["enums"]["discovery-intent"]["values"] != ["refresh", "complete"]:
+    raise SystemExit("discovery intent values drifted")
 
 expected_worlds = {
     "input-world": {"imports": ["input-host"], "exports": ["input-plugin"]},

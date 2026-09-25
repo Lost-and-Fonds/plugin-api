@@ -9,19 +9,25 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.2.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.3.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, and collection-export lifecycles. RPC
 v1 remains the native transport: four-byte big-endian length followed by a
 UTF-8 JSON object. Inline `list<u8>` values map to JSON arrays of unsigned byte
 values.
 
-The 0.2 contract makes the generic HTTP request shape and typed plugin errors
-explicit. Core accepts 0.1 manifests during migration, but new plugins should
-declare 0.2 and use the current SDK. Input acquisition may request a subset of
-generic artifact roles; the result can report a role as temporarily or
-permanently unavailable without implying that an existing Vault Asset should
-be removed. Collection exporters receive generic collection metadata, entries,
-and options, and return a named media artifact or a typed plugin error.
+The Input contract describes opaque plugin-owned source and Item references,
+generic byte sizes, and staged artifact descriptors (reference, media type, and
+byte size). It does not require a URL, audiovisual media kind, title, duration,
+artwork, or fixed Asset role. Provider and domain fields belong in
+plugin-owned metadata facets: each facet carries a stable versioned schema
+identifier and a JSON object, which Core treats as opaque. The HTTP capability
+is available to Inputs that need it; it is not part of every Input's identity.
+Core uses opaque IDs and references to connect lifecycle records, byte estimates
+for storage decisions, and staged descriptors to ingest content and calculate
+fixity. It does not infer domain meaning from plugin metadata.
+
+Collection exporters receive generic collection metadata, entries, and options,
+and return a named media artifact or a typed plugin error.
 
 ## Verify the contract
 

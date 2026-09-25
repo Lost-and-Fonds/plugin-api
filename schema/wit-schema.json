@@ -5,14 +5,6 @@
       "interfaces": {
         "input-host": {
           "enums": {
-            "artifact-role": {
-              "values": [
-                "primary",
-                "captions",
-                "artwork",
-                "metadata"
-              ]
-            },
             "http-method": {
               "values": [
                 "get",
@@ -98,63 +90,6 @@
                   }
                 },
                 {
-                  "name": "title",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "description",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "published-at",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "artwork-reference",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "duration-seconds",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "u32"
-                    }
-                  }
-                },
-                {
-                  "name": "kind",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
                   "name": "size-bytes",
                   "type": {
                     "kind": "option",
@@ -172,12 +107,12 @@
                   }
                 },
                 {
-                  "name": "upstream-state",
+                  "name": "metadata",
                   "type": {
-                    "kind": "option",
+                    "kind": "list",
                     "value": {
-                      "kind": "scalar",
-                      "name": "string"
+                      "kind": "named",
+                      "name": "plugin-metadata"
                     }
                   }
                 }
@@ -305,6 +240,24 @@
                 }
               ]
             },
+            "plugin-metadata": {
+              "fields": [
+                {
+                  "name": "schema",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "json",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
             "progress": {
               "fields": [
                 {
@@ -336,16 +289,6 @@
                   }
                 },
                 {
-                  "name": "role",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "named",
-                      "name": "artifact-role"
-                    }
-                  }
-                },
-                {
                   "name": "media-type",
                   "type": {
                     "kind": "option",
@@ -360,6 +303,16 @@
                   "type": {
                     "kind": "scalar",
                     "name": "u64"
+                  }
+                },
+                {
+                  "name": "metadata",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "plugin-metadata"
+                    }
                   }
                 }
               ]
@@ -552,12 +505,6 @@
                 "refresh",
                 "complete"
               ]
-            },
-            "media-kind": {
-              "values": [
-                "video",
-                "audio"
-              ]
             }
           },
           "functions": [
@@ -665,32 +612,12 @@
             "acquisition-options": {
               "fields": [
                 {
-                  "name": "media-kind",
-                  "type": {
-                    "kind": "named",
-                    "name": "media-kind"
-                  }
-                },
-                {
                   "name": "options",
                   "type": {
                     "kind": "list",
                     "value": {
                       "kind": "named",
                       "name": "input-option"
-                    }
-                  }
-                },
-                {
-                  "name": "requested-roles",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "list",
-                      "value": {
-                        "kind": "named",
-                        "name": "artifact-role"
-                      }
                     }
                   }
                 },
@@ -720,16 +647,6 @@
                       "name": "staged-artifact"
                     }
                   }
-                },
-                {
-                  "name": "unavailable",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "unavailable-artifact"
-                    }
-                  }
                 }
               ]
             },
@@ -750,63 +667,6 @@
                   }
                 },
                 {
-                  "name": "title",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "description",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "published-at",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "artwork-reference",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "duration-seconds",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "u32"
-                    }
-                  }
-                },
-                {
-                  "name": "kind",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
                   "name": "size-bytes",
                   "type": {
                     "kind": "option",
@@ -824,12 +684,12 @@
                   }
                 },
                 {
-                  "name": "upstream-state",
+                  "name": "metadata",
                   "type": {
-                    "kind": "option",
+                    "kind": "list",
                     "value": {
-                      "kind": "scalar",
-                      "name": "string"
+                      "kind": "named",
+                      "name": "plugin-metadata"
                     }
                   }
                 }
@@ -909,36 +769,6 @@
                   }
                 },
                 {
-                  "name": "kind",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "title",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "artwork-reference",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
                   "name": "estimated-item-count",
                   "type": {
                     "kind": "option",
@@ -964,6 +794,16 @@
                     "kind": "scalar",
                     "name": "bool"
                   }
+                },
+                {
+                  "name": "metadata",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "plugin-metadata"
+                    }
+                  }
                 }
               ]
             },
@@ -984,36 +824,11 @@
                   }
                 }
               ]
-            },
-            "unavailable-artifact": {
-              "fields": [
-                {
-                  "name": "role",
-                  "type": {
-                    "kind": "named",
-                    "name": "artifact-role"
-                  }
-                },
-                {
-                  "name": "permanent",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "bool"
-                  }
-                },
-                {
-                  "name": "message",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                }
-              ]
             }
           },
           "resources": [],
           "uses": {
-            "artifact-role": "input-host",
+            "plugin-metadata": "input-host",
             "staged-artifact": "input-host"
           },
           "variants": {
@@ -1098,7 +913,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.2.0",
+      "package": "stashd:plugin@0.3.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -2204,7 +2019,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.2.0",
+      "package": "stashd:plugin@0.3.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -2501,7 +2316,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.2.0",
+      "package": "stashd:plugin@0.3.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2514,6 +2329,6 @@
       }
     }
   ],
-  "package": "stashd:plugin@0.2.0",
+  "package": "stashd:plugin@0.3.0",
   "schema_version": 1
 }
