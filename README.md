@@ -288,6 +288,32 @@ method enum with validated method tokens and makes redirect, URL, credential,
 and streamed-body replay behavior explicit host/runtime policy without adding
 provider-specific HTTP types.
 
+Collection Export is a bounded interchange operation, not a domain catalogue
+model. `exporter` selects a plugin-defined export operation or format, not an
+entry kind; `options` are caller selections owned and interpreted by that
+exporter. Entries do not repeat either value. A collection is the inline set
+of entries for this invocation, optionally titled for human presentation. It
+need not be a persisted Core collection and has no collection-level reference:
+it may be an anonymous ad-hoc selection, an OPML document, or a named reading
+list. An entry's required `reference` is an opaque identifier in the interchange
+being produced, not necessarily a URL, provider ID, or Stashd entity ID. Its
+optional `title` is the natural display name when one exists; entries need not
+invent one. There is no universal `kind` because feeds, books, documents, and
+links have domain taxonomies that the exporter or its caller owns, and no
+separate `label` because that would duplicate presentation semantics.
+
+Mappings: OPML uses the collection title as the document title and each
+entry's reference as the outline target (typically a feed URL), with an
+optional title; podcast subscription lists use feed references and optional
+feed titles. Book and document inventories use opaque publication/document
+references and optional natural titles, without universal type labels. Generic
+JSON/XML catalogues serialize the same identifier and optional title fields;
+format-specific metadata and taxonomy belong to the exporter, not this shared
+envelope. An identifier-only set uses references with absent titles. Broadcast
+is instead the scalable publication path for large archives/catalogues, with
+host-managed streams and staging; it is not a substitute Collection Export
+entry model.
+
 Inputs can select the same reference on `http-request`; the HTTP host applies
 it without exposing secret material to the plugin. `run-helper` accepts the
 same bindings and supplies selected credentials to the helper as named

@@ -14,14 +14,11 @@ interface collection-export-plugin {
     }
 
     record collection-entry {
-        title: string,
-        kind: string,
-        label: string,
         reference: string,
+        title: option<string>,
     }
 
     record collection {
-        reference: option<string>,
         title: option<string>,
         /// Inline interchange input, bounded by the host's configured maximum
         /// serialized invocation-message size; entry count is not universal.

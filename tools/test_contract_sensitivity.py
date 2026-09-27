@@ -417,6 +417,46 @@ def stream_collection_export_output(candidate: dict) -> None:
     }
 
 
+def add_collection_entry_taxonomy(candidate: dict) -> None:
+    owner = interface(candidate, "wit/collection-export.wit", "collection-export-plugin")
+    owner["records"]["collection-entry"]["fields"].append(
+        {"name": "kind", "type": {"kind": "scalar", "name": "string"}}
+    )
+
+
+def add_duplicate_collection_entry_label(candidate: dict) -> None:
+    owner = interface(candidate, "wit/collection-export.wit", "collection-export-plugin")
+    owner["records"]["collection-entry"]["fields"].append(
+        {"name": "label", "type": {"kind": "scalar", "name": "string"}}
+    )
+
+
+def remove_collection_entry_reference(candidate: dict) -> None:
+    owner = interface(candidate, "wit/collection-export.wit", "collection-export-plugin")
+    owner["records"]["collection-entry"]["fields"] = [
+        field for field in owner["records"]["collection-entry"]["fields"] if field["name"] != "reference"
+    ]
+
+
+def make_collection_entry_reference_optional(candidate: dict) -> None:
+    owner = interface(candidate, "wit/collection-export.wit", "collection-export-plugin")
+    field = next(field for field in owner["records"]["collection-entry"]["fields"] if field["name"] == "reference")
+    field["type"] = {"kind": "option", "value": field["type"]}
+
+
+def add_collection_identity(candidate: dict) -> None:
+    owner = interface(candidate, "wit/collection-export.wit", "collection-export-plugin")
+    owner["records"]["collection"]["fields"].insert(
+        0, {"name": "reference", "type": {"kind": "option", "value": {"kind": "scalar", "name": "string"}}}
+    )
+
+
+def require_collection_entry_title(candidate: dict) -> None:
+    owner = interface(candidate, "wit/collection-export.wit", "collection-export-plugin")
+    field = next(field for field in owner["records"]["collection-entry"]["fields"] if field["name"] == "title")
+    field["type"] = {"kind": "scalar", "name": "string"}
+
+
 def remove_input_http_import(candidate: dict) -> None:
     contract(candidate, "wit/input.wit")["worlds"]["input-world"]["imports"].remove("http-host")
 
@@ -537,6 +577,12 @@ expect_rejected("Collection Export without shared logging", remove_collection_lo
 expect_rejected("Collection Export without typed size-limit outcome", remove_collection_export_limit_error)
 expect_rejected("streamed Collection Export input", stream_collection_export_input)
 expect_rejected("staged Collection Export output", stream_collection_export_output)
+expect_rejected("Collection Export domain taxonomy restored as kind", add_collection_entry_taxonomy)
+expect_rejected("Collection Export duplicate label presentation field", add_duplicate_collection_entry_label)
+expect_rejected("Collection Export entry without interchange reference", remove_collection_entry_reference)
+expect_rejected("Collection Export reference made optional", make_collection_entry_reference_optional)
+expect_rejected("Collection Export collection-level identity restored", add_collection_identity)
+expect_rejected("Collection Export entry title made mandatory", require_collection_entry_title)
 expect_rejected("Input without canonical HTTP capability", remove_input_http_import)
 expect_rejected("raw Broadcast HTTP credential", make_broadcast_http_credential_raw)
 expect_rejected("closed HTTP method enum", restore_closed_http_method_enum)

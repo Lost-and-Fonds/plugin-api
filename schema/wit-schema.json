@@ -1609,16 +1609,6 @@
             "collection": {
               "fields": [
                 {
-                  "name": "reference",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
                   "name": "title",
                   "type": {
                     "kind": "option",
@@ -1643,31 +1633,20 @@
             "collection-entry": {
               "fields": [
                 {
-                  "name": "title",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "kind",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "label",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
                   "name": "reference",
                   "type": {
                     "kind": "scalar",
                     "name": "string"
+                  }
+                },
+                {
+                  "name": "title",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
                   }
                 }
               ]

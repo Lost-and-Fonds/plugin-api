@@ -475,10 +475,24 @@ if "progress-host" in worlds["collection-export-world"]["imports"]:
 # limits; large catalogue publication belongs to Broadcast's streaming path.
 collection_export = interfaces["collection-export-plugin"]
 collection_fields = fields(collection_export, "collection")
-if collection_fields.get("entries") != {
-    "kind": "list", "value": {"kind": "named", "name": "collection-entry"}
+if collection_fields != {
+    "title": {"kind": "option", "value": {"kind": "scalar", "name": "string"}},
+    "entries": {"kind": "list", "value": {"kind": "named", "name": "collection-entry"}},
 }:
-    raise SystemExit("Collection Export input must remain an inline entry list")
+    raise SystemExit("Collection Export collection must have only optional presentation title and inline entries")
+entry_fields = fields(collection_export, "collection-entry")
+if entry_fields != {
+    "reference": {"kind": "scalar", "name": "string"},
+    "title": {"kind": "option", "value": {"kind": "scalar", "name": "string"}},
+}:
+    raise SystemExit("Collection Export entries must use an opaque required reference and optional display title")
+export_function = next(function for function in collection_export["functions"] if function["name"] == "export-collection")
+if export_function["arguments"] != [
+    {"name": "exporter", "type": {"kind": "scalar", "name": "string"}},
+    {"name": "collection", "type": {"kind": "named", "name": "collection"}},
+    {"name": "options", "type": {"kind": "list", "value": {"kind": "named", "name": "setting"}}},
+]:
+    raise SystemExit("Collection Export must select a plugin-defined exporter with caller-owned plugin settings")
 artifact_fields = fields(collection_export, "exported-artifact")
 if artifact_fields.get("contents") != {
     "kind": "list", "value": {"kind": "scalar", "name": "u8"}
