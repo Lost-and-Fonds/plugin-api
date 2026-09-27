@@ -1,4 +1,4 @@
-package stashd:plugin@0.15.0;
+package stashd:plugin@0.16.0;
 
 /// Lifecycle-independent plugin value contracts. Metadata facets remain in
 /// `io-host` with the shared host-managed I/O boundary.
@@ -33,14 +33,10 @@ interface logging-host {
 interface http-host {
     use io-host.{byte-stream, credential-reference};
 
-    enum http-method {
-        get,
-        post,
-        put,
-        patch,
-        delete,
-    }
-
+    /// HTTP method names are case-sensitive tokens. The host validates the
+    /// value as one or more ASCII `tchar` characters before dispatching it;
+    /// invalid syntax is rejected before the HTTP operation is attempted.
+    /// This remains open to standard, WebDAV, and extension methods.
     record http-header {
         name: string,
         value: string,
@@ -48,8 +44,10 @@ interface http-host {
 
     /// A request body is absent or is consumed from one invocation-scoped
     /// host byte stream. The host takes ownership and reads chunks until EOF.
+    /// Header names and values are passed through the existing generic model;
+    /// conditional and range requests require no special WIT fields.
     record http-request {
-        method: http-method,
+        method: string,
         url: string,
         /// The host rejects references not granted to this invocation and
         /// rechecks authorization and availability for each use.
@@ -63,6 +61,14 @@ interface http-host {
         headers: list<http-header>,
         body: byte-stream,
     }
+
+    /// Redirect following is host/runtime policy, not a plugin or SDK default.
+    /// For every hop the host re-evaluates URL policy and credential
+    /// authorization. Credentials are not forwarded to a new authority unless
+    /// that policy explicitly permits the reference for the target. A streamed
+    /// body is followed only when the host can safely replay it; otherwise the
+    /// host returns a typed HTTP error rather than silently dropping or
+    /// replaying the body.
 
     variant http-error {
         denied,

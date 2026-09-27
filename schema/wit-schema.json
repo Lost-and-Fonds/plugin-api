@@ -554,7 +554,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.15.0",
+      "package": "stashd:plugin@0.16.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -1086,7 +1086,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.15.0",
+      "package": "stashd:plugin@0.16.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -1568,7 +1568,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.15.0",
+      "package": "stashd:plugin@0.16.0",
       "worlds": {
         "enrichment-world": {
           "exports": [
@@ -1839,7 +1839,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.15.0",
+      "package": "stashd:plugin@0.16.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -1856,17 +1856,7 @@
       "file": "wit/io.wit",
       "interfaces": {
         "http-host": {
-          "enums": {
-            "http-method": {
-              "values": [
-                "get",
-                "post",
-                "put",
-                "patch",
-                "delete"
-              ]
-            }
-          },
+          "enums": {},
           "functions": [
             {
               "arguments": [],
@@ -1901,8 +1891,8 @@
                 {
                   "name": "method",
                   "type": {
-                    "kind": "named",
-                    "name": "http-method"
+                    "kind": "scalar",
+                    "name": "string"
                   }
                 },
                 {
@@ -2562,10 +2552,10 @@
           "variants": {}
         }
       },
-      "package": "stashd:plugin@0.15.0",
+      "package": "stashd:plugin@0.16.0",
       "worlds": {}
     }
   ],
-  "package": "stashd:plugin@0.15.0",
+  "package": "stashd:plugin@0.16.0",
   "schema_version": 1
 }

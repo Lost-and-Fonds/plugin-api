@@ -14,7 +14,7 @@ package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
-expected_package = "stashd:plugin@0.15.0"
+expected_package = "stashd:plugin@0.16.0"
 if len(packages) != 1 or None in packages or packages != {schema["package"]} or schema["package"] != expected_package:
     raise SystemExit("WIT package identity mismatch")
 
@@ -257,7 +257,12 @@ if {value["name"] for value in credential_errors} != {"denied", "unavailable"}:
 if any(resource["name"] == "credential-access" for resource in io_host.get("resources", [])):
     raise SystemExit("raw credential access must not become a shared host capability")
 
-input_http_credential = fields(http_host, "http-request").get("credential")
+http_request_fields = fields(http_host, "http-request")
+if http_request_fields.get("method") != {"kind": "scalar", "name": "string"}:
+    raise SystemExit("shared HTTP methods must remain arbitrary validated token strings")
+if "http-method" in http_host.get("enums", {}):
+    raise SystemExit("shared HTTP methods must not be a closed enum")
+input_http_credential = http_request_fields.get("credential")
 if input_http_credential != {"kind": "option", "value": credential_reference}:
     raise SystemExit("shared HTTP must select credentials through the opaque reference model")
 http_errors = {value["name"] for value in http_host["variants"].get("http-error", {}).get("values", [])}
@@ -547,6 +552,8 @@ delegation_resolver = next(
 )
 if delegation_resolver is None:
     raise SystemExit("Input must expose the generic resolve-delegation entry point")
+if delegation_type is None:
+    raise SystemExit("discovered-item must carry optional generic Input delegation context")
 if not delegation_resolver["arguments"] or delegation_resolver["arguments"][0] != {
     "name": "delegation", "type": delegation_type["value"]
 }:

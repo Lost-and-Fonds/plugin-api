@@ -1,5 +1,5 @@
 {
-  "package": "stashd:plugin@0.15.0",
+  "package": "stashd:plugin@0.16.0",
   "vectors": [
     {
       "name": "owned-byte-stream-handle",
@@ -22,6 +22,40 @@
       },
       "ownership": "request.body is owned option<byte-stream>; acceptance consumes opaque-stream",
       "after-acceptance": "the host installs the stream in its active-resource table and the plugin rejects any reuse or drop"
+    },
+    {
+      "name": "generic-http-method-tokens",
+      "method": "stashd:plugin/http-host.http-client.request",
+      "methods": ["HEAD", "OPTIONS", "PROPFIND", "MKCOL", "MOVE", "COPY", "X-STASHD-EXT"],
+      "validation": "each method is a non-empty ASCII tchar token; no closed method list applies; invalid syntax is rejected before dispatch"
+    },
+    {
+      "name": "conditional-range-authenticated-stream",
+      "method": "stashd:plugin/http-host.http-client.request",
+      "request": {
+        "method": "PROPFIND",
+        "url": "https://example.invalid/webdav/",
+        "credential": {"$resource": {"type": "stashd:plugin/io-host.credential-reference", "id": "credential-1"}},
+        "headers": [
+          {"name": "If-None-Match", "value": "\"etag-1\""},
+          {"name": "Range", "value": "bytes=0-1023"}
+        ],
+        "body": {"$resource": {"type": "stashd:plugin/io-host.byte-stream", "id": "opaque-stream"}}
+      },
+      "policy": "the host mediates the opaque credential and consumes the streamed body without requiring provider-specific fields"
+    },
+    {
+      "name": "redirect-under-host-policy",
+      "method": "stashd:plugin/http-host.http-client.request",
+      "policy": {
+        "redirects": "host-defined",
+        "recheck-url-policy": true,
+        "recheck-credential-grant": true,
+        "forward-credential-to-new-authority": "only-if-host-policy-allows",
+        "replay-streamed-body": "only-if-safely-replayable",
+        "preserve-method-and-headers": "unless-documented-status-policy-says-otherwise"
+      },
+      "failure": "otherwise return a typed HTTP error rather than inheriting an SDK client default"
     },
     {
       "name": "borrowed-helper-output",

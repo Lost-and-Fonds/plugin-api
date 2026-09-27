@@ -368,6 +368,20 @@ def make_broadcast_http_credential_raw(candidate: dict) -> None:
     }
 
 
+def restore_closed_http_method_enum(candidate: dict) -> None:
+    owner = interface(candidate, "wit/io.wit", "http-host")
+    owner["enums"]["http-method"] = {"values": ["get", "post", "put", "patch", "delete"]}
+    next(field for field in owner["records"]["http-request"]["fields"] if field["name"] == "method")["type"] = {
+        "kind": "named", "name": "http-method"
+    }
+
+
+def remove_http_method_token_boundary(candidate: dict) -> None:
+    owner = interface(candidate, "wit/io.wit", "http-host")
+    method = next(field for field in owner["records"]["http-request"]["fields"] if field["name"] == "method")
+    method["type"] = {"kind": "named", "name": "http-method"}
+
+
 def remove_enrichment_revision(candidate: dict) -> None:
     enrich = next(
         function for function in interface(candidate, "wit/enrichment.wit", "enrichment-plugin")["functions"]
@@ -465,6 +479,8 @@ expect_rejected("streamed Collection Export input", stream_collection_export_inp
 expect_rejected("staged Collection Export output", stream_collection_export_output)
 expect_rejected("Input without canonical HTTP capability", remove_input_http_import)
 expect_rejected("raw Broadcast HTTP credential", make_broadcast_http_credential_raw)
+expect_rejected("closed HTTP method enum", restore_closed_http_method_enum)
+expect_rejected("HTTP method without token boundary", remove_http_method_token_boundary)
 expect_rejected("Enrichment invocation without revision", remove_enrichment_revision)
 expect_rejected("Enrichment invocation consuming discovery descriptor", restore_enrichment_discovery_descriptor)
 expect_rejected("duplicated Broadcast error detail", duplicate_broadcast_error_detail)

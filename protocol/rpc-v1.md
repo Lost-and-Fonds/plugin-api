@@ -92,6 +92,33 @@ encodings. A stream read returns `{"ok":null}` at EOF or
 `{"ok":[byte,...]}` for a chunk. Empty arrays are not EOF. A write receives an
 array and validates every byte before appending any of them.
 
+For the shared `http-host` request record, `method` is a non-empty HTTP method
+token. It MUST consist only of ASCII `tchar` characters:
+`!#$%&'*+-.^_`|~`, digits, and letters. The host MUST reject whitespace,
+control characters, non-ASCII characters, an empty token, and any other value
+as a protocol failure before making a request; it MUST NOT dispatch the request
+or translate invalid syntax into a plugin-authored `http-error` result. The rule is open-ended
+and therefore covers standard methods, WebDAV methods such as `PROPFIND`,
+`MKCOL`, `MOVE`, and `COPY`, and extension methods without a WIT enum update.
+HTTP header names and values continue to use the existing `http-header` list;
+conditional and range headers do not acquire method- or provider-specific
+fields, and the host applies normal HTTP header validation.
+
+Redirect following is host/runtime policy, not a language SDK default and not a
+plugin-controlled URL/security bypass. A host MUST document whether it follows
+redirects, its hop limit and URL policy, and what happens on a disallowed or
+invalid target. For every followed hop it MUST re-evaluate URL policy and the
+invocation's credential grant. It MUST NOT forward an opaque credential
+reference to a new authority unless that policy explicitly permits it. A
+request body may be replayed on a redirect only when the host can safely
+replay the invocation-scoped stream; otherwise the host returns a typed
+`body-failed` or `failed` HTTP error rather than silently dropping or replaying
+it. The host's redirect choice and policy outcome are not inferred from a
+client-library default. A host that follows a redirect MUST preserve the
+request method and headers unless its documented policy explicitly changes
+those values for the redirect status; such a policy MUST not silently remove
+credential or conditional/range semantics.
+
 ## Resource handles
 
 A resource value is exactly:
@@ -276,5 +303,6 @@ RPC v1 previously specified length-prefixed UTF-8 JSON and described resources
 as opaque invocation-scoped references, but left their actual representation,
 correlation, ownership and lifecycle unspecified. This document makes those
 unspecified semantics precise without changing a previously specified wire
-value or WIT shape. Therefore `stashd:plugin@0.15.0` remains the canonical
-package identity; no package version bump is warranted.
+value or WIT shape. Therefore `stashd:plugin@0.16.0` remains the canonical
+package identity for the HTTP method model; this WIT shape change requires the
+pre-1.0 package version bump from 0.15.0.

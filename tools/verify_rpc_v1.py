@@ -13,7 +13,7 @@ spec = spec_path.read_text(encoding="utf-8")
 vectors = json.loads(vectors_path.read_text(encoding="utf-8"))
 schema = json.loads(schema_path.read_text(encoding="utf-8"))
 package = schema.get("package")
-if package != "stashd:plugin@0.15.0" or vectors.get("package") != package:
+if package != "stashd:plugin@0.16.0" or vectors.get("package") != package:
     raise SystemExit("RPC v1 conformance material has a conflicting contract identity")
 
 required = (
@@ -35,7 +35,7 @@ required = (
     "Every `list<u8>` is a JSON array",
     "MUST NOT return `limit-exceeded`",
     "same invocation",
-    "package identity; no package version bump is warranted",
+    "pre-1.0 package version bump from 0.15.0",
 )
 if any(term not in spec for term in required):
     raise SystemExit("RPC v1 normative specification is missing a required invariant")
@@ -44,6 +44,9 @@ by_name = {vector["name"]: vector for vector in vectors.get("vectors", [])}
 expected = {
     "owned-byte-stream-handle",
     "nested-owned-http-request-body",
+    "generic-http-method-tokens",
+    "conditional-range-authenticated-stream",
+    "redirect-under-host-policy",
     "borrowed-helper-output",
     "explicit-resource-drop",
     "stream-read-chunk",
@@ -55,6 +58,19 @@ expected = {
 }
 if set(by_name) != expected:
     raise SystemExit("RPC v1 conformance vector set is incomplete or unexpected")
+method_vector = by_name["generic-http-method-tokens"]
+if method_vector["methods"] != ["HEAD", "OPTIONS", "PROPFIND", "MKCOL", "MOVE", "COPY", "X-STASHD-EXT"] or any(term not in method_vector["validation"] for term in ("tchar", "rejected before dispatch")):
+    raise SystemExit("RPC v1 HTTP method forcing vector is incomplete")
+redirect = by_name["redirect-under-host-policy"]["policy"]
+if redirect != {
+    "redirects": "host-defined",
+    "recheck-url-policy": True,
+    "recheck-credential-grant": True,
+    "forward-credential-to-new-authority": "only-if-host-policy-allows",
+    "replay-streamed-body": "only-if-safely-replayable",
+    "preserve-method-and-headers": "unless-documented-status-policy-says-otherwise",
+}:
+    raise SystemExit("RPC v1 redirect policy vector is incomplete")
 handle = by_name["owned-byte-stream-handle"]["value"]
 if set(handle) != {"$resource"} or handle["$resource"] != {
     "type": "stashd:plugin/io-host.byte-stream", "id": "opaque-1"

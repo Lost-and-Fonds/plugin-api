@@ -9,7 +9,7 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.15.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.16.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and Collection Export.
 [RPC v1](protocol/rpc-v1.md) is the canonical wire specification, including
 framing, exact JSON value encodings, re-entrant call correlation, and
@@ -262,7 +262,10 @@ is to generate or publish a large catalogue, use Broadcast and its canonical
 host-managed streaming/staging primitives. Collection Export adds no progress,
 credentials, HTTP, or publication behavior. Adding `limit-exceeded` changes the
 WIT variant shape, so the pre-1.0 package identity advances from 0.14.0 to
-0.15.0; RPC framing is unchanged.
+0.15.0; RPC framing is unchanged. Contract 0.16 replaces the closed HTTP
+method enum with validated method tokens and makes redirect, URL, credential,
+and streamed-body replay behavior explicit host/runtime policy without adding
+provider-specific HTTP types.
 
 Inputs can select the same reference on `http-request`; the HTTP host applies
 it without exposing secret material to the plugin. `run-helper` accepts the
@@ -295,8 +298,12 @@ and Core adopts them only when returned by a successful plugin result.
 Enrichment and Broadcast each open an existing Asset at an offset with an
 optional length, then read bounded chunks using the same canonical stream.
 Input and Broadcast HTTP responses use the same stream resource; HTTP request
-bodies may also consume it. Status, headers, credentials, and generic HTTP
-errors remain host mediated.
+bodies may also consume it. Methods are arbitrary validated HTTP tokens, so
+HEAD, OPTIONS, WebDAV, extension methods, conditional headers, and range
+headers use this same capability. Status, headers, credentials, redirects, URL
+policy, and generic HTTP errors remain host mediated; redirect behavior and
+credential forwarding are never inherited implicitly from an SDK client.
+
 
 The shared helper capability receives an optional owned byte stream for stdin
 and an optional borrowed staged writer for stdout. The host streams helper
@@ -391,9 +398,12 @@ request and response streaming, Broadcast Item/Asset metadata, optional staged
 and filesystem publication results, opaque destination receipts, Broadcast
 Asset reads, staged-artifact reads, helper stdin, host-granted
 Broadcast/Enrichment credentials, Enrichment's shared HTTP import, and staging
-invariants. It also proves that the semantic checks reject acquisition-only
-credentials, raw credentials in generic Input records, inline-only HTTP request
-or response bodies, missing Broadcast Asset streaming, missing helper stdin,
+invariants. HTTP methods are arbitrary validated tokens, while redirect
+following, URL authorization, credential forwarding, and streamed-body replay
+remain explicit host/runtime policy. It also proves that the semantic checks
+reject acquisition-only credentials, raw credentials in generic Input records,
+inline-only HTTP request or response bodies, missing Broadcast Asset streaming,
+missing helper stdin,
 duplicate stream abstractions, missing staged writers, implicit helper staging,
 filesystem or Vault paths in content boundaries, credentials outside explicit
 lifecycle bindings, an unnecessary second credential type, raw-secret fields
