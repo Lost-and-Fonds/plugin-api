@@ -205,15 +205,9 @@ def report(schema: dict) -> str:
             "",
             "## Native mapping",
             "",
-            "- scalar values map to JSON scalars;",
-            "- records map to JSON objects with required fields and nullable option fields;",
-            "- lists map to JSON arrays;",
-            "- enums map to strings;",
-            "- variants map to `{\"tag\": string, \"value\": value}` when a payload exists;",
-            "- results map to exactly one of `{\"ok\": value}` or `{\"error\": value}`;",
-            "- Component resources remain opaque invocation-scoped references; no ABI object is generated.",
-            "",
-            "RPC v1 represents resource handles as opaque invocation-scoped references and byte chunks as JSON arrays of unsigned byte values. Large input and output objects using io-host are transported as bounded chunks, never in one RPC object. The generated schema has no Wasmtime or Component ABI dependency.",
+            "The normative value and resource mapping is [RPC v1](../protocol/rpc-v1.md).",
+            "This report is generated inventory, not a second wire specification.",
+            "The generated schema has no Wasmtime or Component ABI dependency.",
         ]
     )
     return "\n".join(lines) + "\n"

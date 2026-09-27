@@ -10,12 +10,15 @@ Provider repositories own provider behavior.
 Version changes must preserve the documented compatibility policy.
 
 The current contract is `stashd:plugin@0.15.0`. It describes invocation-scoped
-host capabilities for Input, Broadcast, Enrichment, and collection-export
-lifecycles. RPC v1 remains the native transport: four-byte big-endian length
-followed by a UTF-8 JSON object. Large byte streams use opaque host resources;
-each read returns at most a host-configured chunk as `list<u8>`, and writes
-append chunks no larger than the host-configured limit. A whole large object is
-never an inline byte list on these streaming paths.
+host capabilities for Input, Broadcast, Enrichment, and Collection Export.
+[RPC v1](protocol/rpc-v1.md) is the canonical wire specification, including
+framing, exact JSON value encodings, re-entrant call correlation, and
+invocation-scoped WIT resource handles. Its conformance examples are in
+[`protocol/rpc-v1-vectors.json`](protocol/rpc-v1-vectors.json). Large byte
+streams use opaque host resources; each read returns at most a host-configured
+chunk as `list<u8>`, and writes append chunks no larger than the host-configured
+limit. A whole large object is never an inline byte list on these streaming
+paths.
 
 The generated `schema/plugin-package.schema.json` defines one deployable
 package identity (`id` and `version`) with a `components` object keyed by stable
@@ -377,7 +380,8 @@ material as outputs. Enrichment operates on already preserved Item/Asset
 context and may add metadata or preservation Assets to the Vault.
 
 Run `./bin/verify-contract` with Python 3 and `wasm-tools` 1.225.0 available on
-`PATH`. It parses the complete WIT package, checks generated artifacts for
+`PATH`. It parses the complete WIT package, checks the canonical RPC v1
+specification and conformance vectors, checks generated artifacts for
 freshness and determinism, verifies package/world identity, checks package
 component discovery against the declared WIT worlds, and enforces generic
 Input credential lifecycle access, explicit generic Enrichment configuration,

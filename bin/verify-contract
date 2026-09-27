@@ -20,6 +20,10 @@ done
 python3 "$repo_root/tools/verify_generated_contract.py" \
     "$temporary_root/first/wit-schema.json" \
     "$temporary_root/first/plugin-package.schema.json"
+python3 "$repo_root/tools/verify_rpc_v1.py" \
+    "$repo_root/protocol/rpc-v1.md" \
+    "$repo_root/protocol/rpc-v1-vectors.json" \
+    "$temporary_root/first/wit-schema.json"
 python3 "$repo_root/tools/test_contract_sensitivity.py" \
     "$temporary_root/first/wit-schema.json" \
     "$temporary_root/first/plugin-package.schema.json"
