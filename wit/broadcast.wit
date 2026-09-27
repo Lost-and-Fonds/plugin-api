@@ -17,7 +17,7 @@ interface broadcast-host {
 }
 
 interface broadcast-plugin {
-    use io-host.{credential-binding, plugin-metadata, staged-artifact};
+    use io-host.{credential-binding, plugin-metadata, preserved-asset, staged-artifact};
     use plugin-types.{plugin-error-detail};
     use broadcast-host.{published-file};
     variant option-value {
@@ -33,23 +33,12 @@ interface broadcast-plugin {
         value: option-value,
     }
 
-    /// A concrete preserved representation. `reference` is opaque and is
-    /// opened only through the host's bounded Asset stream.
-    record asset {
-        id: string,
-        /// Opaque host-issued locator used only by `open-asset`.
-        reference: string,
-        media-type: option<string>,
-        size-bytes: u64,
-        metadata: list<plugin-metadata>,
-    }
-
     /// Stable preserved Item identity, its concrete Assets, and plugin-owned
     /// metadata facets. Domain fields remain inside those facets.
     record item {
         /// Stable host identity for the preserved logical Item.
         id: string,
-        assets: list<asset>,
+        assets: list<preserved-asset>,
         metadata: list<plugin-metadata>,
     }
 

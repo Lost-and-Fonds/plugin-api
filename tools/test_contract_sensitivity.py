@@ -141,6 +141,42 @@ def remove_helper_input(candidate: dict) -> None:
     helper["arguments"] = [argument for argument in helper["arguments"] if argument["name"] != "input"]
 
 
+def restore_broadcast_asset(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    owner["records"]["asset"] = copy.deepcopy(interface(candidate, "wit/io.wit", "io-host")["records"]["preserved-asset"])
+    owner["uses"].pop("preserved-asset", None)
+    next(field for field in owner["records"]["item"]["fields"] if field["name"] == "assets")["type"]["value"]["name"] = "asset"
+
+
+def restore_enrichment_asset(candidate: dict) -> None:
+    owner = interface(candidate, "wit/enrichment.wit", "enrichment-host")
+    owner["records"]["asset"] = copy.deepcopy(interface(candidate, "wit/io.wit", "io-host")["records"]["preserved-asset"])
+    owner["uses"].pop("preserved-asset", None)
+    next(field for field in owner["records"]["item-context"]["fields"] if field["name"] == "assets")["type"]["value"]["name"] = "asset"
+
+
+def remove_preserved_asset_id(candidate: dict) -> None:
+    owner = interface(candidate, "wit/io.wit", "io-host")
+    owner["records"]["preserved-asset"]["fields"] = [field for field in owner["records"]["preserved-asset"]["fields"] if field["name"] != "id"]
+
+
+def make_preserved_reference_domain_locator(candidate: dict) -> None:
+    owner = interface(candidate, "wit/io.wit", "io-host")
+    reference = next(field for field in owner["records"]["preserved-asset"]["fields"] if field["name"] == "reference")
+    reference["name"] = "url"
+
+
+def remove_preserved_metadata(candidate: dict) -> None:
+    owner = interface(candidate, "wit/io.wit", "io-host")
+    owner["records"]["preserved-asset"]["fields"] = [field for field in owner["records"]["preserved-asset"]["fields"] if field["name"] != "metadata"]
+
+
+def conflate_staged_and_preserved(candidate: dict) -> None:
+    owner = interface(candidate, "wit/io.wit", "io-host")
+    owner["records"].pop("staged-artifact", None)
+    owner["records"]["preserved-asset"] = copy.deepcopy(owner["records"]["preserved-asset"])
+
+
 def duplicate_byte_stream_for_broadcast(candidate: dict) -> None:
     owner = interface(candidate, "wit/broadcast.wit", "broadcast-host")
     owner["uses"].pop("byte-stream", None)
@@ -293,7 +329,7 @@ def embed_credentials_in_broadcast_configuration(candidate: dict) -> None:
 
 
 def restore_asset_kind_taxonomy(candidate: dict) -> None:
-    asset = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["asset"]
+    asset = interface(candidate, "wit/io.wit", "io-host")["records"]["preserved-asset"]
     asset["fields"].append({"name": "kind", "type": {"kind": "scalar", "name": "string"}})
 
 
@@ -592,6 +628,12 @@ expect_rejected("Enrichment invocation consuming discovery descriptor", restore_
 expect_rejected("duplicated Broadcast error detail", duplicate_broadcast_error_detail)
 expect_rejected("duplicated Broadcast staged artifact", duplicate_broadcast_staged_artifact)
 expect_rejected("Broadcast without preserved Asset reads", remove_broadcast_asset_stream)
+expect_rejected("duplicate Broadcast preserved Asset descriptor", restore_broadcast_asset)
+expect_rejected("duplicate Enrichment preserved Asset descriptor", restore_enrichment_asset)
+expect_rejected("preserved Asset without stable identity", remove_preserved_asset_id)
+expect_rejected("preserved Asset reference made a URL", make_preserved_reference_domain_locator)
+expect_rejected("preserved Asset without canonical metadata facets", remove_preserved_metadata)
+expect_rejected("staged artifact conflated with preserved Asset", conflate_staged_and_preserved)
 expect_rejected("helper without explicit streamed input", remove_helper_input)
 expect_rejected("duplicated Broadcast byte-stream abstraction", duplicate_byte_stream_for_broadcast)
 expect_rejected("Vault path exposed by Broadcast content boundary", expose_broadcast_vault_path)

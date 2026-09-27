@@ -140,7 +140,7 @@ if not {"id", "assets", "metadata"} <= item_fields.keys():
     raise SystemExit("Broadcast Items must carry stable identity, preserved Assets, and plugin metadata facets")
 if item_fields["metadata"] != {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}} or broadcast_plugin["uses"].get("plugin-metadata") != "io-host":
     raise SystemExit("Broadcast Items must use the canonical io-host.plugin-metadata facets")
-if item_fields["assets"] != {"kind": "list", "value": {"kind": "named", "name": "asset"}}:
+if item_fields["assets"] != {"kind": "list", "value": {"kind": "named", "name": "preserved-asset"}}:
     raise SystemExit("Broadcast Items must expose a generic list of preserved Assets")
 legacy_item_fields = {"source-reference", "title", "description", "published-at", "duration-seconds", "resources"}
 domain_item_fields = {
@@ -149,15 +149,25 @@ domain_item_fields = {
 }
 if (legacy_item_fields | domain_item_fields) & item_fields.keys():
     raise SystemExit("Broadcast Items must keep source/domain fields in plugin-owned metadata facets")
-asset_fields = fields(broadcast_plugin, "asset")
+asset_fields = fields(io_host, "preserved-asset")
+if broadcast_plugin["uses"].get("preserved-asset") != "io-host":
+    raise SystemExit("Broadcast Items must reuse the canonical io-host.preserved-asset descriptor")
+if "asset" in broadcast_plugin.get("records", {}):
+    raise SystemExit("Broadcast must not restore its duplicate preserved Asset descriptor")
+if item_fields["assets"] != {"kind": "list", "value": {"kind": "named", "name": "preserved-asset"}}:
+    raise SystemExit("Broadcast Items must reference the shared preserved Asset record, not an inline copy")
 if not {"id", "reference", "media-type", "size-bytes", "metadata"} <= asset_fields.keys():
     raise SystemExit("Broadcast Assets must retain generic identity, opaque reference, media type, size, and metadata")
 if asset_fields["id"] != {"kind": "scalar", "name": "string"} or asset_fields["reference"] != {"kind": "scalar", "name": "string"}:
-    raise SystemExit("Broadcast Asset identity and host locator must remain opaque strings")
+    raise SystemExit("Preserved Asset identity and host locator must remain opaque strings")
 if asset_fields["media-type"] != {"kind": "option", "value": {"kind": "scalar", "name": "string"}} or asset_fields["size-bytes"] != {"kind": "scalar", "name": "u64"}:
     raise SystemExit("Broadcast Asset media type and size must remain generic representation facts")
 if asset_fields["metadata"] != {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}}:
-    raise SystemExit("Broadcast Assets must use canonical plugin metadata facets")
+    raise SystemExit("Preserved Assets must use canonical plugin metadata facets")
+if asset_fields["size-bytes"] != {"kind": "scalar", "name": "u64"} or asset_fields["media-type"] != {"kind": "option", "value": {"kind": "scalar", "name": "string"}}:
+    raise SystemExit("Preserved Asset representation facts must remain generic")
+if {"url", "path", "provider-reference"} & asset_fields.keys():
+    raise SystemExit("Preserved Asset references must not become domain locators")
 if {"kind", "derivation-key", "url"} & asset_fields.keys():
     raise SystemExit("Broadcast Assets must not impose a kind taxonomy, derivation key, or public URL")
 request_fields = fields(broadcast_plugin, "publish-request")
@@ -654,14 +664,20 @@ def require_fields(interface: dict, record_name: str, expected: set[str]) -> dic
     return record_fields
 
 
-asset_fields = require_fields(enrichment_host, "asset", {"id", "reference", "media-type", "size-bytes"})
+asset_fields = require_fields(io_host, "preserved-asset", {"id", "reference", "media-type", "size-bytes", "metadata"})
+if enrichment_host["uses"].get("preserved-asset") != "io-host" or enrichment_plugin["uses"].get("preserved-asset") != "io-host":
+    raise SystemExit("Enrichment must reuse the canonical io-host.preserved-asset descriptor")
+if "asset" in enrichment_host.get("records", {}):
+    raise SystemExit("Enrichment must not restore its duplicate preserved Asset descriptor")
+if enrichment_host["uses"].get("plugin-metadata") != "io-host":
+    raise SystemExit("Preserved Asset metadata must use canonical io-host.plugin-metadata facets")
 if "assets" not in fields(enrichment_host, "item-context"):
     raise SystemExit("Enrichment context must include the Item's Assets")
 context_fields = fields(enrichment_host, "item-context")
 if not {"item-id", "assets", "metadata"} <= context_fields.keys():
     raise SystemExit("Enrichment context must expose generic Item identity, Assets, and metadata")
-if not contains_named_type(context_fields["assets"], "asset"):
-    raise SystemExit("Enrichment context Assets must use the canonical Asset descriptor")
+if context_fields["assets"] != {"kind": "list", "value": {"kind": "named", "name": "preserved-asset"}}:
+    raise SystemExit("Enrichment context Assets must use io-host.preserved-asset")
 if enrichment_host["uses"].get("plugin-metadata") != "io-host" or enrichment_plugin["uses"].get("plugin-metadata") != "io-host":
     raise SystemExit("Enrichment metadata facets must reuse the canonical io-host type")
 open_asset = next((function for function in enrichment_host.get("functions", []) if function["name"] == "open-asset"), None)

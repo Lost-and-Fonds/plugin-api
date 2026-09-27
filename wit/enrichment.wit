@@ -1,21 +1,11 @@
 package stashd:plugin@0.16.0;
 
 interface enrichment-host {
-    use io-host.{byte-stream, plugin-metadata};
-
-    /// An existing durable Asset belonging to an Item. `reference` is an
-    /// opaque host-issued locator and does not imply a filesystem path or URL.
-    record asset {
-        id: string,
-        reference: string,
-        media-type: option<string>,
-        size-bytes: u64,
-        metadata: list<plugin-metadata>,
-    }
+    use io-host.{byte-stream, plugin-metadata, preserved-asset};
 
     record item-context {
         item-id: string,
-        assets: list<asset>,
+        assets: list<preserved-asset>,
         metadata: list<plugin-metadata>,
     }
 
@@ -34,7 +24,8 @@ interface enrichment-host {
 
 interface enrichment-plugin {
     use plugin-types.{plugin-error-detail};
-    use enrichment-host.{asset, item-context};
+    use enrichment-host.{item-context};
+    use io-host.{preserved-asset};
     use io-host.{credential-binding, plugin-metadata, staged-artifact};
 
     /// An opaque, plugin-owned operation and revision that apply to the

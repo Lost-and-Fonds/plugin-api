@@ -736,51 +736,6 @@
             }
           ],
           "records": {
-            "asset": {
-              "fields": [
-                {
-                  "name": "id",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "reference",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "media-type",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "size-bytes",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "u64"
-                  }
-                },
-                {
-                  "name": "metadata",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "plugin-metadata"
-                    }
-                  }
-                }
-              ]
-            },
             "choice": {
               "fields": [
                 {
@@ -828,7 +783,7 @@
                     "kind": "list",
                     "value": {
                       "kind": "named",
-                      "name": "asset"
+                      "name": "preserved-asset"
                     }
                   }
                 },
@@ -974,6 +929,7 @@
             "credential-binding": "io-host",
             "plugin-error-detail": "plugin-types",
             "plugin-metadata": "io-host",
+            "preserved-asset": "io-host",
             "published-file": "broadcast-host",
             "staged-artifact": "io-host"
           },
@@ -1124,51 +1080,6 @@
             }
           ],
           "records": {
-            "asset": {
-              "fields": [
-                {
-                  "name": "id",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "reference",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "media-type",
-                  "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "scalar",
-                      "name": "string"
-                    }
-                  }
-                },
-                {
-                  "name": "size-bytes",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "u64"
-                  }
-                },
-                {
-                  "name": "metadata",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "plugin-metadata"
-                    }
-                  }
-                }
-              ]
-            },
             "item-context": {
               "fields": [
                 {
@@ -1184,7 +1095,7 @@
                     "kind": "list",
                     "value": {
                       "kind": "named",
-                      "name": "asset"
+                      "name": "preserved-asset"
                     }
                   }
                 },
@@ -1204,7 +1115,8 @@
           "resources": [],
           "uses": {
             "byte-stream": "io-host",
-            "plugin-metadata": "io-host"
+            "plugin-metadata": "io-host",
+            "preserved-asset": "io-host"
           },
           "variants": {
             "asset-error": {
@@ -1470,11 +1382,11 @@
           },
           "resources": [],
           "uses": {
-            "asset": "enrichment-host",
             "credential-binding": "io-host",
             "item-context": "enrichment-host",
             "plugin-error-detail": "plugin-types",
             "plugin-metadata": "io-host",
+            "preserved-asset": "io-host",
             "staged-artifact": "io-host"
           },
           "variants": {
@@ -2180,6 +2092,51 @@
                   "type": {
                     "kind": "scalar",
                     "name": "string"
+                  }
+                }
+              ]
+            },
+            "preserved-asset": {
+              "fields": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "media-type",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "size-bytes",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "u64"
+                  }
+                },
+                {
+                  "name": "metadata",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "plugin-metadata"
+                    }
                   }
                 }
               ]

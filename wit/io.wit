@@ -98,6 +98,22 @@ interface io-host {
         json: string,
     }
 
+    /// An already-preserved, host-owned concrete representation supplied for
+    /// read-only use during an invocation. `id` is its stable durable Asset
+    /// identity. `reference` is an opaque, host-controlled locator used only
+    /// with the lifecycle host's mediated Asset-read operation; it is not a
+    /// path, URL, provider identity, or durable source identity, and plugins
+    /// must not persist it or place it in metadata. Each lifecycle host accepts
+    /// its own reference only under host-controlled invocation lifetime rules;
+    /// it is not transferable between invocations or host APIs.
+    record preserved-asset {
+        id: string,
+        reference: string,
+        media-type: option<string>,
+        size-bytes: u64,
+        metadata: list<plugin-metadata>,
+    }
+
     /// Opaque host-owned selector for a configured credential. Knowing its id
     /// alone does not authorize use; the host requires an invocation grant and
     /// rechecks authorization and availability when access is attempted.

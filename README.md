@@ -173,6 +173,34 @@ optional `files` result; no empty path stands for a non-filesystem result.
 `published-file` keeps optional Item and Asset IDs for correlation and a
 relative path, while removing the provider-specific source reference.
 
+## Canonical preserved Assets
+
+Broadcast Items and Enrichment `item-context` use the shared
+`io-host.preserved-asset` descriptor because both supply an already-preserved,
+host-owned concrete representation as read-only invocation input. Its fields are
+stable durable `id`, opaque host-mediated `reference`, optional concrete
+`media-type`, factual `size-bytes`, and canonical plugin-owned/versioned
+`plugin-metadata` facets. The ID identifies the preserved Asset; the reference
+is only a host-controlled locator accepted by the relevant lifecycle host's
+`open-asset` call. It is not a filesystem path, URL, provider reference, durable
+source identity, or transferable cross-invocation URI, and must not be persisted
+or copied into metadata. Hosts control its validity and lifetime, which may be
+limited to the invocation.
+
+Broadcast and Enrichment carry the same preserved Asset concept, while their
+Item and context, capabilities, publication, errors, and results remain
+lifecycle-specific. This generic shape applies equally to media, documents,
+images, WARC, optical-media images, adopted derived output, and arbitrary
+binary representations without domain-specific fields. The PHP SDK can expose
+one preserved-Asset DTO/value type across both worlds rather than converting
+between identical representations.
+
+`staged-artifact` remains separate: it represents output produced in the
+current invocation, stays invocation-scoped until successful adoption, and may
+be discarded on failure. In particular, Enrichment's durable derived output
+continues to use `derived-asset` with its staged artifact and provenance; sharing
+the input descriptor does not make new staged output an existing Vault Asset.
+
 This shape covers generated Podcast feed artifacts with enclosure Assets and
 metadata-provided titles/dates; Jellyfin/Plex Asset publication with optional
 filesystem or destination records; Internet Archive and S3/WebDAV remote-only
