@@ -26,7 +26,7 @@ interface broadcast-plugin {
         text(string),
     }
 
-    /// Provider-owned settings carry configuration only, never credential
+    /// Plugin-owned settings carry configuration only, never credential
     /// references or secret material; use the invocation credential bindings.
     record setting {
         key: string,
