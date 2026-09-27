@@ -270,6 +270,28 @@ def add_ambiguous_broadcast_request_fields(candidate: dict) -> None:
     request["fields"].append({"name": "reference", "type": {"kind": "scalar", "name": "string"}})
 
 
+def add_broadcast_sources(candidate: dict) -> None:
+    request = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["publish-request"]
+    request["fields"].append({"name": "sources", "type": {"kind": "list", "value": {"kind": "named", "name": "item"}}})
+
+
+def add_mixed_source_settings(candidate: dict) -> None:
+    request = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["publish-request"]
+    request["fields"].append({"name": "settings", "type": {"kind": "list", "value": {"kind": "named", "name": "setting"}}})
+
+
+def remove_broadcast_configuration(candidate: dict) -> None:
+    plugin = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    plugin["records"].pop("destination-configuration")
+    publish = next(function for function in plugin["functions"] if function["name"] == "publish")
+    publish["arguments"] = [argument for argument in publish["arguments"] if argument["name"] != "configuration"]
+
+
+def embed_credentials_in_broadcast_configuration(candidate: dict) -> None:
+    configuration = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["destination-configuration"]
+    configuration["fields"].append({"name": "credentials", "type": {"kind": "list", "value": {"kind": "named", "name": "credential-binding"}}})
+
+
 def restore_asset_kind_taxonomy(candidate: dict) -> None:
     asset = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["asset"]
     asset["fields"].append({"name": "kind", "type": {"kind": "scalar", "name": "string"}})
@@ -542,6 +564,10 @@ expect_rejected("remote publication requires a fake staged artifact", require_fa
 expect_rejected("publication requires filesystem paths", require_filesystem_result_for_publication)
 expect_rejected("Asset kind restored as a universal taxonomy", restore_asset_kind_taxonomy)
 expect_rejected("ambiguous Broadcast request reference restored", add_ambiguous_broadcast_request_fields)
+expect_rejected("Broadcast source list restored", add_broadcast_sources)
+expect_rejected("mixed source settings restored to Broadcast request", add_mixed_source_settings)
+expect_rejected("explicit Broadcast destination configuration removed", remove_broadcast_configuration)
+expect_rejected("credentials embedded in Broadcast destination configuration", embed_credentials_in_broadcast_configuration)
 expect_rejected("destination receipts lose opaque plugin metadata", replace_destination_receipts_with_settings)
 expect_rejected("credentials embedded in Broadcast publication results", embed_credentials_in_publication)
 expect_rejected("Broadcast preparation phase restored", add_prepare_phase)

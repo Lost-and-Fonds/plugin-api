@@ -671,6 +671,13 @@
                   }
                 },
                 {
+                  "name": "configuration",
+                  "type": {
+                    "kind": "named",
+                    "name": "destination-configuration"
+                  }
+                },
+                {
                   "name": "credentials",
                   "type": {
                     "kind": "list",
@@ -788,6 +795,20 @@
                   "type": {
                     "kind": "scalar",
                     "name": "string"
+                  }
+                }
+              ]
+            },
+            "destination-configuration": {
+              "fields": [
+                {
+                  "name": "settings",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "setting"
+                    }
                   }
                 }
               ]

@@ -58,6 +58,12 @@ interface broadcast-plugin {
         items: list<item>,
     }
 
+    /// Plugin-owned non-secret configuration for the host-selected destination.
+    /// Core persists these values and supplies them on every publication call.
+    record destination-configuration {
+        settings: list<setting>,
+    }
+
     record publication {
         /// Optional local staged output. The host adopts it only when this
         /// publication result succeeds; remote-only publication uses `none`.
@@ -104,8 +110,8 @@ interface broadcast-plugin {
     /// destination-specific selection, transformation, packaging, upload, or
     /// commit work inside this call. It may stage bytes and reopen them during
     /// this invocation. There is no required prepare or finalize call.
-    /// Credentials and staged resources are scoped to this invocation.
-    publish: func(request: publish-request, credentials: list<credential-binding>) -> result<publication, plugin-error>;
+    /// Credentials, destination configuration, and staged resources are scoped to this invocation.
+    publish: func(request: publish-request, configuration: destination-configuration, credentials: list<credential-binding>) -> result<publication, plugin-error>;
 
     /// Runs an explicitly requested plugin-defined interactive destination
     /// operation, independently of publication. It does not publish the

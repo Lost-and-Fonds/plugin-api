@@ -148,14 +148,21 @@ identify data such as `youtube.video@…`, `podcast.episode@…`,
 `internet-archive.item@…`; Core transports their JSON without interpreting it.
 
 A `publish-request` contains only the preserved `items` selected for this
-invocation. It does not identify a Broadcast instance or carry settings: the
-host invokes the plugin instance already configured for the destination, and
-that plugin interprets its own durable destination configuration. There is no
-universal source entity in Broadcast: preserved Items are the publication
-inputs, and any source/provider provenance or domain selection remains in
-plugin-owned metadata. Per-publication choices that are genuinely needed are
-part of the selected Items or represented by a plugin-defined operation, not a
-second generic settings/reference channel.
+invocation. Core selects the configured Broadcast/destination connection and
+supplies its `destination-configuration` explicitly on every `publish` call.
+Core owns persistence of that configuration; the plugin owns and interprets
+its setting keys and values. Values are non-secret and may describe
+plugin-specific endpoint, library, bucket, prefix, or feed choices. Empty
+settings are valid for destinations requiring no configuration. Credentials
+and credential references are excluded and remain separate invocation-scoped
+host grants in `credentials`. No generic destination reference is needed: Core
+selects the connection and supplies the configuration itself. Preserved Items
+are the publication inputs; source/provider provenance and domain data remain
+in plugin-owned metadata. Configuration applies to the selected destination
+for this invocation, not to individual Items or interactive `operation`
+requests. This contract defines durable selected-destination configuration
+only; ephemeral per-publication options are deferred until a forcing case
+requires them.
 
 A `publication` has an optional staged `artifact`, optional filesystem
 `files`, and a list of canonical `destination-metadata` facets. Remote-only
@@ -175,7 +182,7 @@ metadata; and arbitrary document/binary Assets without audiovisual fields.
 
 ## Broadcast lifecycle (contract 0.14)
 
-`publish(request, credentials)` is the complete publication lifecycle and the
+`publish(request, configuration, credentials)` is the complete publication lifecycle and the
 only publication call. A caller may invoke it directly; there is no preceding
 `prepare` call and no following `finalize` call. The plugin may select,
 transform, package, upload, commit, and perform destination work needed for the

@@ -165,12 +165,16 @@ if request_fields != {"items": {"kind": "list", "value": {"kind": "named", "name
     raise SystemExit("Broadcast publish requests must contain only the preserved Items being published")
 if "source" in broadcast_plugin.get("records", {}) or {"reference", "settings", "sources"} & request_fields.keys():
     raise SystemExit("Broadcast requests must not contain ambiguous or duplicated source/destination configuration")
+configuration_fields = fields(broadcast_plugin, "destination-configuration")
+if configuration_fields != {"settings": {"kind": "list", "value": {"kind": "named", "name": "setting"}}}:
+    raise SystemExit("Broadcast must define explicit plugin-owned destination configuration")
 broadcast_functions = {function["name"]: function for function in broadcast_plugin.get("functions", [])}
 if set(broadcast_functions) != {"publish", "operation"}:
     raise SystemExit("Broadcast must expose direct publish and independent operation, without prepare/finalize phases")
 publish = broadcast_functions["publish"]
 if publish.get("arguments") != [
     {"name": "request", "type": {"kind": "named", "name": "publish-request"}},
+    {"name": "configuration", "type": {"kind": "named", "name": "destination-configuration"}},
     {"name": "credentials", "type": {"kind": "list", "value": {"kind": "named", "name": "credential-binding"}}},
 ] or publish.get("result") != {
     "kind": "result",
