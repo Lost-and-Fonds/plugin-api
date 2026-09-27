@@ -65,8 +65,21 @@ component_definition = package_schema.get("$defs", {}).get("component", {})
 if not {"world", "artifact"} <= set(component_definition.get("required", [])):
     raise SystemExit("each identified component must declare its WIT world and artifact")
 component_properties = component_definition.get("properties", {})
-if set(component_properties) != {"world", "artifact"}:
-    raise SystemExit("component declarations must contain only world and artifact")
+if set(component_properties) != {"world", "artifact", "credential_slots"}:
+    raise SystemExit("component declarations must contain world, artifact, and component-scoped credential slots")
+credential_slots_schema = component_properties["credential_slots"]
+if credential_slots_schema.get("type") != "object" or credential_slots_schema.get("propertyNames", {}).get("pattern") != "^[a-z0-9][a-z0-9._-]*$":
+    raise SystemExit("credential slots must be component-local stable identifiers")
+slot_schema = package_schema.get("$defs", {}).get("credential-slot", {})
+if credential_slots_schema.get("additionalProperties") != {"$ref": "#/$defs/credential-slot"}:
+    raise SystemExit("component slot names must map to credential slot declarations")
+if slot_schema.get("required") != ["label", "required"] or slot_schema.get("additionalProperties") is not False:
+    raise SystemExit("credential slots must contain only presentation label, optional description, and required semantics")
+if set(slot_schema.get("properties", {})) != {"label", "required", "description"}:
+    raise SystemExit("credential slot declarations must not include credential taxonomy or secret material")
+slot_text = json.dumps(slot_schema, sort_keys=True).lower()
+if any(term in slot_text for term in ("reference", "secret", "provider", "oauth", "token", "password", "scope", "header", "query")):
+    raise SystemExit("credential slot schema must not encode credential values or taxonomy")
 if component_properties["world"].get("enum") != sorted(worlds):
     raise SystemExit("component world choices must match the canonical WIT worlds exactly")
 if component_definition.get("additionalProperties") is not False:

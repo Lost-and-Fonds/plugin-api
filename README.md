@@ -126,6 +126,43 @@ Asset references, or capability IDs/revisions. HTTP and approved helper
 mediation cover these use cases; Broadcast and Enrichment do not receive raw
 secret access.
 
+## Credential-slot declarations
+
+Static credential requirements are declared in each component's
+`credential_slots` object in the package manifest, keyed by stable plugin-owned
+slot name. Each value contains required `label` and `required`, plus optional
+`description`. Names identify slots within their component; the complete
+identity is `(package id, component id, slot name)`. Presentation text never
+changes identity. Core/configuration persists a selected stored credential
+reference under that identity; rotation replaces the reference without
+renaming the slot. A reference is an opaque host selector, not secret material.
+
+`required` describes whether the component can perform its normal configured
+function without a binding. Optional slots permit anonymous or reduced
+functionality. Neither setting grants access or guarantees use-time validity.
+Core may defer a missing required slot, but it still supplies only explicitly
+authorized `credential-binding(name, reference)` values to each invocation and
+rechecks authorization and availability at use. Invocation bindings MUST name
+slots declared by that component. Identically named slots in different
+components are independent; using one stored credential for both is an explicit
+host/user choice, never package aliasing.
+
+Keep a name across versions for the same logical requirement; labels and
+descriptions may change freely. Adding an optional slot is compatible; adding a
+required slot may require configuration. Renaming or removing a slot is a
+configuration-contract change and must not inherit the old binding. Hosts never
+guess equivalence between names. Declarations contain no secret, reference,
+provider, scope, credential type, or transport details.
+
+A website Input can declare `session`, bind it to a host credential reference,
+and receive that binding for an invocation. Core may rotate the reference while
+the slot remains `session`. HTTP/helper mediation grants only explicitly passed
+bindings; generic helper credential mediation is sufficient for authenticated
+Browsertrix/Chromium/Playwright capture without browser-specific WIT. The
+Input-only `input-host.open-credential(reference)` remains solely for protocols
+that HTTP/helper mediation cannot express. Broadcast and Enrichment retain no
+raw-secret capability.
+
 Contract 0.13 makes Broadcast Items generic: an Item contains its stable ID,
 concrete Assets, and canonical `plugin-metadata` facets. Assets contain a stable
 Asset ID, an opaque host reference, optional media type, byte size, and their

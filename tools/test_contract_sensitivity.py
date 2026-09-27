@@ -25,6 +25,19 @@ def remove_artifact_path_syntax(candidate: dict) -> None:
     package_artifact(candidate).pop("pattern", None)
 
 
+def weaken_credential_slot_schema(candidate: dict) -> None:
+    slot = candidate["$defs"]["credential-slot"]
+    slot["properties"]["credential_reference"] = {"type": "string"}
+
+
+def make_credential_slot_global(candidate: dict) -> None:
+    candidate["properties"]["credential_slots"] = candidate["$defs"]["component"]["properties"].pop("credential_slots")
+
+
+def remove_slot_identity_constraints(candidate: dict) -> None:
+    candidate["$defs"]["component"]["properties"]["credential_slots"]["propertyNames"].pop("pattern", None)
+
+
 def remove_artifact_resolution_reference(candidate: dict) -> None:
     package_artifact(candidate)["description"] = "Package-relative path to a component artifact."
 
@@ -664,3 +677,6 @@ expect_rejected("opaque-reference derived-artifact staging restored", restore_op
 expect_rejected("contract package identity downgraded from 0.14.0", downgrade_contract_package_identity)
 expect_package_schema_rejected("package artifact path syntax removed", remove_artifact_path_syntax)
 expect_package_schema_rejected("package artifact resolution rules unreferenced", remove_artifact_resolution_reference)
+expect_package_schema_rejected("credential reference embedded in slot declaration", weaken_credential_slot_schema)
+expect_package_schema_rejected("package-global credential slots", make_credential_slot_global)
+expect_package_schema_rejected("invalid credential slot identity accepted", remove_slot_identity_constraints)

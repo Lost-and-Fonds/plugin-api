@@ -9,6 +9,16 @@
           "pattern": "^[^/\\\\:\\u0000-\\u001F\\u007F][^\\\\:\\u0000-\\u001F\\u007F]*$",
           "type": "string"
         },
+        "credential_slots": {
+          "additionalProperties": {
+            "$ref": "#/$defs/credential-slot"
+          },
+          "description": "Component-scoped credential requirements; each property name is a stable plugin-defined slot identity. Presentation fields do not participate in identity.",
+          "propertyNames": {
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "type": "object"
+        },
         "world": {
           "description": "Canonical WIT world implemented by this component.",
           "enum": [
@@ -23,6 +33,29 @@
       "required": [
         "world",
         "artifact"
+      ],
+      "type": "object"
+    },
+    "credential-slot": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "description": "Presentation metadata; does not participate in slot identity.",
+          "type": "string"
+        },
+        "label": {
+          "description": "Presentation metadata; does not participate in slot identity.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "required": {
+          "description": "Whether the component needs this binding for its normal configured function; does not grant access or guarantee availability.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "label",
+        "required"
       ],
       "type": "object"
     }

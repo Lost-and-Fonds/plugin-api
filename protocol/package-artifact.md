@@ -2,6 +2,22 @@
 
 This document is normative for the `components.*.artifact` field in the plugin package manifest. It defines a portable logical package path. It does not define package extraction, component validation, or an operating system filesystem API.
 
+## Component credential slots
+
+Each component may declare `credential_slots`, an object keyed by stable slot names. An omitted or empty object means the component declares no credential requirements. Names use the component-ID syntax `^[a-z0-9][a-z0-9._-]*$`; names are unique by construction within the component. Slot identity is the tuple `(package id, component id, slot name)`. The same name in distinct components is independent and never implies shared configuration.
+
+A slot descriptor requires `label` and `required`, and may include `description`. These strings are presentation metadata only and do not participate in identity. Declarations contain no credential reference, secret, credential taxonomy, provider, scopes, or protocol placement.
+
+The package declares requirements; Core/configuration persists the user's choice of stored credential reference per slot; invocation bindings grant temporary use. A `credential-reference` is an opaque host selector, not a secret or authorization. A `credential-binding` maps the declared slot name to that reference and is supplied only when Core authorizes it for the invocation. Bindings MUST correspond to slots declared by that component; plugins MUST NOT rely on hidden or undeclared names.
+
+`required: true` means the component cannot perform its normal configured function without a binding. `required: false` means it may work anonymously or with reduced functionality. Neither value grants permission or guarantees validity or availability. Hosts may defer invocation when a required binding is absent; every use still undergoes invocation authorization and use-time availability/revocation checks, preserving `credential-denied` versus `credential-unavailable`.
+
+Keep a slot name when the logical requirement remains the same. Rotating/replacing the stored credential reference or changing presentation text preserves identity. Adding an optional slot is configuration-compatible; adding a required slot can leave existing installations incompletely configured. Renaming or removing a slot changes the configuration contract and MUST NOT silently transfer its binding. Hosts MUST NOT infer equivalence between differently named slots; no migration framework is implied.
+
+For example, `input.account` and `broadcast.account` in one package are separate slots. Core may let a user select the same stored reference for both, but that is an explicit host/user decision. A website Input declaring `session` may bind a refreshed session reference without changing that slot identity. The Input invocation receives only explicitly granted bindings. HTTP and helper capabilities mediate credential use; the existing Input-only `input-host.open-credential(reference)` remains available only for protocols those capabilities cannot express. Browsertrix/Chromium/Playwright helpers receive only the invocation's explicit bindings; generic helper mediation carries opaque session material without browser-specific WIT. Broadcast and Enrichment do not gain raw-secret access.
+
+This covers API-backed private YouTube and Internet Archive Input, Internet Archive/Broadcast and Jellyfin/Plex destinations, S3/WebDAV Broadcast, helper-backed SFTP, authenticated Enrichment APIs, and multiple independent slots on one component. Each declares only its own stable names, Core stores references by component-scoped identity, and invocation bindings carry name/reference pairs. Use host-mediated HTTP or helper execution where applicable; Input may use its existing raw-secret escape hatch only when mediation is insufficient. Optional slots permit anonymous operation. No package metadata contains secrets or references.
+
 ## Manifest path syntax
 
 The value is a non-empty JSON string containing a portable logical path.

@@ -229,6 +229,12 @@ def package_manifest_schema(package: str, worlds: dict[str, dict]) -> dict:
                 "minLength": 1,
                 "pattern": r"^[^/\\:\u0000-\u001F\u007F][^\\:\u0000-\u001F\u007F]*$",
                 "description": "Portable logical package path using `/` separators; see protocol/package-artifact.md for normalization, containment, and symlink rules.",
+            },
+            "credential_slots": {
+                "type": "object",
+                "description": "Component-scoped credential requirements; each property name is a stable plugin-defined slot identity. Presentation fields do not participate in identity.",
+                "propertyNames": {"pattern": "^[a-z0-9][a-z0-9._-]*$"},
+                "additionalProperties": {"$ref": "#/$defs/credential-slot"},
             }
         },
     }
@@ -251,7 +257,19 @@ def package_manifest_schema(package: str, worlds: dict[str, dict]) -> dict:
                 "additionalProperties": {"$ref": "#/$defs/component"},
             },
         },
-        "$defs": {"component": component},
+        "$defs": {
+            "component": component,
+            "credential-slot": {
+                "type": "object",
+                "required": ["label", "required"],
+                "additionalProperties": False,
+                "properties": {
+                    "label": {"type": "string", "minLength": 1, "description": "Presentation metadata; does not participate in slot identity."},
+                    "required": {"type": "boolean", "description": "Whether the component needs this binding for its normal configured function; does not grant access or guarantee availability."},
+                    "description": {"type": "string", "description": "Presentation metadata; does not participate in slot identity."},
+                },
+            },
+        },
     }
 
 
