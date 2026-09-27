@@ -147,6 +147,16 @@ identify data such as `youtube.video@…`, `podcast.episode@…`,
 `books.publication@…`, `mediawiki.revision@…`, or
 `internet-archive.item@…`; Core transports their JSON without interpreting it.
 
+A `publish-request` contains only the preserved `items` selected for this
+invocation. It does not identify a Broadcast instance or carry settings: the
+host invokes the plugin instance already configured for the destination, and
+that plugin interprets its own durable destination configuration. There is no
+universal source entity in Broadcast: preserved Items are the publication
+inputs, and any source/provider provenance or domain selection remains in
+plugin-owned metadata. Per-publication choices that are genuinely needed are
+part of the selected Items or represented by a plugin-defined operation, not a
+second generic settings/reference channel.
+
 A `publication` has an optional staged `artifact`, optional filesystem
 `files`, and a list of canonical `destination-metadata` facets. Remote-only
 success returns no artifact and can put one or more receipts—such as remote

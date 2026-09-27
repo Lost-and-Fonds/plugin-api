@@ -265,6 +265,11 @@ def require_filesystem_result_for_publication(candidate: dict) -> None:
     }
 
 
+def add_ambiguous_broadcast_request_fields(candidate: dict) -> None:
+    request = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["publish-request"]
+    request["fields"].append({"name": "reference", "type": {"kind": "scalar", "name": "string"}})
+
+
 def restore_asset_kind_taxonomy(candidate: dict) -> None:
     asset = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["asset"]
     asset["fields"].append({"name": "kind", "type": {"kind": "scalar", "name": "string"}})
@@ -536,6 +541,7 @@ expect_rejected("Broadcast Item without canonical metadata facets", remove_broad
 expect_rejected("remote publication requires a fake staged artifact", require_fake_artifact_for_publication)
 expect_rejected("publication requires filesystem paths", require_filesystem_result_for_publication)
 expect_rejected("Asset kind restored as a universal taxonomy", restore_asset_kind_taxonomy)
+expect_rejected("ambiguous Broadcast request reference restored", add_ambiguous_broadcast_request_fields)
 expect_rejected("destination receipts lose opaque plugin metadata", replace_destination_receipts_with_settings)
 expect_rejected("credentials embedded in Broadcast publication results", embed_credentials_in_publication)
 expect_rejected("Broadcast preparation phase restored", add_prepare_phase)

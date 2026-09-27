@@ -53,15 +53,8 @@ interface broadcast-plugin {
         metadata: list<plugin-metadata>,
     }
 
-    record source {
-        reference: string,
-        settings: list<setting>,
-    }
-
+    /// The preserved Items selected by the caller for this publication.
     record publish-request {
-        reference: string,
-        settings: list<setting>,
-        sources: list<source>,
         items: list<item>,
     }
 

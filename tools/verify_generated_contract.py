@@ -160,6 +160,11 @@ if asset_fields["metadata"] != {"kind": "list", "value": {"kind": "named", "name
     raise SystemExit("Broadcast Assets must use canonical plugin metadata facets")
 if {"kind", "derivation-key", "url"} & asset_fields.keys():
     raise SystemExit("Broadcast Assets must not impose a kind taxonomy, derivation key, or public URL")
+request_fields = fields(broadcast_plugin, "publish-request")
+if request_fields != {"items": {"kind": "list", "value": {"kind": "named", "name": "item"}}}:
+    raise SystemExit("Broadcast publish requests must contain only the preserved Items being published")
+if "source" in broadcast_plugin.get("records", {}) or {"reference", "settings", "sources"} & request_fields.keys():
+    raise SystemExit("Broadcast requests must not contain ambiguous or duplicated source/destination configuration")
 broadcast_functions = {function["name"]: function for function in broadcast_plugin.get("functions", [])}
 if set(broadcast_functions) != {"publish", "operation"}:
     raise SystemExit("Broadcast must expose direct publish and independent operation, without prepare/finalize phases")

@@ -918,33 +918,6 @@
             "publish-request": {
               "fields": [
                 {
-                  "name": "reference",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "settings",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "setting"
-                    }
-                  }
-                },
-                {
-                  "name": "sources",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "source"
-                    }
-                  }
-                },
-                {
                   "name": "items",
                   "type": {
                     "kind": "list",
@@ -970,27 +943,6 @@
                   "type": {
                     "kind": "named",
                     "name": "option-value"
-                  }
-                }
-              ]
-            },
-            "source": {
-              "fields": [
-                {
-                  "name": "reference",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "settings",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "setting"
-                    }
                   }
                 }
               ]
