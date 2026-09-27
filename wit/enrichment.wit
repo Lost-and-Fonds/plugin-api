@@ -25,7 +25,6 @@ interface enrichment-host {
 interface enrichment-plugin {
     use plugin-types.{plugin-error-detail};
     use enrichment-host.{item-context};
-    use io-host.{preserved-asset};
     use io-host.{credential-binding, plugin-metadata, staged-artifact};
 
     /// An opaque, plugin-owned operation and revision that apply to the

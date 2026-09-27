@@ -665,8 +665,8 @@ def require_fields(interface: dict, record_name: str, expected: set[str]) -> dic
 
 
 asset_fields = require_fields(io_host, "preserved-asset", {"id", "reference", "media-type", "size-bytes", "metadata"})
-if enrichment_host["uses"].get("preserved-asset") != "io-host" or enrichment_plugin["uses"].get("preserved-asset") != "io-host":
-    raise SystemExit("Enrichment must reuse the canonical io-host.preserved-asset descriptor")
+if enrichment_host["uses"].get("preserved-asset") != "io-host":
+    raise SystemExit("Enrichment host context must reuse the canonical io-host.preserved-asset descriptor")
 if "asset" in enrichment_host.get("records", {}):
     raise SystemExit("Enrichment must not restore its duplicate preserved Asset descriptor")
 if enrichment_host["uses"].get("plugin-metadata") != "io-host":

@@ -1386,7 +1386,6 @@
             "item-context": "enrichment-host",
             "plugin-error-detail": "plugin-types",
             "plugin-metadata": "io-host",
-            "preserved-asset": "io-host",
             "staged-artifact": "io-host"
           },
           "variants": {
