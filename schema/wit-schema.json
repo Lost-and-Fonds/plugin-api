@@ -32,15 +32,22 @@
             {
               "arguments": [
                 {
-                  "name": "item",
+                  "name": "batch",
                   "type": {
                     "kind": "named",
-                    "name": "discovered-item"
+                    "name": "discovery-batch"
                   }
                 }
               ],
-              "name": "report-discovered",
-              "result": null
+              "name": "commit-discovery-batch",
+              "result": {
+                "error": {
+                  "kind": "named",
+                  "name": "discovery-commit-error"
+                },
+                "kind": "result",
+                "ok": null
+              }
             }
           ],
           "records": {
@@ -99,6 +106,49 @@
                 }
               ]
             },
+            "discovery-batch": {
+              "fields": [
+                {
+                  "name": "items",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "discovered-item"
+                    }
+                  }
+                },
+                {
+                  "name": "progress",
+                  "type": {
+                    "kind": "named",
+                    "name": "discovery-progress"
+                  }
+                }
+              ]
+            },
+            "discovery-continuation": {
+              "fields": [
+                {
+                  "name": "value",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
+            "discovery-refresh-state": {
+              "fields": [
+                {
+                  "name": "value",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
             "input-delegation": {
               "fields": [
                 {
@@ -147,6 +197,35 @@
                 {
                   "name": "unavailable",
                   "type": null
+                }
+              ]
+            },
+            "discovery-commit-error": {
+              "values": [
+                {
+                  "name": "rejected",
+                  "type": null
+                }
+              ]
+            },
+            "discovery-progress": {
+              "values": [
+                {
+                  "name": "more",
+                  "type": {
+                    "kind": "named",
+                    "name": "discovery-continuation"
+                  }
+                },
+                {
+                  "name": "complete",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "discovery-refresh-state"
+                    }
+                  }
                 }
               ]
             }
@@ -234,27 +313,10 @@
             {
               "arguments": [
                 {
-                  "name": "input-id",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "intent",
+                  "name": "request",
                   "type": {
                     "kind": "named",
-                    "name": "discovery-intent"
-                  }
-                },
-                {
-                  "name": "options",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "input-option"
-                    }
+                    "name": "discovery-request"
                   }
                 },
                 {
@@ -275,13 +337,7 @@
                   "name": "plugin-error"
                 },
                 "kind": "result",
-                "ok": {
-                  "kind": "list",
-                  "value": {
-                    "kind": "named",
-                    "name": "discovered-item"
-                  }
-                }
+                "ok": null
               }
             },
             {
@@ -350,6 +406,61 @@
                       "kind": "named",
                       "name": "staged-artifact"
                     }
+                  }
+                }
+              ]
+            },
+            "discovery-request": {
+              "fields": [
+                {
+                  "name": "input-id",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "intent",
+                  "type": {
+                    "kind": "named",
+                    "name": "discovery-intent"
+                  }
+                },
+                {
+                  "name": "options",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "input-option"
+                    }
+                  }
+                },
+                {
+                  "name": "continuation",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "discovery-continuation"
+                    }
+                  }
+                },
+                {
+                  "name": "refresh-state",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "discovery-refresh-state"
+                    }
+                  }
+                },
+                {
+                  "name": "maximum-items-per-batch",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "u32"
                   }
                 }
               ]
@@ -453,6 +564,8 @@
           "uses": {
             "credential-binding": "io-host",
             "discovered-item": "input-host",
+            "discovery-continuation": "input-host",
+            "discovery-refresh-state": "input-host",
             "input-delegation": "input-host",
             "plugin-error-detail": "plugin-types",
             "plugin-metadata": "io-host",

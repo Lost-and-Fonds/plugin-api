@@ -351,6 +351,57 @@ def require_credential_bindings(function_name: str, interface: dict = input_plug
 
 for lifecycle_phase in ("resolve", "resolve-delegation", "discover"):
     require_credential_bindings(lifecycle_phase)
+
+# Discovery has exactly one delivery path: acknowledged bounded batches.
+discovery_functions = {function["name"]: function for function in input_plugin.get("functions", [])}
+host_functions = {function["name"]: function for function in input_host.get("functions", [])}
+if "report-discovered" in host_functions:
+    raise SystemExit("single-Item report-discovered delivery must be removed")
+if "commit-discovery-batch" not in host_functions:
+    raise SystemExit("Input must expose host-acknowledged batch acceptance")
+commit = host_functions["commit-discovery-batch"]
+if commit.get("arguments") != [{"name": "batch", "type": {"kind": "named", "name": "discovery-batch"}}] or commit.get("result") != {
+    "kind": "result", "ok": None, "error": {"kind": "named", "name": "discovery-commit-error"},
+}:
+    raise SystemExit("discovery batch acceptance must return a typed acknowledgement error")
+discover = discovery_functions.get("discover")
+if discover is None or discover.get("arguments") != [
+    {"name": "request", "type": {"kind": "named", "name": "discovery-request"}},
+    {"name": "credentials", "type": {"kind": "list", "value": credential_binding}},
+] or discover.get("result") != {
+    "kind": "result", "ok": None, "error": {"kind": "named", "name": "plugin-error"},
+}:
+    raise SystemExit("discover must accept a resumable request and return no Item list")
+discovery_request_fields = fields(input_plugin, "discovery-request")
+if discovery_request_fields != {
+    "input-id": {"kind": "scalar", "name": "string"},
+    "intent": {"kind": "named", "name": "discovery-intent"},
+    "options": {"kind": "list", "value": {"kind": "named", "name": "input-option"}},
+    "continuation": {"kind": "option", "value": {"kind": "named", "name": "discovery-continuation"}},
+    "refresh-state": {"kind": "option", "value": {"kind": "named", "name": "discovery-refresh-state"}},
+    "maximum-items-per-batch": {"kind": "scalar", "name": "u32"},
+}:
+    raise SystemExit("discovery requests must bind run context, separate opaque states, and a host batch maximum")
+for state_name in ("discovery-continuation", "discovery-refresh-state"):
+    state_fields = fields(input_host, state_name)
+    if set(state_fields) != {"value"} or state_fields["value"] != {"kind": "scalar", "name": "string"}:
+        raise SystemExit(f"{state_name} must be a distinct opaque string wrapper")
+batch_fields = fields(input_host, "discovery-batch")
+if batch_fields != {
+    "items": {"kind": "list", "value": {"kind": "named", "name": "discovered-item"}},
+    "progress": {"kind": "named", "name": "discovery-progress"},
+}:
+    raise SystemExit("discovery batches must combine bounded Items with exactly one progress transition")
+progress_cases = input_host["variants"].get("discovery-progress", {}).get("values", [])
+progress = {case["name"]: case["type"] for case in progress_cases}
+if progress != {
+    "more": {"kind": "named", "name": "discovery-continuation"},
+    "complete": {"kind": "option", "value": {"kind": "named", "name": "discovery-refresh-state"}},
+}:
+    raise SystemExit("discovery progress must make nonterminal continuation and terminal refresh state exclusive")
+if any("discovered-item" in str(function.get("result")) for function in discovery_functions.values()):
+    raise SystemExit("discover must not return Items alongside batch delivery")
+
 acquisition_credentials = fields(input_plugin, "acquisition-options").get("credentials")
 if acquisition_credentials != {"kind": "list", "value": credential_binding}:
     raise SystemExit("Input acquisition must use the same host-managed credential bindings as other phases")
@@ -633,16 +684,10 @@ if delegation_resolver.get("result") != {
     "error": {"kind": "named", "name": "plugin-error"},
 }:
     raise SystemExit("resolve-delegation must use the generic Input resolution and error types")
-discover_function = next(
-    (function for function in input_plugin["functions"] if function["name"] == "discover"),
-    None,
-)
-if discover_function is None or discover_function.get("result") != {
-    "kind": "result",
-    "ok": {"kind": "list", "value": {"kind": "named", "name": "discovered-item"}},
-    "error": {"kind": "named", "name": "plugin-error"},
+if fields(input_host, "discovery-batch").get("items") != {
+    "kind": "list", "value": {"kind": "named", "name": "discovered-item"}
 }:
-    raise SystemExit("Input discovery must return the canonical discovered-item handoff boundary")
+    raise SystemExit("Input discovery batches must preserve the canonical discovered-item handoff boundary")
 
 for interface in (input_host, input_plugin):
     symbols = set(interface["records"]) | set(interface["variants"]) | set(interface["enums"])

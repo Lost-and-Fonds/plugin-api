@@ -680,3 +680,63 @@ expect_package_schema_rejected("package artifact resolution rules unreferenced",
 expect_package_schema_rejected("credential reference embedded in slot declaration", weaken_credential_slot_schema)
 expect_package_schema_rejected("package-global credential slots", make_credential_slot_global)
 expect_package_schema_rejected("invalid credential slot identity accepted", remove_slot_identity_constraints)
+
+
+def remove_batch_commit(candidate: dict) -> None:
+    owner = input_interface(candidate, "input-host")
+    owner["functions"] = [function for function in owner["functions"] if function["name"] != "commit-discovery-batch"]
+
+
+def restore_single_item_delivery(candidate: dict) -> None:
+    owner = input_interface(candidate, "input-host")
+    owner["functions"].append({"name": "report-discovered", "arguments": [{"name": "item", "type": {"kind": "named", "name": "discovered-item"}}], "result": None})
+
+
+def return_discovery_items(candidate: dict) -> None:
+    owner = input_interface(candidate, "input-plugin")
+    discover = next(function for function in owner["functions"] if function["name"] == "discover")
+    discover["result"]["ok"] = {"kind": "list", "value": {"kind": "named", "name": "discovered-item"}}
+
+
+def merge_discovery_states(candidate: dict) -> None:
+    owner = input_interface(candidate, "input-plugin")
+    request = owner["records"]["discovery-request"]
+    next(field for field in request["fields"] if field["name"] == "continuation")["type"] = {
+        "kind": "option", "value": {"kind": "scalar", "name": "string"}
+    }
+
+
+def put_refresh_state_in_nonterminal_progress(candidate: dict) -> None:
+    owner = input_interface(candidate, "input-host")
+    more = next(case for case in owner["variants"]["discovery-progress"]["values"] if case["name"] == "more")
+    more["type"] = {"kind": "named", "name": "discovery-refresh-state"}
+
+
+def remove_batch_limit(candidate: dict) -> None:
+    owner = input_interface(candidate, "input-plugin")
+    request = owner["records"]["discovery-request"]
+    request["fields"] = [field for field in request["fields"] if field["name"] != "maximum-items-per-batch"]
+
+
+def embed_credentials_in_discovery_state(candidate: dict) -> None:
+    owner = input_interface(candidate, "input-host")
+    owner["records"]["discovery-continuation"]["fields"].append(
+        {"name": "credentials", "type": {"kind": "list", "value": {"kind": "named", "name": "credential-binding"}}}
+    )
+
+
+def add_provider_pagination_field(candidate: dict) -> None:
+    owner = input_interface(candidate, "input-plugin")
+    owner["records"]["discovery-request"]["fields"].append(
+        {"name": "page-token", "type": {"kind": "scalar", "name": "string"}}
+    )
+
+
+expect_rejected("missing acknowledged discovery batch", remove_batch_commit)
+expect_rejected("single-item discovery delivery restored", restore_single_item_delivery)
+expect_rejected("returned discovery Item list restored", return_discovery_items)
+expect_rejected("undifferentiated continuation state", merge_discovery_states)
+expect_rejected("refresh state in nonterminal progress", put_refresh_state_in_nonterminal_progress)
+expect_rejected("unbounded discovery batch", remove_batch_limit)
+expect_rejected("credentials embedded in continuation", embed_credentials_in_discovery_state)
+expect_rejected("provider pagination field in request", add_provider_pagination_field)

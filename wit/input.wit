@@ -37,11 +37,40 @@ interface input-host {
         metadata: list<plugin-metadata>,
     }
 
-    report-discovered: func(item: discovered-item);
+    /// Opaque plugin-owned restart point for one in-progress run. The host stores
+    /// it unchanged, and advances it only atomically with the accepted batch.
+    record discovery-continuation {
+        value: string,
+    }
+
+    /// Opaque plugin-owned baseline used only between successfully completed runs.
+    record discovery-refresh-state {
+        value: string,
+    }
+
+    variant discovery-progress {
+        /// The batch was nonterminal; resume after this durably accepted batch.
+        more(discovery-continuation),
+        /// The run is terminal; replace completed refresh state atomically.
+        complete(option<discovery-refresh-state>),
+    }
+
+    record discovery-batch {
+        items: list<discovered-item>,
+        progress: discovery-progress,
+    }
+
+    variant discovery-commit-error {
+        rejected,
+    }
+
+    /// MUST atomically accept every Item and its progress transition. Success means
+    /// both survive invocation failure; on error, the plugin MUST NOT assume progress advanced.
+    commit-discovery-batch: func(batch: discovery-batch) -> result<_, discovery-commit-error>;
 }
 
 interface input-plugin {
-    use input-host.{discovered-item, input-delegation};
+    use input-host.{discovered-item, input-delegation, discovery-continuation, discovery-refresh-state};
     use io-host.{credential-binding, plugin-metadata, staged-artifact};
     use plugin-types.{plugin-error-detail};
 
@@ -64,6 +93,19 @@ interface input-plugin {
     enum discovery-intent {
         refresh,
         complete,
+    }
+
+    /// A run's identity, intent, options, and refresh baseline must remain fixed
+    /// when resuming. Continuations contain no credential material.
+    /// `maximum-items-per-batch` MUST be greater than zero and limits each
+    /// host-committed transport batch independently of the RPC message-size limit.
+    record discovery-request {
+        input-id: string,
+        intent: discovery-intent,
+        options: list<input-option>,
+        continuation: option<discovery-continuation>,
+        refresh-state: option<discovery-refresh-state>,
+        maximum-items-per-batch: u32,
     }
 
     record acquisition-options {
@@ -101,7 +143,9 @@ interface input-plugin {
     /// Resolve a handoff delegated by another Input. Inputs that cannot
     /// handle it return `unsupported`; Core may probe other installed Inputs.
     resolve-delegation: func(delegation: input-delegation, credentials: list<credential-binding>) -> result<resolved-input, plugin-error>;
-    discover: func(input-id: string, intent: discovery-intent, options: list<input-option>, credentials: list<credential-binding>) -> result<list<discovered-item>, plugin-error>;
+    /// Success means a terminal batch was committed and acknowledged. Every batch
+    /// MUST respect the request limit; providers' own pagination stays plugin-owned.
+    discover: func(request: discovery-request, credentials: list<credential-binding>) -> result<_, plugin-error>;
     acquire: func(item: discovered-item, options: acquisition-options) -> result<acquisition-result, plugin-error>;
 }
 

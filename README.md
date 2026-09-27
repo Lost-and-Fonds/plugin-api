@@ -34,8 +34,11 @@ and regular-file requirements are specified in
 [`protocol/package-artifact.md`](protocol/package-artifact.md), with forcing
 vectors in [`protocol/package-artifact-vectors.json`](protocol/package-artifact-vectors.json).
 Input, Broadcast, Enrichment, and Collection Export keep their separate
-interfaces and lifecycles. Enrichment inspects generic Item/Asset context, reports applicable
-plugin-owned capabilities, and returns opaque metadata facets and/or durable
+interfaces and lifecycles. Input discovery uses bounded, host-acknowledged
+batches with distinct opaque continuation and completed refresh state; see the
+normative [Input discovery contract](protocol/input-discovery.md). Enrichment
+inspects generic Item/Asset context, reports applicable plugin-owned capabilities,
+and returns opaque metadata facets and/or durable
 derived Assets with source Asset IDs and plugin activity/version provenance.
 Capability `id` and `revision` identify the operation and its evolution. Each
 capability also advertises zero or more generic configuration options. An
