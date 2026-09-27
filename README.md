@@ -22,13 +22,15 @@ paths.
 
 The generated `schema/plugin-package.schema.json` defines one deployable
 package identity (`id` and `version`) with a `components` object keyed by stable
-component IDs. Each component declares a canonical WIT `world` and a portable
-logical package `artifact` path. Multiple component IDs may declare the same
-world. The allowed world values are generated from this package's WIT
-declarations; the manifest selects those worlds and cannot add new ones.
+component IDs. Each component declares a canonical WIT `world`, portable logical
+package `artifact` path, and optional component-scoped credential slots.
+Multiple component IDs may declare the same world. The allowed world values are
+generated from this package's WIT declarations; the manifest selects those
+worlds and cannot add new ones. The complete normative manifest and component
+metadata contract is in [`protocol/plugin-package.md`](protocol/plugin-package.md).
 Package tooling can validate each artifact against its declared world. Artifact
 normalization, native-path rejection, filesystem containment, symlink handling,
-and regular-file requirements are normative in
+and regular-file requirements are specified in
 [`protocol/package-artifact.md`](protocol/package-artifact.md), with forcing
 vectors in [`protocol/package-artifact-vectors.json`](protocol/package-artifact-vectors.json).
 Input, Broadcast, Enrichment, and Collection Export keep their separate

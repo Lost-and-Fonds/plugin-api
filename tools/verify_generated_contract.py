@@ -91,6 +91,22 @@ if artifact_schema.get("pattern") != r"^[^/\\:\u0000-\u001F\u007F][^\\:\u0000-\u
     raise SystemExit("component artifacts must use the canonical portable path syntax")
 if "protocol/package-artifact.md" not in artifact_schema.get("description", ""):
     raise SystemExit("component artifacts must reference the normative resolution rules")
+package_metadata_document = Path(__file__).resolve().parents[1] / "protocol" / "plugin-package.md"
+package_metadata_text = package_metadata_document.read_text(encoding="utf-8") if package_metadata_document.is_file() else ""
+if not package_metadata_text.startswith("# Plugin package metadata") or "Component credential slots" not in package_metadata_text:
+    raise SystemExit("normative component credential-slot semantics must be documented")
+for semantic in (
+    "(package id, component id, slot name)",
+    "presentation metadata only",
+    "required: true",
+    "required: false",
+    "MUST NOT silently transfer its binding",
+    "MUST correspond to slots declared by that component",
+    "input-host.open-credential(reference)",
+    "helper capabilities mediate credential use",
+):
+    if semantic.casefold() not in package_metadata_text.casefold():
+        raise SystemExit(f"normative package metadata document is missing: {semantic}")
 
 package_schema_text = json.dumps(package_schema, sort_keys=True).lower()
 implementation_terms = ("php", "composer", "class-name", "entrypoint", "implementation-language")

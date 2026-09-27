@@ -222,7 +222,7 @@ def package_manifest_schema(package: str, worlds: dict[str, dict]) -> dict:
             "world": {
                 "type": "string",
                 "enum": sorted(worlds),
-                "description": "Canonical WIT world implemented by this component.",
+                "description": "Canonical WIT world implemented by this component; see protocol/plugin-package.md for the normative package and component metadata contract.",
             },
             "artifact": {
                 "type": "string",
@@ -232,7 +232,7 @@ def package_manifest_schema(package: str, worlds: dict[str, dict]) -> dict:
             },
             "credential_slots": {
                 "type": "object",
-                "description": "Component-scoped credential requirements; each property name is a stable plugin-defined slot identity. Presentation fields do not participate in identity.",
+                "description": "Component-scoped credential requirements; each property name is a stable plugin-defined slot identity. Presentation fields do not participate in identity. See protocol/plugin-package.md for normative semantics.",
                 "propertyNames": {"pattern": "^[a-z0-9][a-z0-9._-]*$"},
                 "additionalProperties": {"$ref": "#/$defs/credential-slot"},
             }
