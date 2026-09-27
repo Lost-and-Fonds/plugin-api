@@ -14,6 +14,19 @@ from pathlib import Path
 schema_path, package_schema_path = map(Path, sys.argv[1:3])
 verifier = Path(__file__).with_name("verify_generated_contract.py")
 schema = json.loads(schema_path.read_text(encoding="utf-8"))
+package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
+
+
+def package_artifact(candidate: dict) -> dict:
+    return candidate["$defs"]["component"]["properties"]["artifact"]
+
+
+def remove_artifact_path_syntax(candidate: dict) -> None:
+    package_artifact(candidate).pop("pattern", None)
+
+
+def remove_artifact_resolution_reference(candidate: dict) -> None:
+    package_artifact(candidate)["description"] = "Package-relative path to a component artifact."
 
 
 def input_interface(candidate: dict, name: str) -> dict:
@@ -38,6 +51,26 @@ def expect_rejected(name: str, mutate) -> None:
         candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
         result = subprocess.run(
             [sys.executable, str(verifier), str(candidate_path), str(package_schema_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    if result.returncode == 0:
+        raise SystemExit(f"semantic verifier accepted the {name} regression")
+    print(f"sensitivity check caught {name}")
+
+
+def expect_package_schema_rejected(name: str, mutate) -> None:
+    candidate = copy.deepcopy(schema)
+    package_candidate = copy.deepcopy(package_schema)
+    mutate(package_candidate)
+    with tempfile.TemporaryDirectory(prefix="stashd-contract-sensitivity-") as temp:
+        candidate_path = Path(temp) / "wit-schema.json"
+        package_candidate_path = Path(temp) / "plugin-package.schema.json"
+        candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+        package_candidate_path.write_text(json.dumps(package_candidate), encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, str(verifier), str(candidate_path), str(package_candidate_path)],
             capture_output=True,
             text=True,
             check=False,
@@ -509,3 +542,5 @@ expect_rejected("Broadcast preparation phase restored", add_prepare_phase)
 expect_rejected("Broadcast finalization phase restored", add_finalize_phase)
 expect_rejected("opaque-reference derived-artifact staging restored", restore_opaque_prepared_output)
 expect_rejected("contract package identity downgraded from 0.14.0", downgrade_contract_package_identity)
+expect_package_schema_rejected("package artifact path syntax removed", remove_artifact_path_syntax)
+expect_package_schema_rejected("package artifact resolution rules unreferenced", remove_artifact_resolution_reference)

@@ -71,6 +71,13 @@ if component_properties["world"].get("enum") != sorted(worlds):
     raise SystemExit("component world choices must match the canonical WIT worlds exactly")
 if component_definition.get("additionalProperties") is not False:
     raise SystemExit("component declarations must reject unspecified fields")
+artifact_schema = component_properties.get("artifact", {})
+if artifact_schema.get("type") != "string" or artifact_schema.get("minLength") != 1:
+    raise SystemExit("component artifacts must be non-empty strings")
+if artifact_schema.get("pattern") != r"^[^/\\:\u0000-\u001F\u007F][^\\:\u0000-\u001F\u007F]*$":
+    raise SystemExit("component artifacts must use the canonical portable path syntax")
+if "protocol/package-artifact.md" not in artifact_schema.get("description", ""):
+    raise SystemExit("component artifacts must reference the normative resolution rules")
 
 package_schema_text = json.dumps(package_schema, sort_keys=True).lower()
 implementation_terms = ("php", "composer", "class-name", "entrypoint", "implementation-language")

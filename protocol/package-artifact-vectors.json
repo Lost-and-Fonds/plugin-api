@@ -1,0 +1,273 @@
+{
+  "package": "stashd:plugin@0.16.0",
+  "lexical": [
+    {
+      "artifact": "components/main.wasm",
+      "name": "normal package-relative artifact",
+      "normalized": "components/main.wasm",
+      "outcome": "accepted"
+    },
+    {
+      "artifact": "components/wasm/main.wasm",
+      "name": "nested package-relative artifact",
+      "normalized": "components/wasm/main.wasm",
+      "outcome": "accepted"
+    },
+    {
+      "artifact": "./components/main.wasm",
+      "name": "leading dot segment",
+      "normalized": "components/main.wasm",
+      "outcome": "accepted"
+    },
+    {
+      "artifact": "components//./wasm/main.wasm/",
+      "name": "repeated separators, dot segment, and trailing separator",
+      "normalized": "components/wasm/main.wasm",
+      "outcome": "accepted"
+    },
+    {
+      "artifact": "components/current/../main.wasm",
+      "name": "in-root parent segment",
+      "normalized": "components/main.wasm",
+      "outcome": "accepted"
+    },
+    {
+      "artifact": "../../evil.wasm",
+      "name": "traversal above package root",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "a/../../../evil.wasm",
+      "name": "repeated traversal above package root",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "/component.wasm",
+      "name": "canonical absolute path",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "C:/component.wasm",
+      "name": "Windows drive absolute path",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "C:component.wasm",
+      "name": "Windows drive-relative path",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "//server/share/component.wasm",
+      "name": "slash UNC path",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "\\\\server\\share\\component.wasm",
+      "name": "backslash UNC path",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "components\\main.wasm",
+      "name": "backslash separator",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "components:main.wasm",
+      "name": "host-specific colon form",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": ".",
+      "name": "dot-only path",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "a/..",
+      "name": "empty normalized path",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "",
+      "name": "empty manifest value",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "components/\u0000main.wasm",
+      "name": "ASCII control character",
+      "outcome": "rejected"
+    }
+  ],
+  "equivalent": [
+    {
+      "artifacts": ["components/main.wasm", "./components//main.wasm", "components/wasm/../main.wasm"],
+      "name": "equivalent normalized paths",
+      "normalized": "components/main.wasm"
+    }
+  ],
+  "filesystem": [
+    {
+      "artifact": "components/main.wasm",
+      "entries": {
+        "components": {
+          "type": "directory"
+        },
+        "components/main.wasm": {
+          "type": "file"
+        }
+      },
+      "name": "regular artifact",
+      "outcome": "accepted"
+    },
+    {
+      "artifact": "component.wasm",
+      "entries": {
+        "component.wasm": {
+          "target": "components/main.wasm",
+          "type": "symlink"
+        },
+        "components": {
+          "type": "directory"
+        },
+        "components/main.wasm": {
+          "type": "file"
+        }
+      },
+      "name": "in-package final symlink",
+      "outcome": "accepted"
+    },
+    {
+      "artifact": "lib/../component.wasm",
+      "entries": {
+        "component.wasm": {
+          "type": "symlink",
+          "target": "components/main.wasm"
+        },
+        "components": {
+          "type": "directory"
+        },
+        "components/main.wasm": {
+          "type": "file"
+        }
+      },
+      "name": "normalized path resolves from package root",
+      "outcome": "accepted"
+    },
+    {
+      "artifact": "dir/../component.wasm",
+      "entries": {
+        "component.wasm": {
+          "type": "file"
+        }
+      },
+      "name": "lexical normalization removes canceled directory segments",
+      "outcome": "accepted"
+    },
+    {
+      "artifact": "component.wasm",
+      "entries": {
+        "component.wasm": {
+          "target": "/outside/evil.wasm",
+          "type": "symlink"
+        }
+      },
+      "name": "final symlink escape",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "missing/directory/component.wasm",
+      "entries": {
+        "missing/directory/component.wasm": {
+          "type": "file"
+        }
+      },
+      "name": "missing intermediate directory",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "regular-file/component.wasm",
+      "entries": {
+        "regular-file": {
+          "type": "file"
+        },
+        "regular-file/component.wasm": {
+          "type": "file"
+        }
+      },
+      "name": "regular file used as intermediate directory",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "component.wasm",
+      "entries": {
+        "component.wasm": {
+          "target": "../package-two/component.wasm",
+          "type": "symlink"
+        }
+      },
+      "name": "sibling root prefix is not package containment",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "component.wasm",
+      "entries": {
+        "component.wasm": {
+          "target": "components/main.wasm",
+          "type": "symlink"
+        },
+        "components": {
+          "type": "directory"
+        },
+        "components/main.wasm": {
+          "type": "file"
+        }
+      },
+      "name": "in-package final symlink with explicit directory",
+      "outcome": "accepted"
+    },
+    {
+      "artifact": "lib/component.wasm",
+      "entries": {
+        "lib": {
+          "target": "/outside",
+          "type": "symlink"
+        },
+        "lib/component.wasm": {
+          "type": "file"
+        }
+      },
+      "name": "intermediate directory symlink escape",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "component.wasm",
+      "entries": {
+        "component.wasm": {
+          "target": "loop.wasm",
+          "type": "symlink"
+        },
+        "loop.wasm": {
+          "target": "component.wasm",
+          "type": "symlink"
+        }
+      },
+      "name": "symlink loop",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "components",
+      "entries": {
+        "components": {
+          "type": "directory"
+        }
+      },
+      "name": "directory artifact",
+      "outcome": "rejected"
+    },
+    {
+      "artifact": "missing.wasm",
+      "entries": {},
+      "name": "missing artifact",
+      "outcome": "rejected"
+    }
+  ]
+}

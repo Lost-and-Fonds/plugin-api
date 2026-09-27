@@ -22,13 +22,17 @@ paths.
 
 The generated `schema/plugin-package.schema.json` defines one deployable
 package identity (`id` and `version`) with a `components` object keyed by stable
-component IDs. Each component declares a canonical WIT `world` and a
-package-relative `artifact`. Multiple component IDs may declare the same world.
-The allowed world values are generated from this package's WIT declarations;
-the manifest selects those worlds and cannot add new ones. Package tooling can
-validate each artifact against its declared world. Input, Broadcast,
-Enrichment, and Collection Export keep their separate interfaces and
-lifecycles. Enrichment inspects generic Item/Asset context, reports applicable
+component IDs. Each component declares a canonical WIT `world` and a portable
+logical package `artifact` path. Multiple component IDs may declare the same
+world. The allowed world values are generated from this package's WIT
+declarations; the manifest selects those worlds and cannot add new ones.
+Package tooling can validate each artifact against its declared world. Artifact
+normalization, native-path rejection, filesystem containment, symlink handling,
+and regular-file requirements are normative in
+[`protocol/package-artifact.md`](protocol/package-artifact.md), with forcing
+vectors in [`protocol/package-artifact-vectors.json`](protocol/package-artifact-vectors.json).
+Input, Broadcast, Enrichment, and Collection Export keep their separate
+interfaces and lifecycles. Enrichment inspects generic Item/Asset context, reports applicable
 plugin-owned capabilities, and returns opaque metadata facets and/or durable
 derived Assets with source Asset IDs and plugin activity/version provenance.
 Capability `id` and `revision` identify the operation and its evolution. Each
@@ -400,7 +404,10 @@ Asset reads, staged-artifact reads, helper stdin, host-granted
 Broadcast/Enrichment credentials, Enrichment's shared HTTP import, and staging
 invariants. HTTP methods are arbitrary validated tokens, while redirect
 following, URL authorization, credential forwarding, and streamed-body replay
-remain explicit host/runtime policy. It also proves that the semantic checks
+remain explicit host/runtime policy. Package artifact vectors cover portable
+syntax, lexical normalization, native-path rejection, in-package symlinks,
+symlink escapes, containment, existence, and regular-file requirements. It also
+proves that the semantic checks
 reject acquisition-only credentials, raw credentials in generic Input records,
 inline-only HTTP request or response bodies, missing Broadcast Asset streaming,
 missing helper stdin,

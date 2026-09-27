@@ -227,7 +227,8 @@ def package_manifest_schema(package: str, worlds: dict[str, dict]) -> dict:
             "artifact": {
                 "type": "string",
                 "minLength": 1,
-                "description": "Package-relative path to a component artifact implementing the declared WIT world.",
+                "pattern": r"^[^/\\:\u0000-\u001F\u007F][^\\:\u0000-\u001F\u007F]*$",
+                "description": "Portable logical package path using `/` separators; see protocol/package-artifact.md for normalization, containment, and symlink rules.",
             }
         },
     }
