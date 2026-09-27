@@ -740,3 +740,25 @@ expect_rejected("refresh state in nonterminal progress", put_refresh_state_in_no
 expect_rejected("unbounded discovery batch", remove_batch_limit)
 expect_rejected("credentials embedded in continuation", embed_credentials_in_discovery_state)
 expect_rejected("provider pagination field in request", add_provider_pagination_field)
+
+
+def verify_terminal_commit_authority() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "input-discovery.md"
+    text = document.read_text(encoding="utf-8")
+    weakened = text.replace("Successful acknowledgment of this batch is the durable commit point for the discovery run.", "The terminal batch indicates completion.")
+    if weakened == text:
+        raise SystemExit("terminal commit-point sensitivity mutation did not apply")
+    document.write_text(weakened, encoding="utf-8")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
+            capture_output=True, text=True, check=False,
+        )
+    finally:
+        document.write_text(text, encoding="utf-8")
+    if result.returncode == 0:
+        raise SystemExit("semantic verifier accepted missing terminal commit-point semantics")
+    print("sensitivity check caught missing terminal commit-point semantics")
+
+
+verify_terminal_commit_authority()

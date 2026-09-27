@@ -65,7 +65,10 @@ interface input-host {
     }
 
     /// MUST atomically accept every Item and its progress transition. Success means
-    /// both survive invocation failure; on error, the plugin MUST NOT assume progress advanced.
+    /// both survive invocation failure. The host MUST enforce the active request's
+    /// maximum, reject commits outside an active run and after terminal completion,
+    /// and retain committed state even if acknowledgment is lost. Terminal success
+    /// is the run's durable commit point; later errors MUST NOT roll it back.
     commit-discovery-batch: func(batch: discovery-batch) -> result<_, discovery-commit-error>;
 }
 
@@ -143,8 +146,10 @@ interface input-plugin {
     /// Resolve a handoff delegated by another Input. Inputs that cannot
     /// handle it return `unsupported`; Core may probe other installed Inputs.
     resolve-delegation: func(delegation: input-delegation, credentials: list<credential-binding>) -> result<resolved-input, plugin-error>;
-    /// Success means a terminal batch was committed and acknowledged. Every batch
-    /// MUST respect the request limit; providers' own pagination stays plugin-owned.
+    /// Success requires an acknowledged terminal batch; otherwise it is a protocol
+    /// violation and MUST NOT complete the run. After terminal acknowledgment, the
+    /// plugin MUST return success without further discovery or batch commits.
+    /// Every batch MUST respect the request limit; providers' own pagination stays plugin-owned.
     discover: func(request: discovery-request, credentials: list<credential-binding>) -> result<_, plugin-error>;
     acquire: func(item: discovered-item, options: acquisition-options) -> result<acquisition-result, plugin-error>;
 }

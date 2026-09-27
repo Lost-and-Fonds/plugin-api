@@ -401,6 +401,21 @@ if progress != {
     raise SystemExit("discovery progress must make nonterminal continuation and terminal refresh state exclusive")
 if any("discovered-item" in str(function.get("result")) for function in discovery_functions.values()):
     raise SystemExit("discover must not return Items alongside batch delivery")
+discovery_document = Path(__file__).resolve().parents[1] / "protocol" / "input-discovery.md"
+discovery_text = discovery_document.read_text(encoding="utf-8") if discovery_document.is_file() else ""
+for semantic in (
+    "host MUST enforce the active request's `maximum-items-per-batch`",
+    "reject a batch exceeding that count",
+    "commit outside the active `discover` run",
+    "any commit after that run is terminal",
+    "successful acknowledgment of this batch is the durable commit point",
+    "MUST return successful completion from `discover`",
+    "success without a successfully acknowledged terminal `complete(...)` batch is a protocol violation",
+    "MUST NOT roll back or reopen the run",
+    "MUST NOT cause the host to mark the run complete",
+):
+    if semantic.casefold() not in discovery_text.casefold():
+        raise SystemExit(f"normative Input discovery lifecycle is missing: {semantic}")
 
 acquisition_credentials = fields(input_plugin, "acquisition-options").get("credentials")
 if acquisition_credentials != {"kind": "list", "value": credential_binding}:
