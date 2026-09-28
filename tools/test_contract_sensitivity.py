@@ -776,7 +776,6 @@ expect_rejected("mixed source settings restored to Broadcast request", add_mixed
 expect_rejected("explicit Broadcast destination configuration removed", remove_broadcast_configuration)
 expect_rejected("credentials embedded in Broadcast destination configuration", embed_credentials_in_broadcast_configuration)
 expect_rejected("destination receipts lose opaque plugin metadata", replace_destination_receipts_with_settings)
-expect_rejected("destination receipts lose opaque plugin metadata", replace_destination_receipts_with_settings)
 expect_rejected("inline publication file list restored", restore_inline_files)
 expect_rejected("credentials embedded in Broadcast publication results", embed_credentials_in_publication)
 expect_rejected("Broadcast preparation phase restored", add_prepare_phase)
