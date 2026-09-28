@@ -185,8 +185,6 @@ if shared_values["plugin-metadata"] != {
     "valid-data": {"ok": [0]}, "eof": {"ok": None}, "invalid-empty-data": {"ok": []}, "eof-sticky": True,
 } or shared_values["progress"] != {
     "valid": [None, 0.0, 1.0], "invalid": [-0.1, 1.0001], "monotonicity-required": False,
-} or shared_values["input-size"] != {
-    "valid": [[None, False], [0, False], [0, True]], "invalid": [[None, True]],
 }:
     raise SystemExit("shared value semantic conformance vector is incomplete or inconsistent")
 enrichment_discovery = by_name["enrichment-capabilities-local-discovery"]

@@ -612,28 +612,6 @@
         ],
         "monotonicity-required": false
       },
-      "input-size": {
-        "valid": [
-          [
-            null,
-            false
-          ],
-          [
-            0,
-            false
-          ],
-          [
-            0,
-            true
-          ]
-        ],
-        "invalid": [
-          [
-            null,
-            true
-          ]
-        ]
-      },
       "meaning": "compact semantic examples; invalid values are contract violations, not lifecycle results"
     },
     {

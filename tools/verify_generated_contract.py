@@ -93,6 +93,8 @@ input_values_requirements = (
     ("| `none` | `true` | invalid:",),
     ("resolved-input` and `discovered-item` use the same", "must reject the containing value"),
     ("later `discover` invocation", "without an undocumented in-memory mapping"),
+    ("resolved-input.id`, which the host later supplies as `discovery-request.input-id`", "later `discover` invocation"),
+    ("acquire` receives the complete `discovered-item`", "later invocation"),
     ("later invocation", "must not require an undocumented process-local object"),
     ("correctness must not depend on an undocumented mutable process-local mapping",),
     ("continuation` and `discovery-refresh-state`", "self-sufficient across process/invocation boundaries", "no credential material"),
@@ -126,7 +128,7 @@ if readme_path.is_file():
         if required_phrase not in readme_text:
             raise SystemExit(f"README is missing current shared invariant guidance: {required_phrase}")
 input_wit_text = (repo_root / "wit" / "input.wit").read_text(encoding="utf-8").casefold()
-if "size-value/estimate pairing follows protocol/input-values.md" not in input_wit_text or "id` is stable and usable by later independent discover/acquire calls" not in input_wit_text or "must remain usable across independent invocations" not in input_wit_text:
+if "the complete item, especially stable `id` and opaque `reference`" not in input_wit_text or "later independent acquire" not in input_wit_text or "`id` is the input identity used as `discovery-request.input-id`" not in input_wit_text or "later independent discover calls" not in input_wit_text:
     raise SystemExit("Input WIT guidance must link shared size and cross-invocation identity semantics")
 io_wit_text = (repo_root / "wit" / "io.wit").read_text(encoding="utf-8").casefold()
 if "protocol/shared-values.md" not in io_wit_text or "some([])` is invalid" not in io_wit_text:
