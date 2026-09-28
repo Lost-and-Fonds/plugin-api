@@ -668,7 +668,7 @@ expect_staging_rule_rejected("metadata mutable after finish", "`media-type` and 
 expect_staging_rule_rejected("forged reference reopened", "Unknown, fabricated, stale, or other-invocation references return `stream-error.missing`.")
 expect_staging_rule_rejected("old invocation reference reused", "A descriptor from an earlier invocation is never resolved against that invocation, durable Vault storage, another component/process, or another artifact with coincidentally similar fields.")
 expect_staging_rule_rejected("descriptor matching ignores non-reference fields", "A plugin MAY copy a descriptor value. Any operation accepting one MUST resolve its reference in the current invocation's completed-artifact registry and compare the entire supplied descriptor against the canonical descriptor: `reference`, `media-type`, `size-bytes`, and `metadata`.")
-expect_staging_rule_rejected("write errors do not poison writer", "Any `write` returning any `staging-error` transitions OPEN to POISONED.")
+expect_staging_rule_rejected("write errors do not poison writer", "because the write returns `staging-error`, it transitions OPEN to POISONED.")
 expect_staging_rule_rejected("poisoned writer can recover", "A POISONED writer cannot recover or produce an artifact.")
 expect_staging_rule_rejected("second finish creates another artifact", "FINISHED is terminal: subsequent `write` and second `finish` calls fail deterministically with `staging-error.failed(...)`.")
 expect_staging_rule_rejected("write after finish allowed", "FINISHED is terminal: subsequent `write` and second `finish` calls fail deterministically with `staging-error.failed(...)`.")

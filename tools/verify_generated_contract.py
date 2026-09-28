@@ -54,7 +54,7 @@ staging_requirements = (
     ("unknown, fabricated, stale, or other-invocation references return `stream-error.missing`", "known reference with any descriptor-field mismatch returns `stream-error.denied`"),
     ("canonical descriptor may be reopened repeatedly in the same invocation", "new invocation-scoped canonical `byte-stream`"),
     ("**open**", "**poisoned**", "**finished**"),
-    ("any `write` returning any `staging-error` transitions open to poisoned", "oversized or rejected chunk is not partially appended"),
+    ("because the write returns `staging-error`, it transitions open to poisoned", "oversized or rejected chunk is not partially appended"),
     ("subsequent `write` and `finish` calls fail deterministically with `staging-error.failed(...)`", "a poisoned writer cannot recover"),
     ("subsequent `write` and second `finish` calls fail deterministically", "finish does not consume the writer resource"),
     ("dropping an open or poisoned writer discards partial unpublished output", "dropping a finished writer releases only the writer resource handle"),

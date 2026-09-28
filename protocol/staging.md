@@ -20,7 +20,7 @@ Before opening bytes, `open-staged-artifact` MUST look up the reference in the a
 
 Each newly created writer begins **OPEN**. Its behavioral states are **OPEN**, **POISONED**, and **FINISHED**; these are not wire fields.
 
-In OPEN, a successful `write` appends the complete chunk and leaves the writer OPEN. Existing configured chunk limits and atomic rejection apply: an oversized or rejected chunk is not partially appended. Any `write` returning any `staging-error` transitions OPEN to POISONED. Partial physical output remains unpublished and can never be finalized. A helper or output-stream failure that existing helper semantics say makes the writer unfinalizable also transitions it to POISONED.
+In OPEN, a successful `write` appends the complete chunk and leaves the writer OPEN. Existing configured chunk limits and atomic rejection apply: an oversized or rejected chunk is not partially appended, and because the write returns `staging-error`, it transitions OPEN to POISONED. Any other `write` returning any `staging-error` also transitions OPEN to POISONED. Partial physical output remains unpublished and can never be finalized. A helper or output-stream failure that existing helper semantics say makes the writer unfinalizable also transitions it to POISONED.
 
 A POISONED writer cannot recover or produce an artifact. Subsequent `write` and `finish` calls fail deterministically with `staging-error.failed(...)`; retrying a failed chunk cannot make it finalizable.
 
