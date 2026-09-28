@@ -14,6 +14,9 @@ schema = json.loads(schema_path.read_text(encoding="utf-8"))
 package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
 repo_root = Path(__file__).resolve().parents[1]
 execution_path = repo_root / "protocol" / "component-execution.md"
+shared_values_path = Path(os.environ.get("STASHD_SHARED_VALUES_SPEC", repo_root / "protocol" / "shared-values.md"))
+input_values_path = Path(os.environ.get("STASHD_INPUT_VALUES_SPEC", repo_root / "protocol" / "input-values.md"))
+readme_path = Path(os.environ.get("STASHD_README", repo_root / "README.md"))
 enrichment_path = Path(os.environ.get("STASHD_ENRICHMENT_SPEC", repo_root / "protocol" / "enrichment-capabilities.md"))
 if not enrichment_path.is_file():
     raise SystemExit("normative Enrichment capability discovery document is missing")
@@ -63,6 +66,71 @@ execution_requirements = (
 )
 if any(any(term not in execution for term in group) for group in execution_requirements):
     raise SystemExit("component execution specification is missing a required semantic invariant")
+if not shared_values_path.is_file() or not input_values_path.is_file():
+    raise SystemExit("normative shared-value or Input-value specification is missing")
+shared_values_text = shared_values_path.read_text(encoding="utf-8").casefold()
+shared_values_requirements = (
+    ("json` must be syntactically valid interoperable json", "parsed root is an object"),
+    ("objects at every depth must not contain duplicate member names",),
+    ("no canonical json/jcs requirement applies", "must not reconstruct, normalize"),
+    ("schema` must be non-empty", "versioned/revision-bearing", "incompatible change", "different schema identifier/version"),
+    ("core must not infer compatibility", "inspect it to derive provider/domain taxonomy"),
+    ("must reject the containing protocol value", "convert the violation to a lifecycle `plugin-error`", "drop only the invalid facet"),
+    ("a successful non-eof result `ok(some(bytes))` must contain at least one byte", "`ok(some([]))` is invalid"),
+    ("`ok(none)` is the only eof representation", "eof is sticky"),
+    ("configured maximum chunk size",),
+    ("fraction = none` means indeterminate or stage-only", "must not derive a percentage"),
+    ("inclusive range `[0.0, 1.0]`", "must be finite"),
+    ("must reject it, not clamp it", "no universal monotonicity rule applies"),
+)
+if any(any(term not in shared_values_text for term in group) for group in shared_values_requirements):
+    raise SystemExit("shared-value specification is missing a required metadata, stream, or progress invariant")
+input_values_text = input_values_path.read_text(encoding="utf-8").casefold()
+input_values_requirements = (
+    ("`none` | `false`", "no byte-size value is currently known"),
+    ("`some(n)` | `false`", "non-estimated byte-size value"),
+    ("`some(n)` | `true`", "estimated byte size"),
+    ("| `none` | `true` | invalid:",),
+    ("resolved-input` and `discovered-item` use the same", "must reject the containing value"),
+    ("later `discover` invocation", "without an undocumented in-memory mapping"),
+    ("later invocation", "must not require an undocumented process-local object"),
+    ("correctness must not depend on an undocumented mutable process-local mapping",),
+    ("continuation` and `discovery-refresh-state`", "self-sufficient across process/invocation boundaries", "no credential material"),
+    ("no persistence api or wit fields",),
+)
+if any(any(term not in input_values_text for term in group) for group in input_values_requirements):
+    raise SystemExit("Input value specification is missing a required size or independent-invocation invariant")
+if readme_path.is_file():
+    readme_text = readme_path.read_text(encoding="utf-8")
+    stale_claims = (
+        "A `publish-request` contains only the preserved `items` selected",
+        "`publication.destination-metadata`",
+        "optional staged\nand filesystem publication results",
+        "`publication.files` is an inline filesystem result list",
+        "`publication.destination-metadata` is an inline final result field",
+        "receipts in inline destination metadata",
+        "`prepare`, `publish`, `finalize` are current lifecycle calls",
+    )
+    if any(claim in readme_text for claim in stale_claims):
+        raise SystemExit("README retains a contradicted current Broadcast claim")
+    for required_phrase in (
+        "bounded reporter-based",
+        "Filesystem-relative file records are reported incrementally through\n`publication-reporter.report-files`",
+        "`publication.files` is only the `complete` / `not-applicable` status",
+        "non-empty stream",
+        "sticky EOF",
+        "Input size-estimate/independent-identity semantics",
+        "protocol/shared-values.md",
+        "protocol/input-values.md",
+    ):
+        if required_phrase not in readme_text:
+            raise SystemExit(f"README is missing current shared invariant guidance: {required_phrase}")
+input_wit_text = (repo_root / "wit" / "input.wit").read_text(encoding="utf-8").casefold()
+if "size-value/estimate pairing follows protocol/input-values.md" not in input_wit_text or "id` is stable and usable by later independent discover/acquire calls" not in input_wit_text or "must remain usable across independent invocations" not in input_wit_text:
+    raise SystemExit("Input WIT guidance must link shared size and cross-invocation identity semantics")
+io_wit_text = (repo_root / "wit" / "io.wit").read_text(encoding="utf-8").casefold()
+if "protocol/shared-values.md" not in io_wit_text or "some([])` is invalid" not in io_wit_text:
+    raise SystemExit("shared WIT value guidance must link metadata, stream, and progress rules")
 staging_path = Path(os.environ.get("STASHD_STAGING_SPEC", repo_root / "protocol" / "staging.md"))
 if not staging_path.is_file():
     raise SystemExit("normative staged output specification is missing")
@@ -241,8 +309,8 @@ def require_metadata_facet(interface: dict, record_name: str) -> None:
 metadata_fields = fields(io_host, "plugin-metadata")
 if not {"schema", "json"} <= metadata_fields.keys():
     raise SystemExit("plugin-metadata must retain its schema identifier and JSON payload")
-if any(metadata_fields[name] != {"kind": "scalar", "name": "string"} for name in ("schema", "json")):
-    raise SystemExit("plugin-metadata schema identifier and JSON payload must remain strings")
+if set(metadata_fields) != {"schema", "json"} or any(metadata_fields[name] != {"kind": "scalar", "name": "string"} for name in ("schema", "json")):
+    raise SystemExit("plugin-metadata must retain exactly the canonical schema and JSON string fields")
 
 require_metadata_facet(input_host, "discovered-item")
 require_metadata_facet(input_plugin, "resolved-input")
@@ -273,6 +341,12 @@ if {"url", "http-status", "resource-kind", "page-number", "attachment-id", "embe
     raise SystemExit("Input deficiency primitives must not encode provider/domain-specific fields")
 if "retryable" in acquisition_fields:
     raise SystemExit("Input acquisition must not duplicate deficiency dispositions with an overall retryable flag")
+
+input_host_size = fields(input_host, "discovered-item")
+input_plugin_size = fields(input_plugin, "resolved-input")
+for record_name, record_fields in (("discovered-item", input_host_size), ("resolved-input", input_plugin_size)):
+    if record_fields.get("size-bytes") != {"kind": "option", "value": {"kind": "scalar", "name": "u64"}} or record_fields.get("size-estimated") != {"kind": "scalar", "name": "bool"}:
+        raise SystemExit(f"Input {record_name} must retain optional byte size and its estimate flag")
 
 broadcast_contract = next(contract for contract in contracts if contract["file"] == "wit/broadcast.wit")
 broadcast_plugin = broadcast_contract["interfaces"]["broadcast-plugin"]

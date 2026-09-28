@@ -91,9 +91,13 @@ runtime has exact JSON integer support.
 Every `list<u8>` is a JSON array of integer numbers from 0 through 255,
 inclusive. This applies equally to inline values and each bounded stream chunk.
 Base64, byte strings, and implementation-specific binary values are not RPC v1
-encodings. A stream read returns `{"ok":null}` at EOF or
-`{"ok":[byte,...]}` for a chunk. Empty arrays are not EOF. A write receives an
-array and validates every byte before appending any of them.
+encodings. A stream read returns `{"ok":null}` (`none`) at EOF or
+`{"ok":[byte,...]}` (`some(bytes)`) for a chunk. A successful non-EOF chunk MUST contain at
+least one byte; `none` is the only EOF value, and `some([])` is invalid protocol
+behavior. EOF is sticky: once `none` is returned, subsequent successful reads
+from that live stream MUST continue to return `none`. See
+[shared value semantics](shared-values.md). A write receives an array and
+validates every byte before appending any of them.
 
 For the shared `http-host` request record, `method` is a non-empty HTTP method
 token. It MUST consist only of ASCII `tchar` characters:

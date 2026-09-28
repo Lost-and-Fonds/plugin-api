@@ -943,6 +943,67 @@ def verify_enrichment_capability_semantics() -> None:
         print(f"sensitivity check caught weakened Enrichment capability semantics: {original}")
 
 
+def expect_document_semantic_rejected(name: str, env_key: str, path: Path, mutations: tuple[tuple[str, str], ...]) -> None:
+    text = path.read_text(encoding="utf-8")
+    for original, replacement in mutations:
+        weakened = text.replace(original, replacement, 1)
+        if weakened == text:
+            raise SystemExit(f"{name} sensitivity mutation did not apply: {original}")
+        with tempfile.TemporaryDirectory(prefix=f"stashd-{name}-sensitivity-") as temp:
+            candidate = Path(temp) / path.name
+            candidate.write_text(weakened, encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
+                capture_output=True, text=True, check=False,
+                env={**os.environ, env_key: str(candidate)},
+            )
+        if result.returncode == 0:
+            raise SystemExit(f"semantic verifier accepted weakened {name} semantics: {original}")
+        print(f"sensitivity check caught weakened {name} semantics: {original}")
+
+
+def verify_shared_value_semantics() -> None:
+    root = Path(__file__).resolve().parents[1]
+    expect_document_semantic_rejected("shared-value", "STASHD_SHARED_VALUES_SPEC", root / "protocol" / "shared-values.md", (
+        ("MUST be syntactically valid interoperable JSON", "may be arbitrary text"),
+        ("parsed root is an object", "parsed root may be any JSON value"),
+        ("MUST reject the containing protocol value as a contract/protocol violation.", "MUST accept the containing protocol value."),
+        ("No canonical JSON/JCS requirement applies.", "Canonical key-sorted JSON is required."),
+        ("schema` MUST be non-empty", "schema` may be empty"),
+        ("Core MUST NOT infer compatibility", "Core infers compatibility"),
+        ("MUST reject the containing protocol value as a contract/protocol violation.", "MAY accept the containing protocol value."),
+        ("MUST contain at least one byte", "may contain zero bytes"),
+        ("`ok(some([]))` is invalid protocol/contract behavior.", "`ok(some([]))` is valid data."),
+        ("EOF is sticky", "EOF is not sticky"),
+        ("not clamp it", "clamp it"),
+        ("No universal monotonicity rule applies", "A universal monotonicity rule applies"),
+    ))
+
+
+def verify_input_value_semantics() -> None:
+    root = Path(__file__).resolve().parents[1]
+    expect_document_semantic_rejected("Input-value", "STASHD_INPUT_VALUES_SPEC", root / "protocol" / "input-values.md", (
+        ("| `none` | `true` | Invalid: an estimate has no numeric value.", "| `none` | `true` | Valid unknown estimate."),
+        ("`some(N)` | `false` | N is presented as a non-estimated byte-size value", "`some(N)` | `false` | N remains an estimate."),
+        ("`resolved-input` and `discovered-item` use the same", "`resolved-input` and `discovered-item` use different"),
+        ("without an undocumented in-memory mapping established by the earlier resolve call", "using an undocumented in-memory mapping established by the earlier resolve call"),
+        ("MUST NOT require an undocumented process-local object retained from the earlier discovery invocation", "MAY require a process-local object retained from the earlier discovery invocation"),
+        ("Correctness MUST NOT depend on an undocumented mutable process-local mapping", "Correctness MAY depend on an undocumented mutable process-local mapping"),
+        ("MUST be self-sufficient across process/invocation boundaries and contain no credential material", "may depend on hidden state and contain credentials"),
+    ))
+
+
+def verify_readme_current_contract() -> None:
+    root = Path(__file__).resolve().parents[1]
+    expect_document_semantic_rejected("README", "STASHD_README", root / "README.md", (
+        ("A `publish-request` contains the invocation-scoped `item-collection` and", "A `publish-request` contains only the preserved `items` selected"),
+        ("`publication-reporter.report-destination-metadata`", "`publication.destination-metadata`"),
+        ("Filesystem-relative file records are reported incrementally through\n`publication-reporter.report-files`", "Filesystem-relative file records are returned inline in `publication.files`"),
+        ("`publish(request, configuration, credentials)` is the complete publication lifecycle and the\nonly publication call.", "`prepare`, `publish`, `finalize` are current lifecycle calls. `publish(request, configuration, credentials)` remains the complete publication lifecycle and the\nonly publication call."),
+        ("  receipts through `publication-reporter`; no local artifact is required.", "  receipts in inline destination metadata; no local artifact is required."),
+    ))
+
+
 def verify_preservation_semantics() -> None:
     document = Path(__file__).resolve().parents[1] / "protocol" / "input-preservation.md"
     text = document.read_text(encoding="utf-8")
@@ -1091,6 +1152,9 @@ def verify_rpc_response_envelope_semantics() -> None:
 
 
 verify_terminal_commit_authority()
+verify_shared_value_semantics()
+verify_input_value_semantics()
+verify_readme_current_contract()
 verify_enrichment_capability_semantics()
 verify_preservation_semantics()
 verify_broadcast_collection_semantics()
