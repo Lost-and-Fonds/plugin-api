@@ -894,6 +894,85 @@ def verify_broadcast_collection_semantics() -> None:
         print(f"sensitivity check caught weakened Broadcast collection semantics: {original}")
 
 
+def verify_component_execution_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "component-execution.md"
+    text = document.read_text(encoding="utf-8")
+    mutations = (
+        ("stdin is exclusively the host-to-plugin RPC v1 byte channel", "stdin is exclusively the plugin-to-host RPC v1 byte channel"),
+        ("stderr is an ordinary diagnostic channel, not part of RPC v1", "stderr is an RPC v1 protocol channel"),
+        ("Plugins MUST NOT write banners, logs, warnings, whitespace, or other diagnostic/text output there.", "Plugins MAY write arbitrary diagnostic logs there."),
+        ("Every newly launched process MUST send the existing RPC v1 `hello` request as its first stdout frame.", "Every newly launched process MAY send the existing RPC v1 `hello` request after a lifecycle frame."),
+        ("correctness MUST NOT depend on mutable process-local state surviving between lifecycle invocations", "correctness MAY depend on mutable process-local state surviving between lifecycle invocations"),
+        ("become invalid at invocation end even if the process remains alive", "remain valid after invocation end if the process remains alive"),
+        ("The protocol requires no command-line arguments.", "The protocol requires command-line arguments carrying lifecycle state."),
+        ("No environment variable is guaranteed unless explicitly defined by the canonical contract.", "Ambient environment variables are guaranteed implicit inputs."),
+        ("only after successful hello may it send a lifecycle request", "it may send a lifecycle request before successful hello"),
+        ("is invocation transport/execution failure, never a successful lifecycle result", "is an ordinary successful lifecycle result"),
+        ("A top-level `error` field is invalid in a response envelope", "A top-level `error` field is permitted in a response envelope"),
+        ("MUST NOT continue processing later frames on that channel", "MAY continue processing later frames on that channel"),
+    )
+    for original, replacement in mutations:
+        weakened = text.replace(original, replacement)
+        if weakened == text:
+            raise SystemExit(f"component execution sensitivity mutation did not apply: {original}")
+        document.write_text(weakened, encoding="utf-8")
+        try:
+            result = subprocess.run(
+                [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
+                capture_output=True, text=True, check=False,
+            )
+        finally:
+            document.write_text(text, encoding="utf-8")
+        if result.returncode == 0:
+            raise SystemExit(f"semantic verifier accepted weakened component execution semantics: {original}")
+        print(f"sensitivity check caught weakened component execution semantics: {original}")
+
+
+def verify_shared_component_identity_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "plugin-package.md"
+    text = document.read_text(encoding="utf-8")
+    original = "Components with the same WIT world that share an artifact MUST NOT require knowledge of the selected component ID for correctness"
+    replacement = "Components with the same WIT world that share an artifact MAY require knowledge of the selected component ID for correctness"
+    weakened = text.replace(original, replacement)
+    if weakened == text:
+        raise SystemExit("shared-component identity sensitivity mutation did not apply")
+    document.write_text(weakened, encoding="utf-8")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
+            capture_output=True, text=True, check=False,
+        )
+    finally:
+        document.write_text(text, encoding="utf-8")
+    if result.returncode == 0:
+        raise SystemExit("semantic verifier accepted same-world dependence on implicit component identity")
+    print("sensitivity check caught implicit same-world component identity")
+
+
+def verify_rpc_response_envelope_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "rpc-v1.md"
+    text = document.read_text(encoding="utf-8")
+    original = "A top-level `error`\nfield is invalid."
+    replacement = "A top-level `error` field is permitted."
+    weakened = text.replace(original, replacement)
+    if weakened == text:
+        raise SystemExit("RPC response-envelope sensitivity mutation did not apply")
+    document.write_text(weakened, encoding="utf-8")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).with_name("verify_rpc_v1.py")), str(document), str(Path(__file__).resolve().parents[1] / "protocol" / "rpc-v1-vectors.json"), str(schema_path)],
+            capture_output=True, text=True, check=False,
+        )
+    finally:
+        document.write_text(text, encoding="utf-8")
+    if result.returncode == 0:
+        raise SystemExit("RPC verifier accepted a restored top-level response error")
+    print("sensitivity check caught top-level RPC response error permitted")
+
+
 verify_terminal_commit_authority()
 verify_preservation_semantics()
 verify_broadcast_collection_semantics()
+verify_component_execution_semantics()
+verify_shared_component_identity_semantics()
+verify_rpc_response_envelope_semantics()

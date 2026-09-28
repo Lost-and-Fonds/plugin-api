@@ -13,7 +13,9 @@ The current contract is `stashd:plugin@0.16.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and Collection Export.
 [RPC v1](protocol/rpc-v1.md) is the canonical wire specification, including
 framing, exact JSON value encodings, re-entrant call correlation, and
-invocation-scoped WIT resource handles. Its conformance examples are in
+invocation-scoped WIT resource handles. The process launch and stdin/stdout/stderr
+binding is specified in [`protocol/component-execution.md`](protocol/component-execution.md).
+Its conformance examples are in
 [`protocol/rpc-v1-vectors.json`](protocol/rpc-v1-vectors.json). Large byte
 streams use opaque host resources; each read returns at most a host-configured
 chunk as `list<u8>`, and writes append chunks no larger than the host-configured
