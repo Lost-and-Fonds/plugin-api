@@ -45,8 +45,11 @@ Input acquisition separates execution errors from complete or partial preservati
 outcomes, retaining valid artifacts with deficiency diagnostics; see the normative
 [Input preservation and completeness contract](protocol/input-preservation.md). Broadcast
 publishes caller-selected Items through an invocation-scoped bounded collection
-reader and requires EOF before success; see the normative
-[Broadcast collection contract](protocol/broadcast-collection.md). Enrichment
+reader and requires EOF before success; bounded invocation-scoped result batches,
+complete versus not-applicable file reporting, opaque destination metadata, and
+final-result commit semantics are defined in the normative
+[Broadcast collection contract](protocol/broadcast-collection.md) and
+[Broadcast publication results](protocol/broadcast-publication.md). Enrichment
 inspects generic Item/Asset context, reports applicable plugin-owned capabilities,
 and returns opaque metadata facets and/or durable
 derived Assets with source Asset IDs and plugin activity/version provenance.

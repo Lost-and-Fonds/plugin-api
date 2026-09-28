@@ -930,6 +930,57 @@
                 }
               ],
               "name": "item-collection"
+            },
+            {
+              "functions": [
+                {
+                  "arguments": [
+                    {
+                      "name": "files",
+                      "type": {
+                        "kind": "list",
+                        "value": {
+                          "kind": "named",
+                          "name": "published-file"
+                        }
+                      }
+                    }
+                  ],
+                  "name": "report-files",
+                  "result": {
+                    "error": {
+                      "kind": "named",
+                      "name": "publication-report-error"
+                    },
+                    "kind": "result",
+                    "ok": null
+                  }
+                },
+                {
+                  "arguments": [
+                    {
+                      "name": "metadata",
+                      "type": {
+                        "kind": "list",
+                        "value": {
+                          "kind": "named",
+                          "name": "plugin-metadata"
+                        }
+                      }
+                    }
+                  ],
+                  "name": "report-destination-metadata",
+                  "result": {
+                    "error": {
+                      "kind": "named",
+                      "name": "publication-report-error"
+                    },
+                    "kind": "result",
+                    "ok": null
+                  }
+                }
+              ],
+              "name": "publication-reporter"
             }
           ],
           "uses": {
@@ -964,11 +1015,37 @@
                   }
                 }
               ]
+            },
+            "publication-report-error": {
+              "values": [
+                {
+                  "name": "rejected",
+                  "type": null
+                },
+                {
+                  "name": "limit-exceeded",
+                  "type": null
+                },
+                {
+                  "name": "failed",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
             }
           }
         },
         "broadcast-plugin": {
-          "enums": {},
+          "enums": {
+            "file-report-status": {
+              "values": [
+                "not-applicable",
+                "complete"
+              ]
+            }
+          },
           "functions": [
             {
               "arguments": [
@@ -1147,24 +1224,8 @@
                 {
                   "name": "files",
                   "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "list",
-                      "value": {
-                        "kind": "named",
-                        "name": "published-file"
-                      }
-                    }
-                  }
-                },
-                {
-                  "name": "destination-metadata",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "plugin-metadata"
-                    }
+                    "kind": "named",
+                    "name": "file-report-status"
                   }
                 }
               ]
@@ -1176,6 +1237,20 @@
                   "type": {
                     "kind": "named",
                     "name": "item-collection"
+                  }
+                },
+                {
+                  "name": "reporter",
+                  "type": {
+                    "kind": "named",
+                    "name": "publication-reporter"
+                  }
+                },
+                {
+                  "name": "maximum-report-records-per-batch",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "u32"
                   }
                 }
               ]
@@ -1205,7 +1280,7 @@
             "item-collection": "broadcast-host",
             "plugin-error-detail": "plugin-types",
             "plugin-metadata": "io-host",
-            "published-file": "broadcast-host",
+            "publication-reporter": "broadcast-host",
             "staged-artifact": "io-host"
           },
           "variants": {

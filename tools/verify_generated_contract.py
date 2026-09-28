@@ -294,8 +294,12 @@ if {"url", "path", "provider-reference"} & asset_fields.keys():
 if {"kind", "derivation-key", "url"} & asset_fields.keys():
     raise SystemExit("Broadcast Assets must not impose a kind taxonomy, derivation key, or public URL")
 request_fields = fields(broadcast_plugin, "publish-request")
-if request_fields != {"collection": {"kind": "named", "name": "item-collection"}}:
-    raise SystemExit("Broadcast publish requests must contain only the invocation-scoped collection resource")
+if request_fields != {
+    "collection": {"kind": "named", "name": "item-collection"},
+    "reporter": {"kind": "named", "name": "publication-reporter"},
+    "maximum-report-records-per-batch": {"kind": "scalar", "name": "u32"},
+}:
+    raise SystemExit("Broadcast publish requests must contain invocation-scoped resources and the explicit report maximum")
 collection_resources = {resource["name"]: resource for resource in broadcast_host.get("resources", [])}
 collection = collection_resources.get("item-collection")
 if collection is None or len(collection["functions"]) != 1:
@@ -361,12 +365,41 @@ publication_fields = fields(broadcast_plugin, "publication")
 publication_artifact = publication_fields.get("artifact")
 if publication_artifact != {"kind": "option", "value": {"kind": "named", "name": "staged-artifact"}} or broadcast_plugin["uses"].get("staged-artifact") != "io-host":
     raise SystemExit("Broadcast publication must allow no local artifact or the canonical staged artifact")
-if publication_fields.get("files") != {"kind": "option", "value": {"kind": "list", "value": {"kind": "named", "name": "published-file"}}}:
-    raise SystemExit("filesystem-specific published files must be optional and scoped")
-if publication_fields.get("destination-metadata") != {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}}:
-    raise SystemExit("destination receipts must use canonical opaque plugin metadata facets")
+if publication_fields.get("files") != {"kind": "named", "name": "file-report-status"} or any(field["name"] == "files" and field["type"].get("kind") == "list" for field in broadcast_plugin["records"]["publication"]["fields"]):
+    raise SystemExit("publication must express file completeness without an inline result list")
+file_status = {value for value in broadcast_plugin.get("enums", {}).get("file-report-status", {}).get("values", [])}
+if file_status != {"not-applicable", "complete"}:
+    raise SystemExit("successful file report status must be exactly not-applicable or complete")
+if "destination-metadata" in publication_fields:
+    raise SystemExit("destination metadata must not be an inline publication list")
+request_reporter = request_fields.get("reporter")
+if request_reporter != {"kind": "named", "name": "publication-reporter"} or request_fields.get("maximum-report-records-per-batch") != {"kind": "scalar", "name": "u32"}:
+    raise SystemExit("publish request must provide a reporter and explicit bounded batch maximum")
+reporter = next((resource for resource in broadcast_host.get("resources", []) if resource["name"] == "publication-reporter"), None)
+if reporter is None or {function["name"] for function in reporter["functions"]} != {"report-files", "report-destination-metadata"}:
+    raise SystemExit("Broadcast must expose only the two bounded publication report calls")
+for report in reporter["functions"]:
+    if len(report.get("arguments", [])) != 1 or report["arguments"][0]["type"].get("kind") != "list" or report.get("result", {}).get("kind") != "result" or report["result"].get("ok") is not None or report["result"].get("error") != {"kind": "named", "name": "publication-report-error"}:
+        raise SystemExit("publication report calls must accept a sequence and return typed atomic errors")
+metadata_report = next(function for function in reporter["functions"] if function["name"] == "report-destination-metadata")
+if metadata_report["arguments"][0]["type"] != {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}}:
+    raise SystemExit("destination reports must retain opaque canonical plugin-metadata facets")
 if broadcast_plugin["uses"].get("plugin-metadata") != "io-host":
-    raise SystemExit("Broadcast results must reuse canonical io-host.plugin-metadata")
+    raise SystemExit("Broadcast reporter must reuse canonical io-host.plugin-metadata")
+publication_document = Path(__file__).resolve().parents[1] / "protocol" / "broadcast-publication.md"
+publication_text = publication_document.read_text(encoding="utf-8") if publication_document.is_file() else ""
+for semantic in (
+    "exactly one `broadcast-host.publication-reporter`", "MUST be greater than zero",
+    "contains 1 through that maximum records", "Each call is atomic", "accepts every record",
+    "any error accepts none", "files: not-applicable", "zero accepted file records",
+    "files: complete", "exhaustive canonical filesystem-relative file result",
+    "each `relative-path` MUST occur at most once", "call order and then record order",
+    "not one facet per remote object", "opaque", "sole commit point",
+    "MUST discard all reporter state", "side effects", "There is no reporter finish/finalize phase",
+    "There is no publication continuation, cursor, checkpoint",
+):
+    if semantic.casefold() not in publication_text.casefold():
+        raise SystemExit(f"normative Broadcast publication semantics are missing: {semantic}")
 published_file_fields = fields(next(contract for contract in contracts if contract["file"] == "wit/broadcast.wit")["interfaces"]["broadcast-host"], "published-file")
 if published_file_fields.get("relative-path") != {"kind": "scalar", "name": "string"} or "source-reference" in published_file_fields:
     raise SystemExit("filesystem result paths must stay inside published-file without provider source references")
