@@ -113,7 +113,7 @@
       "method": "stashd:plugin/io-host.staged-writer.finish",
       "invocation": "inv-stage-1",
       "params": {"self": {"$resource": {"type": "stashd:plugin/io-host.staged-writer", "id": "writer-1"}}},
-      "response-result": {"err": {"failed": "writer already finished"}},
+      "response-result": {"error": {"tag": "failed", "value": "writer already finished"}},
       "state": "FINISHED is terminal; a second finish does not create another staged artifact"
     },
     {

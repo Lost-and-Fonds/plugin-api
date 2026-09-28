@@ -95,6 +95,25 @@ def expect_staging_rule_rejected(name: str, weakened_rule: str) -> None:
     print(f"sensitivity check caught {name}")
 
 
+def expect_staging_adoption_position_rejected(name: str, position: str) -> None:
+    candidate = staging_text.replace(position, "", 1)
+    if candidate == staging_text:
+        raise SystemExit(f"staging sensitivity mutation could not locate {name}")
+    with tempfile.TemporaryDirectory(prefix="stashd-staging-sensitivity-") as temp:
+        candidate_path = Path(temp) / "staging.md"
+        candidate_path.write_text(candidate, encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "STASHD_STAGING_SPEC": str(candidate_path)},
+        )
+    if result.returncode == 0:
+        raise SystemExit(f"semantic verifier accepted the {name} regression")
+    print(f"sensitivity check caught {name}")
+
+
 def expect_package_schema_rejected(name: str, mutate) -> None:
     candidate = copy.deepcopy(schema)
     package_candidate = copy.deepcopy(package_schema)
@@ -662,6 +681,10 @@ def restore_raw_acquisition_credentials(candidate: dict) -> None:
     }
 
 
+expect_staging_adoption_position_rejected("Input adoption path becomes implicit", "- Input: successful `input-plugin.acquire` adopts `acquisition-result.artifacts[]`; each entry is a `staged-artifact`.\n")
+expect_staging_adoption_position_rejected("Enrichment adoption path becomes implicit", "- Enrichment: successful `enrichment-plugin.enrich` adopts `enrichment-result.assets[].artifact`; each `derived-asset.artifact` is a `staged-artifact`.\n")
+expect_staging_adoption_position_rejected("Broadcast adoption path becomes implicit", "- Broadcast: successful `broadcast-plugin.publish` adopts `publication.artifact` when that optional value is `some`.\n")
+expect_staging_adoption_position_rejected("Collection Export staged adoption is claimed", "- Collection Export does not use or adopt `staged-artifact`; its output transport remains separate and is outside this staging contract.\n")
 expect_staging_rule_rejected("plugin-authored size becomes authoritative", "The host computes `size-bytes` from bytes successfully written. It is factual host-observed state and the plugin cannot author or override it.")
 expect_staging_rule_rejected("media type mutable after finish", "`media-type` and `metadata` originate in `staging-area.create`; the host records the exact WIT values supplied and freezes them into the canonical descriptor at successful finish.")
 expect_staging_rule_rejected("metadata mutable after finish", "`media-type` and `metadata` originate in `staging-area.create`; the host records the exact WIT values supplied and freezes them into the canonical descriptor at successful finish.")
@@ -673,7 +696,7 @@ expect_staging_rule_rejected("poisoned writer can recover", "A POISONED writer c
 expect_staging_rule_rejected("second finish creates another artifact", "FINISHED is terminal: subsequent `write` and second `finish` calls fail deterministically with `staging-error.failed(...)`.")
 expect_staging_rule_rejected("write after finish allowed", "FINISHED is terminal: subsequent `write` and second `finish` calls fail deterministically with `staging-error.failed(...)`.")
 expect_staging_rule_rejected("dropping finished writer deletes artifact", "Dropping a FINISHED writer releases only the writer resource handle. Its completed artifact remains registered and usable for the rest of the invocation, including reopening and successful lifecycle-result adoption.")
-expect_staging_rule_rejected("lifecycle result adopts altered descriptor", "Each must have been successfully finished in this invocation, exactly match its canonical descriptor, and remain eligible for adoption; a live writer handle is not required.")
+expect_staging_rule_rejected("lifecycle result adopts altered descriptor", "Each adoption candidate MUST have been successfully finished in this invocation, resolve to a currently registered staged artifact, and exactly match its canonical host-issued descriptor.")
 expect_staging_rule_rejected("invalid result partially adopts outputs", "The host MUST reject the entire result, adopt none of its staged artifacts, fail the invocation, and clean/discard invocation-scoped staging according to existing failure rules. It MUST NOT partially accept valid descriptors from an invalid result.")
 expect_staging_rule_rejected("duplicate reference silently adopted", "The same canonical reference MUST NOT occur more than once among adoption candidates in one successful result. A duplicate is a contract violation: reject the whole result, adopt none, and do not silently deduplicate or create multiple durable outputs.")
 expect_staging_rule_rejected("unreturned completed output automatically durable", "Completed staged artifacts not returned for adoption remain temporary and are discarded at invocation end, even if opened as HTTP/helper input. Finish alone does not make output durable.")

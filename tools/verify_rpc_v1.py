@@ -91,8 +91,10 @@ if staged_finish["response-result"]["ok"] != {
 staged_reopen = by_name["reopen-exact-canonical-staged-artifact"]
 if staged_reopen["invocation"] != staged_finish["invocation"] or staged_reopen["params"]["artifact"] != staged_finish["response-result"]["ok"]:
     raise SystemExit("staged artifact reopen vector must use the exact descriptor from finish in the same invocation")
-if by_name["staged-writer-second-finish-failed"]["response-result"] != {"err": {"failed": "writer already finished"}}:
-    raise SystemExit("a second staged writer finish must return the existing staging-error.failed case")
+if by_name["staged-writer-second-finish-failed"]["response-result"] != {
+    "error": {"tag": "failed", "value": "writer already finished"}
+}:
+    raise SystemExit("a second staged writer finish must use the canonical RPC result and payload-bearing variant encoding")
 method_vector = by_name["generic-http-method-tokens"]
 if method_vector["methods"] != ["HEAD", "OPTIONS", "PROPFIND", "MKCOL", "MOVE", "COPY", "X-STASHD-EXT"] or any(term not in method_vector["validation"] for term in ("tchar", "rejected before dispatch")):
     raise SystemExit("RPC v1 HTTP method forcing vector is incomplete")

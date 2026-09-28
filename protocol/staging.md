@@ -30,7 +30,14 @@ Dropping an OPEN or POISONED writer discards partial unpublished output and crea
 
 ## Lifecycle-result adoption
 
-For a purported successful lifecycle result, the host MUST validate every staged-artifact descriptor in every adoption-bearing result position against the current invocation's canonical registry before accepting success. Each must have been successfully finished in this invocation, exactly match its canonical descriptor, and remain eligible for adoption; a live writer handle is not required. The result identifies which already-completed outputs survive invocation cleanup and does not mutate them.
+For a purported successful lifecycle result, the host MUST validate every staged-artifact descriptor in the following current canonical adoption-bearing result positions against the current invocation's canonical registry before accepting success:
+
+- Input: successful `input-plugin.acquire` adopts `acquisition-result.artifacts[]`; each entry is a `staged-artifact`.
+- Enrichment: successful `enrichment-plugin.enrich` adopts `enrichment-result.assets[].artifact`; each `derived-asset.artifact` is a `staged-artifact`.
+- Broadcast: successful `broadcast-plugin.publish` adopts `publication.artifact` when that optional value is `some`.
+- Collection Export does not use or adopt `staged-artifact`; its output transport remains separate and is outside this staging contract.
+
+Each adoption candidate MUST have been successfully finished in this invocation, resolve to a currently registered staged artifact, and exactly match its canonical host-issued descriptor. A live writer handle is not required. The result identifies which already-completed outputs survive invocation cleanup and does not mutate them.
 
 A fabricated, unknown, stale, altered, or otherwise invalid descriptor in a purported success is a contract/protocol violation, not a plugin-authored lifecycle error. The host MUST reject the entire result, adopt none of its staged artifacts, fail the invocation, and clean/discard invocation-scoped staging according to existing failure rules. It MUST NOT partially accept valid descriptors from an invalid result.
 
