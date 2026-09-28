@@ -928,6 +928,27 @@ def verify_component_execution_semantics() -> None:
         print(f"sensitivity check caught weakened component execution semantics: {original}")
 
 
+def verify_shared_component_identity_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "plugin-package.md"
+    text = document.read_text(encoding="utf-8")
+    original = "Components with the same WIT world that share an artifact MUST NOT require knowledge of the selected component ID for correctness"
+    replacement = "Components with the same WIT world that share an artifact MAY require knowledge of the selected component ID for correctness"
+    weakened = text.replace(original, replacement)
+    if weakened == text:
+        raise SystemExit("shared-component identity sensitivity mutation did not apply")
+    document.write_text(weakened, encoding="utf-8")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
+            capture_output=True, text=True, check=False,
+        )
+    finally:
+        document.write_text(text, encoding="utf-8")
+    if result.returncode == 0:
+        raise SystemExit("semantic verifier accepted same-world dependence on implicit component identity")
+    print("sensitivity check caught implicit same-world component identity")
+
+
 def verify_rpc_response_envelope_semantics() -> None:
     document = Path(__file__).resolve().parents[1] / "protocol" / "rpc-v1.md"
     text = document.read_text(encoding="utf-8")
@@ -953,4 +974,5 @@ verify_terminal_commit_authority()
 verify_preservation_semantics()
 verify_broadcast_collection_semantics()
 verify_component_execution_semantics()
+verify_shared_component_identity_semantics()
 verify_rpc_response_envelope_semantics()

@@ -39,6 +39,16 @@ execution_requirements = (
 )
 if any(any(term not in execution for term in group) for group in execution_requirements):
     raise SystemExit("component execution specification is missing a required semantic invariant")
+package_document = (repo_root / "protocol" / "plugin-package.md").read_text(encoding="utf-8").lower()
+component_identity_requirements = (
+    "different worlds sharing an executable are distinguishable through their canonical lifecycle methods",
+    "components with the same wit world that share an artifact must not require knowledge of the selected component id for correctness",
+    "same-world aliases must not rely on hidden component-selection state",
+    "core retains the selected component identity",
+    "no component id is added as a universal lifecycle field",
+)
+if any(term not in package_document for term in component_identity_requirements):
+    raise SystemExit("package component identity semantics are missing a required shared-artifact invariant")
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
