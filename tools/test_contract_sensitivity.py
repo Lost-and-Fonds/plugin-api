@@ -973,6 +973,7 @@ def verify_shared_value_semantics() -> None:
         ("Core MUST NOT infer compatibility", "Core infers compatibility"),
         ("MUST reject the containing protocol value as a contract/protocol violation.", "MAY accept the containing protocol value."),
         ("MUST contain at least one byte", "may contain zero bytes"),
+        ("`ok(none)` is the only EOF representation.", "`ok(some([]))` is an alternative EOF representation."),
         ("`ok(some([]))` is invalid protocol/contract behavior.", "`ok(some([]))` is valid data."),
         ("EOF is sticky", "EOF is not sticky"),
         ("not clamp it", "clamp it"),
