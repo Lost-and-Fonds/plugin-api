@@ -29,8 +29,10 @@ interface enrichment-plugin {
 
     /// An opaque, plugin-owned operation and revision that apply to the
     /// supplied Item/Asset context. The host does not interpret either value.
-    /// `options` describes accepted invocation settings; it is not part of
-    /// capability identity. An empty list represents a fixed capability.
+    /// `revision` identifies the advertised configuration/execution contract;
+    /// `options` describes accepted invocation settings and is not identity.
+    /// An empty list represents a fixed capability. See
+    /// protocol/enrichment-capabilities.md for normative semantics.
     record capability {
         id: string,
         revision: string,
@@ -84,11 +86,20 @@ interface enrichment-plugin {
         failed(plugin-error-detail),
     }
 
-    /// Return the operations that are applicable to this Item/Asset context.
+    /// Deterministic local, credentialless discovery from the supplied value
+    /// context and installed package state. Describes operations the component
+    /// can attempt, not remote availability or guaranteed success. Does not
+    /// open Asset bytes or perform fallible host/remote work. See
+    /// protocol/enrichment-capabilities.md for normative semantics.
     capabilities: func(context: item-context) -> list<capability>;
 
-    /// Run one previously declared capability with the caller's selections
-    /// and return plugin-owned metadata and/or durable derived Assets. The
+    /// Execute a previously declared capability. Credentials and typed remote
+    /// or execution failures are handled here, not during capabilities.
+    /// Unknown/inapplicable IDs and stale revisions are unsupported; invalid
+    /// selections are invalid-configuration. Run one previously declared
+    /// capability with caller selections and return plugin-owned metadata
+    /// and/or durable derived Assets. See
+    /// protocol/enrichment-capabilities.md for normative semantics. The
     /// plugin validates selections against the capability's advertised
     /// options and reports invalid values with `invalid-configuration`.
     enrich: func(context: item-context, capability-id: string, capability-revision: string, configuration: list<configuration-value>, credentials: list<credential-binding>) -> result<enrichment-result, plugin-error>;

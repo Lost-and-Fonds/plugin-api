@@ -62,10 +62,18 @@ and value pairs to `enrich` with the advertised capability's stable ID and
 revision. Plugins validate them against that revision and report invalid
 selections with `invalid-configuration`; the host
 transports the descriptors and values without interpreting their meaning.
-Plugins should change the capability revision when its accepted configuration
-contract changes incompatibly, and callers should submit selections for the
-revision they advertised. The host controls reads of existing Asset bytes and
-adopts staged outputs only when an enrichment result succeeds.
+Plugins MUST change the capability revision when accepted configuration
+semantics change, and callers should submit selections for the revision they
+advertised. Capability discovery is deterministic, local, and credentialless:
+it determines applicability from supplied context descriptors and metadata,
+never Asset bytes or remote availability. Advertised means the component can
+attempt the operation, not that execution is guaranteed; credentials and typed
+remote/execution failures are handled by `enrich`. Options must be locally
+discoverable, not fetched from a live remote catalogue. Unknown or stale IDs
+and revisions are `unsupported`; invalid selections for a supported revision
+are `invalid-configuration`. The host adopts staged outputs only when an
+enrichment result succeeds. See the normative
+[Enrichment capability discovery contract](protocol/enrichment-capabilities.md).
 
 This model covers optional OCR language (omit the optional selection to use
 the plugin default), required subtitle target language, independent

@@ -576,6 +576,24 @@ def remove_http_method_token_boundary(candidate: dict) -> None:
     method["type"] = {"kind": "named", "name": "http-method"}
 
 
+def enrichment_interface(candidate: dict) -> dict:
+    return interface(candidate, "wit/enrichment.wit", "enrichment-plugin")
+
+
+def change_enrichment_discovery_result(candidate: dict) -> None:
+    function = next(function for function in enrichment_interface(candidate)["functions"] if function["name"] == "capabilities")
+    function["result"] = {
+        "kind": "result",
+        "ok": {"kind": "list", "value": {"kind": "named", "name": "capability"}},
+        "error": {"kind": "named", "name": "plugin-error"},
+    }
+
+
+def add_enrichment_discovery_credentials(candidate: dict) -> None:
+    function = next(function for function in enrichment_interface(candidate)["functions"] if function["name"] == "capabilities")
+    function["arguments"].append({"name": "credentials", "type": {"kind": "list", "value": {"kind": "named", "name": "credential-binding"}}})
+
+
 def remove_enrichment_revision(candidate: dict) -> None:
     enrich = next(
         function for function in interface(candidate, "wit/enrichment.wit", "enrichment-plugin")["functions"]
@@ -743,6 +761,8 @@ expect_rejected("raw Broadcast HTTP credential", make_broadcast_http_credential_
 expect_rejected("closed HTTP method enum", restore_closed_http_method_enum)
 expect_rejected("HTTP method without token boundary", remove_http_method_token_boundary)
 expect_rejected("Enrichment invocation without revision", remove_enrichment_revision)
+expect_rejected("credentials added to Enrichment capability discovery", add_enrichment_discovery_credentials)
+expect_rejected("fallible Enrichment capability discovery", change_enrichment_discovery_result)
 expect_rejected("Enrichment invocation consuming discovery descriptor", restore_enrichment_discovery_descriptor)
 expect_rejected("duplicated Broadcast error detail", duplicate_broadcast_error_detail)
 expect_rejected("duplicated Broadcast staged artifact", duplicate_broadcast_staged_artifact)
@@ -887,6 +907,40 @@ expect_rejected("refresh state in nonterminal progress", put_refresh_state_in_no
 expect_rejected("unbounded discovery batch", remove_batch_limit)
 expect_rejected("credentials embedded in continuation", embed_credentials_in_discovery_state)
 expect_rejected("provider pagination field in request", add_provider_pagination_field)
+
+
+def verify_enrichment_capability_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "enrichment-capabilities.md"
+    text = document.read_text(encoding="utf-8")
+    mutations = (
+        ("MUST NOT require or depend on credentials or their availability", "may require credentials or their availability"),
+        ("HTTP, remote calls or service health", "HTTP and remote service health are permitted"),
+        ("helper execution, staging, progress callbacks, or Asset byte reads through `enrichment-host.open-asset`", "helper execution is permitted, staging and progress callbacks remain prohibited, and Asset byte reads through `enrichment-host.open-asset` remain prohibited"),
+        ("Discovery determines applicability from those descriptors and metadata, not by opening or examining Asset bytes.", "Discovery determines applicability from those descriptors and metadata, and may open or examine Asset bytes."),
+        ("MUST NOT perform remote service discovery, preflight execution, or an availability check", "MAY perform remote service discovery, preflight execution, and availability checks"),
+        ("not guaranteed success", "guaranteed success"),
+        ("MUST NOT require a live remote lookup", "MUST perform a live remote lookup"),
+        ("revision MUST change when the accepted or interpreted caller configuration contract changes semantically", "revision may remain unchanged when accepted configuration semantics change"),
+        ("Presentation-only changes, including wording of labels and ordering with no plugin-defined semantic meaning, do not require a revision change.", "Label-only changes MUST change the revision."),
+        ("it MUST return `plugin-error.unsupported`", "it MUST return `plugin-error.invalid-configuration`"),
+        ("MUST return `plugin-error.invalid-configuration`", "MUST return `plugin-error.unsupported`"),
+        ("An empty list is an ordinary successful result meaning no capability applies", "An empty list means the remote service is unavailable"),
+    )
+    for original, replacement in mutations:
+        weakened = text.replace(original, replacement, 1)
+        if weakened == text:
+            raise SystemExit(f"Enrichment capability sensitivity mutation did not apply: {original}")
+        with tempfile.TemporaryDirectory(prefix="stashd-enrichment-sensitivity-") as temp:
+            candidate_path = Path(temp) / "enrichment-capabilities.md"
+            candidate_path.write_text(weakened, encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
+                capture_output=True, text=True, check=False,
+                env={**os.environ, "STASHD_ENRICHMENT_SPEC": str(candidate_path)},
+            )
+        if result.returncode == 0:
+            raise SystemExit(f"semantic verifier accepted weakened Enrichment capability semantics: {original}")
+        print(f"sensitivity check caught weakened Enrichment capability semantics: {original}")
 
 
 def verify_preservation_semantics() -> None:
@@ -1037,6 +1091,7 @@ def verify_rpc_response_envelope_semantics() -> None:
 
 
 verify_terminal_commit_authority()
+verify_enrichment_capability_semantics()
 verify_preservation_semantics()
 verify_broadcast_collection_semantics()
 verify_component_execution_semantics()
