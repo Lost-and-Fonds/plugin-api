@@ -204,6 +204,18 @@ resource it created or accepted, invalidates every handle, closes streams,
 discards unfinished staged writers, and discards unadopted invocation output.
 Garbage collection is not a release mechanism.
 
+## Broadcast collection resource
+
+`broadcast-plugin.publish` receives the host-created owned
+`broadcast-host.item-collection` handle in its request. The resource method
+`item-collection.next` uses the normal correlated method call with an implicit
+borrowed `self`; ownership is not consumed by reads. Its `max-items` argument
+bounds each `some(non-empty Item list)` result. `none` is collection EOF. The
+handle is valid only in that publication's invocation, may be explicitly
+released with `rpc.resource-drop`, and is invalidated and cleaned up at
+invocation end. The Broadcast collection contract specifies membership,
+read-error, and successful-exhaustion requirements.
+
 ## Collection Export host result
 
 Collection Export's WIT `plugin-error.limit-exceeded` is reserved for the host.

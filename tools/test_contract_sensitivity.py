@@ -155,7 +155,7 @@ def remove_helper_input(candidate: dict) -> None:
 
 
 def restore_broadcast_asset(candidate: dict) -> None:
-    owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-host")
     owner["records"]["asset"] = copy.deepcopy(interface(candidate, "wit/io.wit", "io-host")["records"]["preserved-asset"])
     owner["uses"].pop("preserved-asset", None)
     next(field for field in owner["records"]["item"]["fields"] if field["name"] == "assets")["type"]["value"]["name"] = "asset"
@@ -293,12 +293,12 @@ def expose_raw_credentials_through_shared_io(candidate: dict) -> None:
 
 
 def restore_broadcast_duration(candidate: dict) -> None:
-    item = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["item"]
+    item = interface(candidate, "wit/broadcast.wit", "broadcast-host")["records"]["item"]
     item["fields"].append({"name": "duration-seconds", "type": {"kind": "option", "value": {"kind": "scalar", "name": "u32"}}})
 
 
 def remove_broadcast_item_metadata(candidate: dict) -> None:
-    item = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["item"]
+    item = interface(candidate, "wit/broadcast.wit", "broadcast-host")["records"]["item"]
     item["fields"] = [field for field in item["fields"] if field["name"] != "metadata"]
 
 
@@ -579,6 +579,47 @@ def duplicate_broadcast_staged_artifact(candidate: dict) -> None:
     }
 
 
+def restore_inline_broadcast_items(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-plugin")
+    next(field for field in owner["records"]["publish-request"]["fields"] if field["name"] == "collection")["name"] = "items"
+    next(field for field in owner["records"]["publish-request"]["fields"] if field["name"] == "items")["type"] = {
+        "kind": "list", "value": {"kind": "named", "name": "item"}
+    }
+
+
+def make_unbounded_collection_read(candidate: dict) -> None:
+    owner = interface(candidate, "wit/broadcast.wit", "broadcast-host")
+    function = owner["resources"][0]["functions"][0]
+    function["arguments"] = []
+    function["result"]["ok"] = {"kind": "list", "value": {"kind": "named", "name": "item"}}
+
+
+def add_collection_filter_parameter(candidate: dict) -> None:
+    function = interface(candidate, "wit/broadcast.wit", "broadcast-host")["resources"][0]["functions"][0]
+    function["arguments"].append({"name": "query", "type": {"kind": "scalar", "name": "string"}})
+
+
+def add_provider_cursor(candidate: dict) -> None:
+    function = interface(candidate, "wit/broadcast.wit", "broadcast-host")["resources"][0]["functions"][0]
+    function["arguments"].append({"name": "page-token", "type": {"kind": "scalar", "name": "string"}})
+
+
+def expose_collection_vault_path(candidate: dict) -> None:
+    interface(candidate, "wit/broadcast.wit", "broadcast-host")["records"]["item"]["fields"].append(
+        {"name": "vault-path", "type": {"kind": "scalar", "name": "string"}}
+    )
+
+
+def duplicate_broadcast_item(candidate: dict) -> None:
+    interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["item"] = copy.deepcopy(
+        interface(candidate, "wit/broadcast.wit", "broadcast-host")["records"]["item"]
+    )
+
+
+def add_broadcast_continuation(candidate: dict) -> None:
+    interface(candidate, "wit/broadcast.wit", "broadcast-plugin")["records"]["continuation"] = {"fields": []}
+
+
 def downgrade_contract_package_identity(candidate: dict) -> None:
     candidate["package"] = "stashd:plugin@0.9.0"
 
@@ -675,6 +716,14 @@ expect_rejected("Broadcast preparation phase restored", add_prepare_phase)
 expect_rejected("Broadcast finalization phase restored", add_finalize_phase)
 expect_rejected("opaque-reference derived-artifact staging restored", restore_opaque_prepared_output)
 expect_rejected("contract package identity downgraded from 0.14.0", downgrade_contract_package_identity)
+expect_rejected("inline Broadcast Item list restored", restore_inline_broadcast_items)
+expect_rejected("unbounded collection result", make_unbounded_collection_read)
+expect_rejected("collection read maximum removed", make_unbounded_collection_read)
+expect_rejected("host query/filter parameter", add_collection_filter_parameter)
+expect_rejected("provider cursor added", add_provider_cursor)
+expect_rejected("Vault path exposed in collection Item", expose_collection_vault_path)
+expect_rejected("parallel Broadcast Item DTO", duplicate_broadcast_item)
+expect_rejected("cross-invocation Broadcast continuation", add_broadcast_continuation)
 expect_package_schema_rejected("package artifact path syntax removed", remove_artifact_path_syntax)
 expect_package_schema_rejected("package artifact resolution rules unreferenced", remove_artifact_resolution_reference)
 expect_package_schema_rejected("credential reference embedded in slot declaration", weaken_credential_slot_schema)
@@ -818,5 +867,33 @@ def verify_terminal_commit_authority() -> None:
     print("sensitivity check caught missing terminal commit-point semantics")
 
 
+def verify_broadcast_collection_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "broadcast-collection.md"
+    text = document.read_text(encoding="utf-8")
+    mutations = (
+        ("The host MUST accept `Ok(publication)` only after the collection has\nreached EOF.", "Publication may succeed before the collection reaches EOF."),
+        ("Selected Items MUST NOT silently disappear due to unrelated state changes.", "Selected Items may silently disappear due to unrelated state changes."),
+        ("host MUST return every selected Item at most once", "host may return selected Items more than once"),
+        ("single Item that\ncannot fit within the configured RPC response limit MUST fail", "single Item may exceed the configured RPC response limit"),
+        ("There is no cross-invocation Broadcast continuation, cursor, checkpoint, or\nresume state.", "Broadcast continuation state may be reused across invocations."),
+    )
+    for original, replacement in mutations:
+        weakened = text.replace(original, replacement)
+        if weakened == text:
+            raise SystemExit(f"Broadcast collection sensitivity mutation did not apply: {original}")
+        document.write_text(weakened, encoding="utf-8")
+        try:
+            result = subprocess.run(
+                [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
+                capture_output=True, text=True, check=False,
+            )
+        finally:
+            document.write_text(text, encoding="utf-8")
+        if result.returncode == 0:
+            raise SystemExit(f"semantic verifier accepted weakened Broadcast collection semantics: {original}")
+        print(f"sensitivity check caught weakened Broadcast collection semantics: {original}")
+
+
 verify_terminal_commit_authority()
 verify_preservation_semantics()
+verify_broadcast_collection_semantics()

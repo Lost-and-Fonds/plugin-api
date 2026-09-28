@@ -21,6 +21,7 @@ required = (
     "## JSON values",
     "## Resource handles",
     "## Ownership, borrowing, and release",
+    "## Broadcast collection resource",
     "## Collection Export host result",
     "## Conformance flows",
     "four-byte unsigned big-endian",
@@ -54,6 +55,10 @@ expected = {
     "u64-boundaries",
     "s64-boundaries",
     "host-synthesized-collection-limit",
+    "broadcast-publish-collection-resource",
+    "broadcast-collection-next-batch",
+    "broadcast-collection-eof",
+    "broadcast-collection-drop",
     "reentrant-correlation",
 }
 if set(by_name) != expected:
@@ -87,6 +92,16 @@ for name, low, high in (
     if any(type(value) is not str or not value.lstrip("-").isdigit() or not low <= int(value) <= high for value in values):
         raise SystemExit(f"RPC v1 {name} must use in-range decimal strings")
 
+collection_request = by_name["broadcast-publish-collection-resource"]
+collection_resource = collection_request["params"]["request"]["collection"]["$resource"]
+if collection_resource != {"type": "stashd:plugin/broadcast-host.item-collection", "id": "opaque-collection"} or collection_request["invocation"] != "inv-23":
+    raise SystemExit("Broadcast publish vector must transfer the invocation-scoped collection resource")
+collection_read = by_name["broadcast-collection-next-batch"]
+if collection_read["params"]["max-items"] != 500 or collection_read["response-result"]["ok"] == []:
+    raise SystemExit("Broadcast collection next vector must show bounded non-empty batches")
+collection_eof = by_name["broadcast-collection-eof"]
+if collection_eof["response-result"] != {"ok": None} or collection_eof["invocation"] != "inv-23":
+    raise SystemExit("Broadcast collection EOF vector must use none in the same invocation")
 limit = by_name["host-synthesized-collection-limit"]["lifecycle-response"]
 if limit.get("result", {}).get("error", {}).get("tag") != "limit-exceeded" or "error" in limit:
     raise SystemExit("Collection Export limit vector must be a host-synthesized WIT result")

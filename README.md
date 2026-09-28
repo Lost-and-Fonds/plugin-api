@@ -39,7 +39,10 @@ batches with distinct opaque continuation, explicit exhaustive/partial/indetermi
 coverage, and completed refresh state; see the normative [Input discovery contract](protocol/input-discovery.md).
 Input acquisition separates execution errors from complete or partial preservation
 outcomes, retaining valid artifacts with deficiency diagnostics; see the normative
-[Input preservation and completeness contract](protocol/input-preservation.md). Enrichment
+[Input preservation and completeness contract](protocol/input-preservation.md). Broadcast
+publishes caller-selected Items through an invocation-scoped bounded collection
+reader and requires EOF before success; see the normative
+[Broadcast collection contract](protocol/broadcast-collection.md). Enrichment
 inspects generic Item/Asset context, reports applicable plugin-owned capabilities,
 and returns opaque metadata facets and/or durable
 derived Assets with source Asset IDs and plugin activity/version provenance.

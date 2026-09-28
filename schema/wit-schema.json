@@ -833,6 +833,37 @@
             }
           ],
           "records": {
+            "item": {
+              "fields": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "assets",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "preserved-asset"
+                    }
+                  }
+                },
+                {
+                  "name": "metadata",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "plugin-metadata"
+                    }
+                  }
+                }
+              ]
+            },
             "published-file": {
               "fields": [
                 {
@@ -865,12 +896,76 @@
               ]
             }
           },
-          "resources": [],
+          "resources": [
+            {
+              "functions": [
+                {
+                  "arguments": [
+                    {
+                      "name": "max-items",
+                      "type": {
+                        "kind": "scalar",
+                        "name": "u32"
+                      }
+                    }
+                  ],
+                  "name": "next",
+                  "result": {
+                    "error": {
+                      "kind": "named",
+                      "name": "collection-read-error"
+                    },
+                    "kind": "result",
+                    "ok": {
+                      "kind": "option",
+                      "value": {
+                        "kind": "list",
+                        "value": {
+                          "kind": "named",
+                          "name": "item"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "name": "item-collection"
+            }
+          ],
           "uses": {
             "byte-stream": "io-host",
+            "plugin-metadata": "io-host",
+            "preserved-asset": "io-host",
             "stream-error": "io-host"
           },
-          "variants": {}
+          "variants": {
+            "collection-read-error": {
+              "values": [
+                {
+                  "name": "rejected",
+                  "type": null
+                },
+                {
+                  "name": "limit-exceeded",
+                  "type": null
+                },
+                {
+                  "name": "unavailable",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "failed",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            }
+          }
         },
         "broadcast-plugin": {
           "enums": {},
@@ -982,37 +1077,6 @@
                 }
               ]
             },
-            "item": {
-              "fields": [
-                {
-                  "name": "id",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "assets",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "preserved-asset"
-                    }
-                  }
-                },
-                {
-                  "name": "metadata",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "plugin-metadata"
-                    }
-                  }
-                }
-              ]
-            },
             "operation-request": {
               "fields": [
                 {
@@ -1108,13 +1172,10 @@
             "publish-request": {
               "fields": [
                 {
-                  "name": "items",
+                  "name": "collection",
                   "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "item"
-                    }
+                    "kind": "named",
+                    "name": "item-collection"
                   }
                 }
               ]
@@ -1141,9 +1202,9 @@
           "resources": [],
           "uses": {
             "credential-binding": "io-host",
+            "item-collection": "broadcast-host",
             "plugin-error-detail": "plugin-types",
             "plugin-metadata": "io-host",
-            "preserved-asset": "io-host",
             "published-file": "broadcast-host",
             "staged-artifact": "io-host"
           },

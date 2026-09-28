@@ -1,7 +1,29 @@
 package stashd:plugin@0.16.0;
 
 interface broadcast-host {
-    use io-host.{byte-stream, stream-error};
+    use io-host.{byte-stream, plugin-metadata, preserved-asset, stream-error};
+
+    /// Stable preserved Item identity, concrete Assets, and plugin-owned metadata facets.
+    record item {
+        id: string,
+        assets: list<preserved-asset>,
+        metadata: list<plugin-metadata>,
+    }
+
+    variant collection-read-error {
+        rejected,
+        limit-exceeded,
+        unavailable(string),
+        failed(string),
+    }
+
+    /// Reads the invocation's fixed selected collection in bounded forward batches.
+    /// max-items must be positive; successful batches are non-empty and none means
+    /// sticky EOF. The host may return fewer than requested and enforces its own limit.
+    /// The host creates this resource for one publication; it is invalid at invocation end.
+    resource item-collection {
+        next: func(max-items: u32) -> result<option<list<item>>, collection-read-error>;
+    }
 
     /// A path reported by a filesystem-oriented destination, relative to that
     /// destination's namespace; it is never a Vault or host filesystem path.
@@ -17,9 +39,9 @@ interface broadcast-host {
 }
 
 interface broadcast-plugin {
-    use io-host.{credential-binding, plugin-metadata, preserved-asset, staged-artifact};
+    use io-host.{credential-binding, plugin-metadata, staged-artifact};
     use plugin-types.{plugin-error-detail};
-    use broadcast-host.{published-file};
+    use broadcast-host.{item-collection, published-file};
     variant option-value {
         boolean(bool),
         number(s64),
@@ -33,18 +55,9 @@ interface broadcast-plugin {
         value: option-value,
     }
 
-    /// Stable preserved Item identity, its concrete Assets, and plugin-owned
-    /// metadata facets. Domain fields remain inside those facets.
-    record item {
-        /// Stable host identity for the preserved logical Item.
-        id: string,
-        assets: list<preserved-asset>,
-        metadata: list<plugin-metadata>,
-    }
-
-    /// The preserved Items selected by the caller for this publication.
+    /// The host-selected preserved collection for this invocation only.
     record publish-request {
-        items: list<item>,
+        collection: item-collection,
     }
 
     /// Plugin-owned non-secret configuration for the host-selected destination.

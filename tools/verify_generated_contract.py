@@ -184,10 +184,15 @@ if "retryable" in acquisition_fields:
 
 broadcast_contract = next(contract for contract in contracts if contract["file"] == "wit/broadcast.wit")
 broadcast_plugin = broadcast_contract["interfaces"]["broadcast-plugin"]
-item_fields = fields(broadcast_plugin, "item")
+broadcast_host = broadcast_contract["interfaces"]["broadcast-host"]
+item_fields = fields(broadcast_host, "item")
 if not {"id", "assets", "metadata"} <= item_fields.keys():
     raise SystemExit("Broadcast Items must carry stable identity, preserved Assets, and plugin metadata facets")
-if item_fields["metadata"] != {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}} or broadcast_plugin["uses"].get("plugin-metadata") != "io-host":
+if item_fields != {
+    "id": {"kind": "scalar", "name": "string"},
+    "assets": {"kind": "list", "value": {"kind": "named", "name": "preserved-asset"}},
+    "metadata": {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}},
+} or broadcast_host["uses"].get("plugin-metadata") != "io-host":
     raise SystemExit("Broadcast Items must use the canonical io-host.plugin-metadata facets")
 if item_fields["assets"] != {"kind": "list", "value": {"kind": "named", "name": "preserved-asset"}}:
     raise SystemExit("Broadcast Items must expose a generic list of preserved Assets")
@@ -199,7 +204,7 @@ domain_item_fields = {
 if (legacy_item_fields | domain_item_fields) & item_fields.keys():
     raise SystemExit("Broadcast Items must keep source/domain fields in plugin-owned metadata facets")
 asset_fields = fields(io_host, "preserved-asset")
-if broadcast_plugin["uses"].get("preserved-asset") != "io-host":
+if broadcast_host["uses"].get("preserved-asset") != "io-host":
     raise SystemExit("Broadcast Items must reuse the canonical io-host.preserved-asset descriptor")
 if "asset" in broadcast_plugin.get("records", {}):
     raise SystemExit("Broadcast must not restore its duplicate preserved Asset descriptor")
@@ -220,8 +225,24 @@ if {"url", "path", "provider-reference"} & asset_fields.keys():
 if {"kind", "derivation-key", "url"} & asset_fields.keys():
     raise SystemExit("Broadcast Assets must not impose a kind taxonomy, derivation key, or public URL")
 request_fields = fields(broadcast_plugin, "publish-request")
-if request_fields != {"items": {"kind": "list", "value": {"kind": "named", "name": "item"}}}:
-    raise SystemExit("Broadcast publish requests must contain only the preserved Items being published")
+if request_fields != {"collection": {"kind": "named", "name": "item-collection"}}:
+    raise SystemExit("Broadcast publish requests must contain only the invocation-scoped collection resource")
+collection_resources = {resource["name"]: resource for resource in broadcast_host.get("resources", [])}
+collection = collection_resources.get("item-collection")
+if collection is None or len(collection["functions"]) != 1:
+    raise SystemExit("Broadcast host must expose one canonical Item collection resource")
+next_function = collection["functions"][0]
+if next_function.get("name") != "next" or next_function.get("arguments") != [{"name": "max-items", "type": {"kind": "scalar", "name": "u32"}}] or next_function.get("result") != {
+    "kind": "result",
+    "ok": {"kind": "option", "value": {"kind": "list", "value": {"kind": "named", "name": "item"}}},
+    "error": {"kind": "named", "name": "collection-read-error"},
+}:
+    raise SystemExit("Broadcast collection reads must be bounded batches with distinct EOF")
+collection_errors = {case["name"]: case["type"] for case in broadcast_host.get("variants", {}).get("collection-read-error", {}).get("values", [])}
+if collection_errors != {"rejected": None, "limit-exceeded": None, "unavailable": {"kind": "scalar", "name": "string"}, "failed": {"kind": "scalar", "name": "string"}}:
+    raise SystemExit("Broadcast collection must retain its small typed read error model")
+if broadcast_plugin.get("records", {}).get("item") or "preserved-asset" in broadcast_plugin.get("uses", {}):
+    raise SystemExit("Broadcast Item must have one host-boundary representation using canonical preserved Assets")
 if "source" in broadcast_plugin.get("records", {}) or {"reference", "settings", "sources"} & request_fields.keys():
     raise SystemExit("Broadcast requests must not contain ambiguous or duplicated source/destination configuration")
 configuration_fields = fields(broadcast_plugin, "destination-configuration")
@@ -251,8 +272,21 @@ if operation.get("arguments") != [
     "error": {"kind": "named", "name": "plugin-error"},
 }:
     raise SystemExit("Broadcast operation must remain a separate interactive operation with its own request and result")
-if {"preparation", "derived-artifact", "finalization-request"} & broadcast_plugin.get("records", {}).keys():
-    raise SystemExit("Broadcast must not define cross-invocation preparation or finalization records")
+if {"preparation", "derived-artifact", "finalization-request", "continuation", "resume-state", "checkpoint"} & broadcast_plugin.get("records", {}).keys():
+    raise SystemExit("Broadcast must not define cross-invocation preparation, continuation, or finalization state")
+collection_text = (Path(__file__).resolve().parents[1] / "protocol" / "broadcast-collection.md").read_text(encoding="utf-8")
+for semantic in (
+    "fixed for", "at most once", "max-items > 0", "sticky",
+    "limit-exceeded", "MUST accept `Ok(publication)` only after the collection has",
+    "Remote side effects already performed may remain", "no cross-invocation Broadcast continuation",
+    "new Items arriving in Core during publication MUST NOT be added",
+    "Selected Items MUST NOT silently disappear due to unrelated state changes",
+    "host MUST return every selected Item at most once",
+    "A successful response before EOF is a protocol/contract violation",
+    "single Item that\ncannot fit within the configured RPC response limit",
+):
+    if semantic.casefold() not in collection_text.casefold():
+        raise SystemExit(f"normative Broadcast collection semantics are missing: {semantic}")
 
 publication_fields = fields(broadcast_plugin, "publication")
 publication_artifact = publication_fields.get("artifact")

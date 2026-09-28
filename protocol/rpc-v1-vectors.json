@@ -8,6 +8,41 @@
       "lifetime": "the receiving endpoint owns the handle until explicit drop or invocation cleanup"
     },
     {
+      "name": "broadcast-publish-collection-resource",
+      "lifecycle-method": "stashd:plugin/broadcast-plugin.publish",
+      "invocation": "inv-23",
+      "params": {
+        "request": {"collection": {"$resource": {"type": "stashd:plugin/broadcast-host.item-collection", "id": "opaque-collection"}}},
+        "configuration": {"settings": []},
+        "credentials": []
+      },
+      "ownership": "the host-created collection handle transfers to the plugin and is valid only for inv-23"
+    },
+    {
+      "name": "broadcast-collection-next-batch",
+      "method": "stashd:plugin/broadcast-host.item-collection.next",
+      "invocation": "inv-23",
+      "params": {"self": {"$resource": {"type": "stashd:plugin/broadcast-host.item-collection", "id": "opaque-collection"}}, "max-items": 500},
+      "response-result": {"ok": [{"id": "item-1", "assets": [], "metadata": []}]},
+      "batch": "non-empty and no larger than requested or host maximum"
+    },
+    {
+      "name": "broadcast-collection-eof",
+      "method": "stashd:plugin/broadcast-host.item-collection.next",
+      "invocation": "inv-23",
+      "params": {"self": {"$resource": {"type": "stashd:plugin/broadcast-host.item-collection", "id": "opaque-collection"}}, "max-items": 500},
+      "response-result": {"ok": null},
+      "meaning": "EOF; only after this may publish return successful publication"
+    },
+    {
+      "name": "broadcast-collection-drop",
+      "method": "stashd:plugin/rpc.resource-drop",
+      "invocation": "inv-23",
+      "params": {"resource": {"$resource": {"type": "stashd:plugin/broadcast-host.item-collection", "id": "opaque-collection"}}},
+      "response-result": null,
+      "lifetime": "drop releases the resource; invocation end invalidates any remaining collection handle"
+    },
+    {
       "name": "nested-owned-http-request-body",
       "method": "stashd:plugin/http-host.http-client.request",
       "params": {
