@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -39,6 +40,32 @@ execution_requirements = (
 )
 if any(any(term not in execution for term in group) for group in execution_requirements):
     raise SystemExit("component execution specification is missing a required semantic invariant")
+staging_path = Path(os.environ.get("STASHD_STAGING_SPEC", repo_root / "protocol" / "staging.md"))
+if not staging_path.is_file():
+    raise SystemExit("normative staged output specification is missing")
+staging = staging_path.read_text(encoding="utf-8").lower()
+staging_requirements = (
+    ("only a successful `staged-writer.finish()` creates and registers an artifact", "exactly one artifact"),
+    ("non-empty opaque reference", "must not expose or encode a path", "another invocation"),
+    ("a descriptor from an earlier invocation is never resolved", "every staged-artifact lookup is limited to the current invocation registry"),
+    ("host computes `size-bytes` from bytes successfully written", "factual host-observed state"),
+    ("`media-type` and `metadata` originate in `staging-area.create`", "freezes them into the canonical descriptor"),
+    ("compare the entire supplied descriptor", "`reference`", "`media-type`", "`size-bytes`", "`metadata`"),
+    ("unknown, fabricated, stale, or other-invocation references return `stream-error.missing`", "known reference with any descriptor-field mismatch returns `stream-error.denied`"),
+    ("canonical descriptor may be reopened repeatedly in the same invocation", "new invocation-scoped canonical `byte-stream`"),
+    ("**open**", "**poisoned**", "**finished**"),
+    ("any `write` returning any `staging-error` transitions open to poisoned", "oversized or rejected chunk is not partially appended"),
+    ("subsequent `write` and `finish` calls fail deterministically with `staging-error.failed(...)`", "a poisoned writer cannot recover"),
+    ("subsequent `write` and second `finish` calls fail deterministically", "finish does not consume the writer resource"),
+    ("dropping an open or poisoned writer discards partial unpublished output", "dropping a finished writer releases only the writer resource handle"),
+    ("must validate every staged-artifact descriptor", "reject the entire result", "not partially accept valid descriptors"),
+    ("exactly match its canonical descriptor", "a live writer handle is not required"),
+    ("same canonical reference", "must not occur more than once", "reject the whole result"),
+    ("completed staged artifacts not returned for adoption remain temporary", "discarded at invocation end"),
+    ("every staged-artifact lookup is limited to the current invocation registry", "no cross-invocation continuation exists"),
+)
+if any(any(term not in staging for term in group) for group in staging_requirements):
+    raise SystemExit("staged output specification is missing a required authority, state, or adoption invariant")
 package_document = (repo_root / "protocol" / "plugin-package.md").read_text(encoding="utf-8").lower()
 component_identity_requirements = (
     "different worlds sharing an executable are distinguishable through their canonical lifecycle methods",

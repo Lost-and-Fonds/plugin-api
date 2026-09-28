@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,8 @@ schema_path, package_schema_path = map(Path, sys.argv[1:3])
 verifier = Path(__file__).with_name("verify_generated_contract.py")
 schema = json.loads(schema_path.read_text(encoding="utf-8"))
 package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
+staging_path = Path(__file__).resolve().parents[1] / "protocol" / "staging.md"
+staging_text = staging_path.read_text(encoding="utf-8")
 
 
 def package_artifact(candidate: dict) -> dict:
@@ -67,6 +70,25 @@ def expect_rejected(name: str, mutate) -> None:
             capture_output=True,
             text=True,
             check=False,
+        )
+    if result.returncode == 0:
+        raise SystemExit(f"semantic verifier accepted the {name} regression")
+    print(f"sensitivity check caught {name}")
+
+
+def expect_staging_rule_rejected(name: str, weakened_rule: str) -> None:
+    candidate = staging_text.replace(weakened_rule, "", 1)
+    if candidate == staging_text:
+        raise SystemExit(f"staging sensitivity mutation could not locate {name}")
+    with tempfile.TemporaryDirectory(prefix="stashd-staging-sensitivity-") as temp:
+        candidate_path = Path(temp) / "staging.md"
+        candidate_path.write_text(candidate, encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "STASHD_STAGING_SPEC": str(candidate_path)},
         )
     if result.returncode == 0:
         raise SystemExit(f"semantic verifier accepted the {name} regression")
@@ -639,6 +661,22 @@ def restore_raw_acquisition_credentials(candidate: dict) -> None:
         ]
     }
 
+
+expect_staging_rule_rejected("plugin-authored size becomes authoritative", "The host computes `size-bytes` from bytes successfully written. It is factual host-observed state and the plugin cannot author or override it.")
+expect_staging_rule_rejected("media type mutable after finish", "`media-type` and `metadata` originate in `staging-area.create`; the host records the exact WIT values supplied and freezes them into the canonical descriptor at successful finish.")
+expect_staging_rule_rejected("metadata mutable after finish", "`media-type` and `metadata` originate in `staging-area.create`; the host records the exact WIT values supplied and freezes them into the canonical descriptor at successful finish.")
+expect_staging_rule_rejected("forged reference reopened", "Unknown, fabricated, stale, or other-invocation references return `stream-error.missing`.")
+expect_staging_rule_rejected("old invocation reference reused", "A descriptor from an earlier invocation is never resolved against that invocation, durable Vault storage, another component/process, or another artifact with coincidentally similar fields.")
+expect_staging_rule_rejected("descriptor matching ignores non-reference fields", "A plugin MAY copy a descriptor value. Any operation accepting one MUST resolve its reference in the current invocation's completed-artifact registry and compare the entire supplied descriptor against the canonical descriptor: `reference`, `media-type`, `size-bytes`, and `metadata`.")
+expect_staging_rule_rejected("write errors do not poison writer", "Any `write` returning any `staging-error` transitions OPEN to POISONED.")
+expect_staging_rule_rejected("poisoned writer can recover", "A POISONED writer cannot recover or produce an artifact.")
+expect_staging_rule_rejected("second finish creates another artifact", "FINISHED is terminal: subsequent `write` and second `finish` calls fail deterministically with `staging-error.failed(...)`.")
+expect_staging_rule_rejected("write after finish allowed", "FINISHED is terminal: subsequent `write` and second `finish` calls fail deterministically with `staging-error.failed(...)`.")
+expect_staging_rule_rejected("dropping finished writer deletes artifact", "Dropping a FINISHED writer releases only the writer resource handle. Its completed artifact remains registered and usable for the rest of the invocation, including reopening and successful lifecycle-result adoption.")
+expect_staging_rule_rejected("lifecycle result adopts altered descriptor", "Each must have been successfully finished in this invocation, exactly match its canonical descriptor, and remain eligible for adoption; a live writer handle is not required.")
+expect_staging_rule_rejected("invalid result partially adopts outputs", "The host MUST reject the entire result, adopt none of its staged artifacts, fail the invocation, and clean/discard invocation-scoped staging according to existing failure rules. It MUST NOT partially accept valid descriptors from an invalid result.")
+expect_staging_rule_rejected("duplicate reference silently adopted", "The same canonical reference MUST NOT occur more than once among adoption candidates in one successful result. A duplicate is a contract violation: reject the whole result, adopt none, and do not silently deduplicate or create multiple durable outputs.")
+expect_staging_rule_rejected("unreturned completed output automatically durable", "Completed staged artifacts not returned for adoption remain temporary and are discarded at invocation end, even if opened as HTTP/helper input. Finish alone does not make output durable.")
 
 expect_rejected("provider-specific delegation", add_provider_field)
 expect_rejected("loss of the discovered-item delegation boundary", remove_discovery_boundary)

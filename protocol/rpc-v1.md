@@ -205,7 +205,9 @@ handle are protocol failures. A borrowed handle is never separately dropped.
 Invocation end is unconditional cleanup: each endpoint releases every owned
 resource it created or accepted, invalidates every handle, closes streams,
 discards unfinished staged writers, and discards unadopted invocation output.
-Garbage collection is not a release mechanism.
+Garbage collection is not a release mechanism. Staged artifact descriptor
+authority, writer finalization, and all-or-nothing successful-result adoption
+are specified in [Staged artifact descriptor authority](staging.md).
 
 ## Broadcast collection resource
 

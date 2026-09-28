@@ -131,7 +131,9 @@ interface io-host {
         reference: credential-reference,
     }
 
-    /// A completed output in this invocation's staging area.
+    /// Immutable host-issued receipt for one completed artifact registered in
+    /// this invocation. Every use must match all descriptor fields to the
+    /// host-recorded value; see protocol/staging.md.
     record staged-artifact {
         reference: string,
         media-type: option<string>,
@@ -173,8 +175,10 @@ interface io-host {
     }
 
     /// Opens a reader over a completed artifact produced in this invocation.
-    /// The optional range is bounded by the artifact size. The returned
-    /// reader is the same canonical byte-stream used for preserved Assets.
+    /// The host validates the reference and exact canonical descriptor before
+    /// opening. Unknown references return missing; descriptor mismatches are
+    /// denied. The optional range is bounded by artifact size. See
+    /// protocol/staging.md.
     open-staged-artifact: func(artifact: staged-artifact, offset: u64, length: option<u64>) -> result<byte-stream, stream-error>;
 
     /// Appends one byte chunk up to the host-configured limit to an

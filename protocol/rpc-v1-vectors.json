@@ -93,6 +93,30 @@
       "failure": "otherwise return a typed HTTP error rather than inheriting an SDK client default"
     },
     {
+      "name": "staged-writer-finish-canonical-descriptor",
+      "method": "stashd:plugin/io-host.staged-writer.finish",
+      "invocation": "inv-stage-1",
+      "params": {"self": {"$resource": {"type": "stashd:plugin/io-host.staged-writer", "id": "writer-1"}}},
+      "response-result": {"ok": {"reference": "opaque-stage-1", "media-type": "application/octet-stream", "size-bytes": "4", "metadata": [{"schema": "example:v1", "json": "{}"}] }},
+      "authority": "the host observes four successfully written bytes, records create-time media type and metadata, issues the opaque reference, registers this canonical descriptor, and leaves the writer handle live in FINISHED state"
+    },
+    {
+      "name": "reopen-exact-canonical-staged-artifact",
+      "method": "stashd:plugin/io-host.open-staged-artifact",
+      "invocation": "inv-stage-1",
+      "params": {"artifact": {"reference": "opaque-stage-1", "media-type": "application/octet-stream", "size-bytes": "4", "metadata": [{"schema": "example:v1", "json": "{}"}]}, "offset": "0", "length": null},
+      "response-result": {"ok": {"$resource": {"type": "stashd:plugin/io-host.byte-stream", "id": "stream-stage-1"}}},
+      "lifetime": "exact canonical descriptors reopen as new streams only in the current invocation; unknown or stale references are missing and altered known descriptors are denied"
+    },
+    {
+      "name": "staged-writer-second-finish-failed",
+      "method": "stashd:plugin/io-host.staged-writer.finish",
+      "invocation": "inv-stage-1",
+      "params": {"self": {"$resource": {"type": "stashd:plugin/io-host.staged-writer", "id": "writer-1"}}},
+      "response-result": {"err": {"failed": "writer already finished"}},
+      "state": "FINISHED is terminal; a second finish does not create another staged artifact"
+    },
+    {
       "name": "borrowed-helper-output",
       "method": "stashd:plugin/io-host.run-helper",
       "params": {
