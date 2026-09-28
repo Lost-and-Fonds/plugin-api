@@ -153,6 +153,20 @@
         {"protocol": 1, "id": "plugin-1", "kind": "response", "invocation": "inv-1", "result": {"$resource": {"type": "stashd:plugin/io-host.staging-area", "id": "opaque-area"}}},
         {"protocol": 1, "id": "host-1", "kind": "response", "invocation": "inv-1", "result": {"ok": {}}}
       ]
+    },
+    {
+      "name": "hello-first",
+      "frames-in-order": [
+        {"protocol": 1, "id": "plugin-hello", "kind": "request", "method": "hello", "params": {"min": 1, "max": 1}},
+        {"protocol": 1, "id": "plugin-hello", "kind": "response", "result": {"protocol": 1, "min": 1, "max": 1}},
+        {"protocol": 1, "id": "host-1", "kind": "request", "invocation": "inv-1", "method": "stashd:plugin/input-plugin.acquire", "params": {}}
+      ],
+      "startup-rule": "hello is the first frame and has no invocation; lifecycle begins only after successful hello"
+    },
+    {
+      "name": "lifecycle-response-result",
+      "response": {"protocol": 1, "id": "host-1", "kind": "response", "invocation": "inv-1", "result": {"error": {"tag": "failed"}}},
+      "meaning": "the WIT result error is nested inside required result; top-level error is forbidden"
     }
   ]
 }

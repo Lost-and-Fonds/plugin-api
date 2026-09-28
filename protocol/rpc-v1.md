@@ -2,7 +2,9 @@
 
 This document is the normative native wire mapping for the WIT package in this
 repository. WIT defines operations and ownership; RPC v1 only transports them.
-This is not a Component Model ABI and does not add operations to WIT.
+This is not a Component Model ABI and does not add operations to WIT. Process
+launch and stdin/stdout/stderr binding are normatively defined in
+[Component execution](component-execution.md).
 
 ## Framing and call model
 
@@ -18,17 +20,17 @@ JSON message that exceeds the WIT operation's configured byte or output limit.
 After startup, every lifecycle frame has `protocol: 1`, a non-empty string
 `id`, `kind`, and the active string `invocation`. A request has
 `kind: "request"`, a canonical WIT `method`, and an object `params`; a response
-has `kind: "response"` and exactly one of `result` or `error`. `id` is an
-opaque correlation token that MUST NOT be reused during the invocation. A
-response MUST echo both `id` and `invocation`. `result` is the WIT return value.
-The top-level `error` is reserved for transport/protocol failure and is never a
-WIT `result<ok, error>` case. Envelope fields not defined for the frame kind
-are invalid.
+has `kind: "response"` and MUST contain `result`. `id` is an opaque
+correlation token that MUST NOT be reused during the invocation. A response
+MUST echo both `id` and `invocation`. `result` is the WIT return value, including
+ordinary typed `result<ok, error>` values encoded inside it. A top-level `error`
+field is invalid. Envelope fields not defined for the frame kind are invalid.
 
-The plugin first sends a `hello` request with `protocol: 1`, `kind: "request"`,
-`method: "hello"`, and `params: {"min":1,"max":1}`; it has no invocation. The
-host responds to the same ID with `result: {"protocol":1,"min":1,"max":1}`.
-The host then starts one exported lifecycle call. Its `method` is the
+For every newly launched process, the plugin's first stdout frame MUST be a
+`hello` request with `protocol: 1`, `kind: "request"`, `method: "hello"`, and
+`params: {"min":1,"max":1}`; it has no invocation. The host responds to the
+same ID with `result: {"protocol":1,"min":1,"max":1}`. Only after successful
+hello validation and response may the host start one exported lifecycle call. Its `method` is the
 package-qualified WIT interface and function, for example
 `stashd:plugin/input-plugin.acquire`; `params` is the record of named WIT
 arguments. Imported functions and resource methods use the same method form,
@@ -52,9 +54,10 @@ operations and does not permit arbitrary concurrent asynchronous calls.
 Calls and responses for one invocation preserve stream order. A receiver MUST
 reject duplicate live IDs, unmatched/duplicate responses, out-of-order or
 wrong-invocation responses, and requests from the wrong direction as protocol
-failures. On protocol failure, the endpoint fails the active lifecycle and
-closes the RPC channel; it MUST NOT translate the failure into a lifecycle
-`plugin-error`. Unknown WIT functions/methods, invalid resource operations,
+failures. On protocol failure, the failing endpoint MUST treat the channel and
+process as unusable, fail the active lifecycle if one exists, and invalidate
+invocation-scoped resources. It MUST NOT continue with later frames or translate
+the failure into a lifecycle `plugin-error`. Unknown WIT functions/methods, invalid resource operations,
 unknown/stale handles, wrong resource types, ownership violations, malformed
 typed values, and over-limit messages are protocol failures. A valid WIT
 `result<ok,error>` is instead returned in `result` and is not a protocol error.

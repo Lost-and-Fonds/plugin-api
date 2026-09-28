@@ -11,6 +11,34 @@ from pathlib import Path
 schema_path, package_schema_path = map(Path, sys.argv[1:3])
 schema = json.loads(schema_path.read_text(encoding="utf-8"))
 package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
+repo_root = Path(__file__).resolve().parents[1]
+execution_path = repo_root / "protocol" / "component-execution.md"
+if not execution_path.is_file():
+    raise SystemExit("normative component execution document is missing")
+execution = execution_path.read_text(encoding="utf-8").lower()
+execution_requirements = (
+    ("stdin", "host-to-plugin rpc v1 byte channel"),
+    ("stdout", "plugin-to-host rpc v1 byte channel", "only valid rpc v1 framed messages", "must not write banners"),
+    ("stderr", "ordinary diagnostic channel, not part of rpc v1"),
+    ("stdout", "any stdout bytes not forming canonical framing are a protocol failure"),
+    ("first stdout frame", "hello"),
+    ("only after successful hello", "lifecycle request"),
+    ("working directory", "unpacked package root"),
+    ("protocol requires no command-line arguments", "must not require core-specific"),
+    ("no environment variable is guaranteed", "inherited host environment"),
+    ("process reuse across sequential lifecycle invocations is host/runtime policy",),
+    ("correctness must not depend on mutable process-local state surviving",),
+    ("resources, grants, streams, staged outputs, and references become invalid at invocation end",),
+    ("before hello completes, process exit is startup failure",),
+    ("process exit or a broken rpc channel before a valid lifecycle response is accepted", "never a successful lifecycle result"),
+    ("later process exit must not retroactively change it",),
+    ("rpc", "error"),
+    ("top-level", "field is invalid in a response envelope"),
+    ("typed",),
+    ("must not continue processing later frames",),
+)
+if any(any(term not in execution for term in group) for group in execution_requirements):
+    raise SystemExit("component execution specification is missing a required semantic invariant")
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
