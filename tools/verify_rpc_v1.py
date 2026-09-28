@@ -82,6 +82,7 @@ expected = {
     "reentrant-correlation",
     "hello-first",
     "lifecycle-response-result",
+    "enrichment-capabilities-local-discovery",
 }
 if set(by_name) != expected:
     raise SystemExit("RPC v1 conformance vector set is incomplete or unexpected")
@@ -162,6 +163,13 @@ item = acquire_params.get("item", {})
 options = acquire_params.get("options", {})
 if len(startup) != 3 or startup[0].get("method") != "hello" or "invocation" in startup[0] or startup[1].get("result", {}).get("protocol") != 1 or startup[2].get("method") != "stashd:plugin/input-plugin.acquire" or set(acquire_params) != {"item", "options"} or set(item) != {"id", "reference", "delegation", "size-bytes", "size-estimated", "metadata"} or item.get("delegation") is not None or item.get("size-bytes") is not None or item.get("size-estimated") is not False or item.get("metadata") != [] or set(options) != {"options", "credentials"} or options != {"options": [], "credentials": []}:
     raise SystemExit("RPC v1 startup vector must gate a valid typed lifecycle invocation on invocation-free hello")
+enrichment_discovery = by_name["enrichment-capabilities-local-discovery"]
+if set(enrichment_discovery["params"]) != {"context"} or enrichment_discovery["response-result"] != {
+    "ok": [{"id": "example.operation", "revision": "r1", "options": []}]
+} or enrichment_discovery["discovery-boundary"] != {
+    "credentials": False, "configuration": False, "host-callbacks": False
+}:
+    raise SystemExit("Enrichment capability discovery vector must show context-only direct-list discovery without credentials, configuration, or callbacks")
 response = by_name["lifecycle-response-result"]["response"]
 expected_error = {"error": {"tag": "failed", "value": {"message": "example failure", "retryable": False}}}
 if "error" in response or response.get("result") != expected_error:

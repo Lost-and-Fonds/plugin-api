@@ -14,6 +14,29 @@ schema = json.loads(schema_path.read_text(encoding="utf-8"))
 package_schema = json.loads(package_schema_path.read_text(encoding="utf-8"))
 repo_root = Path(__file__).resolve().parents[1]
 execution_path = repo_root / "protocol" / "component-execution.md"
+enrichment_path = Path(os.environ.get("STASHD_ENRICHMENT_SPEC", repo_root / "protocol" / "enrichment-capabilities.md"))
+if not enrichment_path.is_file():
+    raise SystemExit("normative Enrichment capability discovery document is missing")
+enrichment_text = enrichment_path.read_text(encoding="utf-8").casefold()
+enrichment_requirements = (
+    ("deterministic, local, credentialless discovery",),
+    ("must not perform remote service discovery, preflight execution, or an availability check",),
+    ("supplied value context plus local installed component/package state",),
+    ("must not require or depend on credentials", "http", "remote calls or service health"),
+    ("helper execution, staging, progress callbacks, or asset byte reads through `enrichment-host.open-asset`",),
+    ("discovery determines applicability from those descriptors and metadata, not by opening or examining asset bytes",),
+    ("applicability and attemptability, not guaranteed success",),
+    ("execution-time authentication failures", "reported by `enrich`"),
+    ("options must not require a live remote lookup",),
+    ("capability.id` is the stable, opaque, plugin-owned identity",),
+    ("revision must change when the accepted or interpreted caller configuration contract changes semantically",),
+    ("presentation-only changes", "do not require a revision change"),
+    ("unsupported/stale revision, it must return `plugin-error.unsupported`",),
+    ("must return `plugin-error.invalid-configuration`",),
+    ("an empty list is an ordinary successful result",),
+)
+if any(any(term not in enrichment_text for term in group) for group in enrichment_requirements):
+    raise SystemExit("Enrichment capability discovery specification is missing a required semantic invariant")
 if not execution_path.is_file():
     raise SystemExit("normative component execution document is missing")
 execution = execution_path.read_text(encoding="utf-8").lower()
@@ -607,6 +630,35 @@ if error_detail.get("retryable") != {"kind": "scalar", "name": "bool"}:
     raise SystemExit("plugin-error-detail.retryable must remain execution-failure retryability")
 if not {"credential-denied", "credential-unavailable", "authentication"} <= error_cases:
     raise SystemExit("Input must preserve credential denial, unavailability, and authentication failure distinctions")
+
+enrichment_contract = next(contract for contract in contracts if contract["file"] == "wit/enrichment.wit")
+enrichment_plugin = enrichment_contract["interfaces"]["enrichment-plugin"]
+enrichment_functions = {function["name"]: function for function in enrichment_plugin.get("functions", [])}
+capabilities = enrichment_functions.get("capabilities")
+if capabilities is None or capabilities.get("arguments") != [
+    {"name": "context", "type": {"kind": "named", "name": "item-context"}},
+] or capabilities.get("result") != {
+    "kind": "list", "value": {"kind": "named", "name": "capability"}
+}:
+    raise SystemExit("Enrichment capabilities must remain credentialless context-only discovery returning a direct capability list")
+if contains_named_type(capabilities["result"], "plugin-error") or any(
+    argument["name"] in {"credentials", "configuration"} for argument in capabilities["arguments"]
+):
+    raise SystemExit("Enrichment capability discovery must not add credentials, configuration, or typed errors")
+enrich = enrichment_functions.get("enrich")
+if enrich is None or enrich.get("arguments") != [
+    {"name": "context", "type": {"kind": "named", "name": "item-context"}},
+    {"name": "capability-id", "type": {"kind": "scalar", "name": "string"}},
+    {"name": "capability-revision", "type": {"kind": "scalar", "name": "string"}},
+    {"name": "configuration", "type": {"kind": "list", "value": {"kind": "named", "name": "configuration-value"}}},
+    {"name": "credentials", "type": {"kind": "list", "value": credential_binding}},
+] or enrich.get("result") != {
+    "kind": "result", "ok": {"kind": "named", "name": "enrichment-result"}, "error": {"kind": "named", "name": "plugin-error"},
+}:
+    raise SystemExit("Enrichment execution must retain ID/revision, selections, credentials, and typed execution outcomes")
+enrichment_errors = {case["name"] for case in enrichment_plugin.get("variants", {}).get("plugin-error", {}).get("values", [])}
+if enrichment_errors != {"unsupported", "not-found", "authentication", "rate-limited", "unavailable", "invalid-configuration", "invalid-data", "failed"}:
+    raise SystemExit("Enrichment must retain its existing typed execution failures")
 
 broadcast_contract = next(contract for contract in contracts if contract["file"] == "wit/broadcast.wit")
 broadcast_plugin = broadcast_contract["interfaces"].get("broadcast-plugin", {})

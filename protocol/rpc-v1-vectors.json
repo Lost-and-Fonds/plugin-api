@@ -547,6 +547,33 @@
       "startup-rule": "hello is the first frame and has no invocation; lifecycle begins only after successful hello"
     },
     {
+      "name": "enrichment-capabilities-local-discovery",
+      "lifecycle-method": "stashd:plugin/enrichment-plugin.capabilities",
+      "invocation": "inv-30",
+      "params": {
+        "context": {
+          "item-id": "item-opaque",
+          "assets": [],
+          "metadata": []
+        }
+      },
+      "response-result": {
+        "ok": [
+          {
+            "id": "example.operation",
+            "revision": "r1",
+            "options": []
+          }
+        ]
+      },
+      "discovery-boundary": {
+        "credentials": false,
+        "configuration": false,
+        "host-callbacks": false
+      },
+      "meaning": "capabilities returns a direct list from supplied context and local installed state; the result advertises an attemptable operation, not guaranteed execution success"
+    },
+    {
       "name": "lifecycle-response-result",
       "response": {
         "protocol": 1,
