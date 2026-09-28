@@ -4,7 +4,15 @@
       "file": "wit/input.wit",
       "interfaces": {
         "input-host": {
-          "enums": {},
+          "enums": {
+            "deficiency-disposition": {
+              "values": [
+                "retryable",
+                "terminal",
+                "unknown"
+              ]
+            }
+          },
           "functions": [
             {
               "arguments": [
@@ -51,6 +59,24 @@
             }
           ],
           "records": {
+            "deficiency": {
+              "fields": [
+                {
+                  "name": "disposition",
+                  "type": {
+                    "kind": "named",
+                    "name": "deficiency-disposition"
+                  }
+                },
+                {
+                  "name": "diagnostic",
+                  "type": {
+                    "kind": "named",
+                    "name": "outcome-diagnostic"
+                  }
+                }
+              ]
+            },
             "discovered-item": {
               "fields": [
                 {
@@ -159,6 +185,27 @@
                   }
                 }
               ]
+            },
+            "outcome-diagnostic": {
+              "fields": [
+                {
+                  "name": "message",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "evidence",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "plugin-metadata"
+                    }
+                  }
+                }
+              ]
             }
           },
           "resources": [
@@ -208,6 +255,37 @@
                 }
               ]
             },
+            "discovery-finish": {
+              "values": [
+                {
+                  "name": "exhaustive",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "discovery-refresh-state"
+                    }
+                  }
+                },
+                {
+                  "name": "partial",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "deficiency"
+                    }
+                  }
+                },
+                {
+                  "name": "indeterminate",
+                  "type": {
+                    "kind": "named",
+                    "name": "outcome-diagnostic"
+                  }
+                }
+              ]
+            },
             "discovery-progress": {
               "values": [
                 {
@@ -218,13 +296,10 @@
                   }
                 },
                 {
-                  "name": "complete",
+                  "name": "finished",
                   "type": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "named",
-                      "name": "discovery-refresh-state"
-                    }
+                    "kind": "named",
+                    "name": "discovery-finish"
                   }
                 }
               ]
@@ -407,6 +482,13 @@
                       "name": "staged-artifact"
                     }
                   }
+                },
+                {
+                  "name": "outcome",
+                  "type": {
+                    "kind": "named",
+                    "name": "preservation-outcome"
+                  }
                 }
               ]
             },
@@ -563,6 +645,7 @@
           "resources": [],
           "uses": {
             "credential-binding": "io-host",
+            "deficiency": "input-host",
             "discovered-item": "input-host",
             "discovery-continuation": "input-host",
             "discovery-refresh-state": "input-host",
@@ -660,6 +743,24 @@
                   "type": {
                     "kind": "named",
                     "name": "plugin-error-detail"
+                  }
+                }
+              ]
+            },
+            "preservation-outcome": {
+              "values": [
+                {
+                  "name": "complete",
+                  "type": null
+                },
+                {
+                  "name": "partial",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "deficiency"
+                    }
                   }
                 }
               ]

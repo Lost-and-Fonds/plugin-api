@@ -48,11 +48,37 @@ interface input-host {
         value: string,
     }
 
+    /// Retryability for a coherent but incomplete preservation result, distinct
+    /// from plugin-error-detail.retryable execution-failure retryability.
+    enum deficiency-disposition {
+        retryable,
+        terminal,
+        unknown,
+    }
+
+    /// Human-readable diagnostic with opaque plugin-owned evidence facets.
+    record outcome-diagnostic {
+        message: string,
+        evidence: list<plugin-metadata>,
+    }
+
+    record deficiency {
+        disposition: deficiency-disposition,
+        diagnostic: outcome-diagnostic,
+    }
+
+    /// `partial` requires at least one deficiency. Only `exhaustive` may replace
+    /// the completed refresh baseline; other finishes preserve it.
+    variant discovery-finish {
+        exhaustive(option<discovery-refresh-state>),
+        partial(list<deficiency>),
+        indeterminate(outcome-diagnostic),
+    }
+
+    /// A finished batch is terminal and commits its coverage with its Items.
     variant discovery-progress {
-        /// The batch was nonterminal; resume after this durably accepted batch.
         more(discovery-continuation),
-        /// The run is terminal; replace completed refresh state atomically.
-        complete(option<discovery-refresh-state>),
+        finished(discovery-finish),
     }
 
     record discovery-batch {
@@ -73,7 +99,7 @@ interface input-host {
 }
 
 interface input-plugin {
-    use input-host.{discovered-item, input-delegation, discovery-continuation, discovery-refresh-state};
+    use input-host.{discovered-item, input-delegation, discovery-continuation, discovery-refresh-state, deficiency};
     use io-host.{credential-binding, plugin-metadata, staged-artifact};
     use plugin-types.{plugin-error-detail};
 
@@ -116,8 +142,18 @@ interface input-plugin {
         credentials: list<credential-binding>,
     }
 
+    /// `complete` covers this Item's intended acquisition scope for this invocation,
+    /// not discovery exhaustiveness. Partial results retain valid artifacts and
+    /// require at least one deficiency. Only returned artifacts from a successful
+    /// result may be adopted, together with this outcome as one durable fact.
+    variant preservation-outcome {
+        complete,
+        partial(list<deficiency>),
+    }
+
     record acquisition-result {
         artifacts: list<staged-artifact>,
+        outcome: preservation-outcome,
     }
 
     /// `canonical-reference`, when present, is an opaque plugin reference.

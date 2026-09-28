@@ -159,8 +159,28 @@ if input_host["uses"].get("plugin-metadata") != "io-host" or input_plugin["uses"
 if input_plugin["uses"].get("staged-artifact") != "io-host":
     raise SystemExit("Input results must return the shared canonical artifact descriptor")
 acquisition_fields = fields(input_plugin, "acquisition-result")
-if "artifacts" not in acquisition_fields or not contains_named_type(acquisition_fields["artifacts"], "staged-artifact"):
-    raise SystemExit("Input acquisition must return completed outputs through the canonical staged-artifact descriptor")
+if set(acquisition_fields) != {"artifacts", "outcome"} or not contains_named_type(acquisition_fields["artifacts"], "staged-artifact"):
+    raise SystemExit("Input acquisition must return staged artifacts and an explicit preservation outcome")
+if acquisition_fields["outcome"] != {"kind": "named", "name": "preservation-outcome"}:
+    raise SystemExit("Input acquisition must distinguish complete and partial preservation")
+
+preservation_cases = {case["name"]: case["type"] for case in input_plugin["variants"].get("preservation-outcome", {}).get("values", [])}
+if preservation_cases != {"complete": None, "partial": {"kind": "list", "value": {"kind": "named", "name": "deficiency"}}}:
+    raise SystemExit("Input preservation outcomes must retain complete and deficiency-bearing partial cases")
+
+deficiency_dispositions = input_host.get("enums", {}).get("deficiency-disposition", {}).get("values", [])
+if deficiency_dispositions != ["retryable", "terminal", "unknown"]:
+    raise SystemExit("Input deficiencies must distinguish retryable, terminal, and unknown dispositions")
+diagnostic_fields = fields(input_host, "outcome-diagnostic")
+if diagnostic_fields != {"message": {"kind": "scalar", "name": "string"}, "evidence": {"kind": "list", "value": {"kind": "named", "name": "plugin-metadata"}}}:
+    raise SystemExit("Input diagnostics must contain a message and canonical plugin metadata evidence")
+deficiency_fields = fields(input_host, "deficiency")
+if deficiency_fields != {"disposition": {"kind": "named", "name": "deficiency-disposition"}, "diagnostic": {"kind": "named", "name": "outcome-diagnostic"}}:
+    raise SystemExit("Input deficiencies must pair a retry disposition with a generic diagnostic")
+if {"url", "http-status", "resource-kind", "page-number", "attachment-id", "embed-type", "provider-error", "expected-count"} & (set(diagnostic_fields) | set(deficiency_fields) | set(acquisition_fields)):
+    raise SystemExit("Input deficiency primitives must not encode provider/domain-specific fields")
+if "retryable" in acquisition_fields:
+    raise SystemExit("Input acquisition must not duplicate deficiency dispositions with an overall retryable flag")
 
 broadcast_contract = next(contract for contract in contracts if contract["file"] == "wit/broadcast.wit")
 broadcast_plugin = broadcast_contract["interfaces"]["broadcast-plugin"]
@@ -396,9 +416,16 @@ progress_cases = input_host["variants"].get("discovery-progress", {}).get("value
 progress = {case["name"]: case["type"] for case in progress_cases}
 if progress != {
     "more": {"kind": "named", "name": "discovery-continuation"},
-    "complete": {"kind": "option", "value": {"kind": "named", "name": "discovery-refresh-state"}},
+    "finished": {"kind": "named", "name": "discovery-finish"},
 }:
-    raise SystemExit("discovery progress must make nonterminal continuation and terminal refresh state exclusive")
+    raise SystemExit("discovery progress must separate continuation from terminal coverage")
+finish_cases = {case["name"]: case["type"] for case in input_host["variants"].get("discovery-finish", {}).get("values", [])}
+if finish_cases != {
+    "exhaustive": {"kind": "option", "value": {"kind": "named", "name": "discovery-refresh-state"}},
+    "partial": {"kind": "list", "value": {"kind": "named", "name": "deficiency"}},
+    "indeterminate": {"kind": "named", "name": "outcome-diagnostic"},
+}:
+    raise SystemExit("terminal discovery must distinguish exhaustive, partial, and indeterminate coverage")
 if any("discovered-item" in str(function.get("result")) for function in discovery_functions.values()):
     raise SystemExit("discover must not return Items alongside batch delivery")
 discovery_document = Path(__file__).resolve().parents[1] / "protocol" / "input-discovery.md"
@@ -408,14 +435,28 @@ for semantic in (
     "reject a batch exceeding that count",
     "commit outside the active `discover` run",
     "any commit after that run is terminal",
-    "successful acknowledgment of this batch is the durable commit point",
+    "every terminal batch's successful acknowledgment is the durable commit point",
     "MUST return successful completion from `discover`",
-    "success without a successfully acknowledged terminal `complete(...)` batch is a protocol violation",
+    "without acknowledgment of a `finished(...)` batch is a protocol violation",
     "MUST NOT roll back or reopen the run",
-    "MUST NOT cause the host to mark the run complete",
+    "partial and indeterminate outcomes leave it unchanged",
+    "Only acknowledged `finished(exhaustive(...))` may replace or clear the completed refresh baseline",
 ):
     if semantic.casefold() not in discovery_text.casefold():
         raise SystemExit(f"normative Input discovery lifecycle is missing: {semantic}")
+preservation_document = Path(__file__).resolve().parents[1] / "protocol" / "input-preservation.md"
+preservation_text = preservation_document.read_text(encoding="utf-8") if preservation_document.is_file() else ""
+for semantic in (
+    "`Err(plugin-error)` means the invocation did not produce a coherent preservation result",
+    "`Ok(result)` means the plugin completed coherently",
+    "`partial` MUST contain at least one deficiency",
+    "artifacts, preservation outcome, and all deficiency diagnostics/evidence as one logical durable preservation fact",
+    "MUST NOT inspect evidence to decide retry policy",
+    "Only `finished(exhaustive(...))` may replace or clear completed refresh state.",
+    "plugin-error-detail.retryable` answers whether a failed invocation should be retried",
+):
+    if semantic.casefold() not in preservation_text.casefold():
+        raise SystemExit(f"normative Input preservation semantics are missing: {semantic}")
 
 acquisition_credentials = fields(input_plugin, "acquisition-options").get("credentials")
 if acquisition_credentials != {"kind": "list", "value": credential_binding}:
@@ -423,6 +464,11 @@ if acquisition_credentials != {"kind": "list", "value": credential_binding}:
 if input_plugin["variants"].get("plugin-error", {}).get("values") is None:
     raise SystemExit("Input must retain typed lifecycle errors")
 error_cases = {value["name"] for value in input_plugin["variants"]["plugin-error"]["values"]}
+if "partial" in error_cases or "incomplete" in error_cases or "missing-resource" in error_cases:
+    raise SystemExit("partial preservation must remain a successful outcome, not an execution error")
+error_detail = fields(plugin_types, "plugin-error-detail")
+if error_detail.get("retryable") != {"kind": "scalar", "name": "bool"}:
+    raise SystemExit("plugin-error-detail.retryable must remain execution-failure retryability")
 if not {"credential-denied", "credential-unavailable", "authentication"} <= error_cases:
     raise SystemExit("Input must preserve credential denial, unavailability, and authentication failure distinctions")
 

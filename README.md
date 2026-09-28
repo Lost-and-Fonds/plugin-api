@@ -35,8 +35,11 @@ and regular-file requirements are specified in
 vectors in [`protocol/package-artifact-vectors.json`](protocol/package-artifact-vectors.json).
 Input, Broadcast, Enrichment, and Collection Export keep their separate
 interfaces and lifecycles. Input discovery uses bounded, host-acknowledged
-batches with distinct opaque continuation and completed refresh state; see the
-normative [Input discovery contract](protocol/input-discovery.md). Enrichment
+batches with distinct opaque continuation, explicit exhaustive/partial/indeterminate
+coverage, and completed refresh state; see the normative [Input discovery contract](protocol/input-discovery.md).
+Input acquisition separates execution errors from complete or partial preservation
+outcomes, retaining valid artifacts with deficiency diagnostics; see the normative
+[Input preservation and completeness contract](protocol/input-preservation.md). Enrichment
 inspects generic Item/Asset context, reports applicable plugin-owned capabilities,
 and returns opaque metadata facets and/or durable
 derived Assets with source Asset IDs and plugin activity/version provenance.

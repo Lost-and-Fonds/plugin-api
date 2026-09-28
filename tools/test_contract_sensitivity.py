@@ -682,6 +682,33 @@ expect_package_schema_rejected("package-global credential slots", make_credentia
 expect_package_schema_rejected("invalid credential slot identity accepted", remove_slot_identity_constraints)
 
 
+def remove_acquisition_outcome(candidate: dict) -> None:
+    fields = input_interface(candidate, "input-plugin")["records"]["acquisition-result"]["fields"]
+    fields[:] = [field for field in fields if field["name"] != "outcome"]
+
+
+def encode_partial_as_execution_error(candidate: dict) -> None:
+    errors = input_interface(candidate, "input-plugin")["variants"]["plugin-error"]["values"]
+    errors.append({"name": "partial", "type": {"kind": "named", "name": "plugin-error-detail"}})
+
+
+def add_overall_retryable(candidate: dict) -> None:
+    input_interface(candidate, "input-plugin")["records"]["acquisition-result"]["fields"].append(
+        {"name": "retryable", "type": {"kind": "scalar", "name": "bool"}}
+    )
+
+
+def add_domain_missing_resource_field(candidate: dict) -> None:
+    input_interface(candidate, "input-host")["records"]["deficiency"]["fields"].append(
+        {"name": "missing-resource-id", "type": {"kind": "scalar", "name": "string"}}
+    )
+
+
+def remove_indeterminate_discovery(candidate: dict) -> None:
+    finish = input_interface(candidate, "input-host")["variants"]["discovery-finish"]["values"]
+    finish[:] = [case for case in finish if case["name"] != "indeterminate"]
+
+
 def remove_batch_commit(candidate: dict) -> None:
     owner = input_interface(candidate, "input-host")
     owner["functions"] = [function for function in owner["functions"] if function["name"] != "commit-discovery-batch"]
@@ -732,6 +759,11 @@ def add_provider_pagination_field(candidate: dict) -> None:
     )
 
 
+expect_rejected("acquisition artifacts without preservation outcome", remove_acquisition_outcome)
+expect_rejected("partial preservation encoded as execution error", encode_partial_as_execution_error)
+expect_rejected("overall retryable bit duplicating deficiencies", add_overall_retryable)
+expect_rejected("provider-specific missing-resource protocol field", add_domain_missing_resource_field)
+expect_rejected("terminal discovery without explicit indeterminate coverage", remove_indeterminate_discovery)
 expect_rejected("missing acknowledged discovery batch", remove_batch_commit)
 expect_rejected("single-item discovery delivery restored", restore_single_item_delivery)
 expect_rejected("returned discovery Item list restored", return_discovery_items)
@@ -742,10 +774,35 @@ expect_rejected("credentials embedded in continuation", embed_credentials_in_dis
 expect_rejected("provider pagination field in request", add_provider_pagination_field)
 
 
+def verify_preservation_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "input-preservation.md"
+    text = document.read_text(encoding="utf-8")
+    mutations = (
+        ("`partial` MUST contain at least one deficiency", "`partial` may contain zero deficiencies"),
+        ("Only `finished(exhaustive(...))` may replace or clear completed refresh state.", "Any terminal outcome may replace completed refresh state."),
+        ("MUST NOT inspect evidence to decide retry policy.", "The host parses evidence to decide retry policy."),
+    )
+    for original, replacement in mutations:
+        weakened = text.replace(original, replacement)
+        if weakened == text:
+            raise SystemExit(f"preservation sensitivity mutation did not apply: {original}")
+        document.write_text(weakened, encoding="utf-8")
+        try:
+            result = subprocess.run(
+                [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
+                capture_output=True, text=True, check=False,
+            )
+        finally:
+            document.write_text(text, encoding="utf-8")
+        if result.returncode == 0:
+            raise SystemExit(f"semantic verifier accepted weakened preservation semantics: {original}")
+        print(f"sensitivity check caught weakened preservation semantics: {original}")
+
+
 def verify_terminal_commit_authority() -> None:
     document = Path(__file__).resolve().parents[1] / "protocol" / "input-discovery.md"
     text = document.read_text(encoding="utf-8")
-    weakened = text.replace("Successful acknowledgment of this batch is the durable commit point for the discovery run.", "The terminal batch indicates completion.")
+    weakened = text.replace("Every terminal batch's successful acknowledgment is the durable commit point:", "Terminal acceptance is informational:")
     if weakened == text:
         raise SystemExit("terminal commit-point sensitivity mutation did not apply")
     document.write_text(weakened, encoding="utf-8")
@@ -762,3 +819,4 @@ def verify_terminal_commit_authority() -> None:
 
 
 verify_terminal_commit_authority()
+verify_preservation_semantics()

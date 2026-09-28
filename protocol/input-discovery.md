@@ -1,6 +1,6 @@
 # Input discovery
 
-This document normatively defines bounded Input enumeration and its durable progress contract.
+This document normatively defines bounded Input enumeration and its durable progress contract. Preservation completeness and acquisition outcomes are specified separately in [Input preservation and completeness](input-preservation.md).
 
 ## Delivery and batch acceptance
 
@@ -10,15 +10,25 @@ The host MUST atomically accept every Item in a batch and its progress transitio
 
 `more(continuation)` accepts a nonterminal batch and durably stores the next run continuation. It leaves the previously completed refresh state unchanged. The host's durable state is authoritative after commit, including when acknowledgment is lost or the plugin subsequently dies. If acceptance fails or acknowledgment is lost, the plugin MUST NOT assume progress advanced or retry on the assumption that it did not; the host may have durably committed the batch.
 
-`complete(refresh-state)` accepts the terminal batch, marks the run complete, clears its continuation, and replaces the completed refresh state with the supplied optional value in the same atomic acceptance. A terminal batch MAY contain zero Items. Successful acknowledgment of this batch is the durable commit point for the discovery run. At that moment all its final Items and the terminal transition are durable. A later plugin crash, transport failure, or erroneous `discover` return MUST NOT roll back or reopen the run. If terminal acknowledgment is lost, the host's durable state remains authoritative; there is no continuation to resume, and a subsequent commit retry MUST be rejected rather than creating another completion transition.
+`finished(exhaustive(refresh-state))` accepts a terminal exhaustive batch, marks the run terminal, clears its continuation, and replaces the completed refresh state with the supplied optional value in the same atomic acceptance. `none` may clear a prior baseline. `finished(partial(deficiencies))` and `finished(indeterminate(diagnostic))` accept terminal coverage claims but MUST leave the previous completed refresh state unchanged. Partial and indeterminate outcomes leave it unchanged. These terminal batches MAY contain zero Items. Every terminal batch's successful acknowledgment is the durable commit point: final Items, terminal status, coverage, and diagnostics/evidence are durable together; only an exhaustive finish changes refresh state.
 
-After terminal acceptance, the plugin MUST NOT commit another batch for that run and MUST return successful completion from `discover` without further discovery work. The host MUST reject any subsequent batch commit for the terminal run. A plugin error returned after terminal acknowledgment is a plugin/protocol execution error for diagnostics only, not a rollback. Conversely, `discover` success without a successfully acknowledged terminal `complete(...)` batch is a protocol violation and MUST NOT cause the host to mark the run complete. If discovery fails or crashes before terminal acceptance, prior acknowledged `more(...)` batches remain durable and the run stays resumable from the latest committed continuation; a plugin error does not discard those batches.
+A `partial` finish MUST contain at least one deficiency. A partial or indeterminate finish MUST NOT carry continuation or advance/clear refresh state. The host MUST reject malformed terminal coverage, including empty deficiencies and any terminal state containing continuation. The host MUST NOT accept a terminal result as exhaustive if its coverage evidence was lost.
+
+After acknowledgment of any `finished(...)` batch, the run is terminal: the plugin MUST NOT commit another batch and MUST return successful completion from `discover` without further discovery work. A later plugin crash, transport failure, or erroneous `discover` return MUST NOT roll back or reopen the run. If terminal acknowledgment is lost, host durable state remains authoritative; no continuation remains, and another commit MUST be rejected. Conversely, `discover` success without acknowledgment of a `finished(...)` batch is a protocol violation and MUST NOT complete the run. If execution fails before terminal acceptance, prior acknowledged `more(...)` batches remain durable and resumable.
+
+## Coverage claims
+
+`exhaustive(refresh-state)` means the plugin asserts that this run enumerated the logical Input exhaustively according to the request, credentials, and plugin semantics. It says nothing about whether discovered Items were fully acquired; exhaustive discovery with partial acquisition is valid.
+
+`partial(deficiencies)` means the run intentionally terminates successfully with known gaps that prevented exhaustive enumeration. The committed Items remain valid, but there is no continuation for that logical run. `indeterminate(diagnostic)` means the run terminates without a truthful claim of either exhaustive enumeration or known definite incompleteness. Use neither terminal form for an ordinary transient interruption that should resume.
+
+If a transient interruption, such as a rate limit, should be resumed, the plugin MUST retain the last acknowledged `more(continuation)` and return an execution error. It MUST NOT turn that interrupted invocation into terminal partial or indeterminate coverage merely because it cannot continue now. `plugin-error-detail.retryable` describes retry of the failed invocation; deficiency dispositions describe gaps in a coherent successful result.
 
 ## Distinct opaque state
 
-A `discovery-continuation` is plugin-owned opaque state for one in-progress logical run. It resumes immediately after the last durably acknowledged batch. It MUST contain or identify all plugin-specific resume information without depending on mutable plugin-local disk or process state. Core MUST store and return it unchanged and MUST NOT interpret it. It is discarded when the run completes or is abandoned and MUST NOT be treated as completed refresh state.
+A `discovery-continuation` is plugin-owned opaque state for one in-progress logical run. It resumes immediately after the last durably acknowledged batch. It MUST contain or identify all plugin-specific resume information without depending on mutable plugin-local disk or process state. Core MUST store and return it unchanged and MUST NOT interpret it. It is discarded when any terminal batch is accepted and MUST NOT be treated as completed refresh state.
 
-A `discovery-refresh-state` is plugin-owned opaque state retained only between completed runs as a possible baseline for a later `refresh`. It is optional. Core MUST NOT interpret it, and it changes only on successful atomic acceptance of a terminal batch. Inputs that do not support efficient refresh MAY always receive and return `none`.
+A `discovery-refresh-state` is plugin-owned opaque state retained only between completed runs as a possible baseline for a later `refresh`. It is optional. Core MUST NOT interpret it. Only acknowledged `finished(exhaustive(...))` may replace or clear the completed refresh baseline; `more`, partial, and indeterminate outcomes leave it unchanged. Inputs that do not support efficient refresh MAY always receive and return `none` on exhaustive completion.
 
 Neither state may contain credentials or depend on secret material. Credential bindings may legitimately change between invocations.
 
@@ -32,7 +42,7 @@ For new `complete` intent, the plugin enumerates the complete logical Input with
 
 After batch 861 is acknowledged and the invocation fails during batch 862, Core retains Items through batch 861, the continuation committed with that batch, and the previous completed refresh state. Retry resumes from that continuation, not batch 1. The underlying remote source may mutate and yield overlapping Items after resumption; stable `discovered-item.id` is the logical identity available to the host. The contract does not require an immutable remote snapshot or add provider-specific deduplication machinery. The continuation MUST faithfully represent the best durable next point the source permits.
 
-For example, if completed refresh state is R10, batches A and B may commit continuations C1 and C2. A crash after B leaves R10 and C2. Only an acknowledged terminal batch `complete(R11)` atomically replaces R10 with R11. Intermediate commits MUST NOT advance the refresh baseline.
+For example, if completed refresh state is R10, batches A and B may commit continuations C1 and C2. A crash after B leaves R10 and C2. If the terminal batch is `finished(partial(...))` or `finished(indeterminate(...))`, committed Items remain, the continuation is cleared, and R10 remains the baseline for a later run. Only `finished(exhaustive(R11))` atomically replaces R10 with R11; `finished(exhaustive(none))` clears it. Intermediate commits MUST NOT advance the baseline.
 
 ## State compatibility
 
@@ -40,6 +50,6 @@ Opaque state formats belong to the plugin. Plugins SHOULD keep formats backward-
 
 ## Input sizes and examples
 
-A small Input discovers A, B, and C, commits one batch containing those Items and `complete(none)`, then returns success. No session or resource is required.
+A small Input discovers A, B, and C, commits one batch containing those Items and `finished(exhaustive(none))`, then returns success. No session or resource is required. An incremental refresh with no new Items may commit a zero-Item `finished(exhaustive(R2))` batch. A source whose boundary is unknown may end with zero-Item `finished(indeterminate(...))`.
 
-Large structured catalogs, whole-site crawls, series/platform enumerations, social histories, and revision feeds use bounded batches and plugin-owned opaque continuation. A completed Discord history may establish D1; later `refresh(D1)` may emit changes and terminally establish D2. An interrupted refresh keeps D1 until its terminal acknowledgment. Website recrawl/change-detection state and crawl-frontier state remain plugin-owned; Core receives no URL, HTTP validator, WARC, crawl-depth, or provider-pagination fields.
+Large structured catalogs, whole-site crawls, series/platform enumerations, social histories, and revision feeds use bounded batches and plugin-owned opaque continuation. A completed Discord history may establish D1; later `refresh(D1)` may emit changes and terminally establish D2. An interrupted refresh keeps D1 until exhaustive terminal acknowledgment. Website recrawl/change-detection state and crawl-frontier state remain plugin-owned; Core receives no URL, HTTP validator, WARC, crawl-depth, or provider-pagination fields.
