@@ -25,6 +25,18 @@ interface broadcast-host {
         next: func(max-items: u32) -> result<option<list<item>>, collection-read-error>;
     }
 
+    variant publication-report-error {
+        rejected,
+        limit-exceeded,
+        failed(string),
+    }
+
+    /// Accumulates bounded provisional result batches for one publication invocation.
+    resource publication-reporter {
+        report-files: func(files: list<published-file>) -> result<_, publication-report-error>;
+        report-destination-metadata: func(metadata: list<plugin-metadata>) -> result<_, publication-report-error>;
+    }
+
     /// A path reported by a filesystem-oriented destination, relative to that
     /// destination's namespace; it is never a Vault or host filesystem path.
     record published-file {
@@ -41,7 +53,7 @@ interface broadcast-host {
 interface broadcast-plugin {
     use io-host.{credential-binding, plugin-metadata, staged-artifact};
     use plugin-types.{plugin-error-detail};
-    use broadcast-host.{item-collection, published-file};
+    use broadcast-host.{item-collection, publication-reporter};
     variant option-value {
         boolean(bool),
         number(s64),
@@ -58,6 +70,8 @@ interface broadcast-plugin {
     /// The host-selected preserved collection for this invocation only.
     record publish-request {
         collection: item-collection,
+        reporter: publication-reporter,
+        maximum-report-records-per-batch: u32,
     }
 
     /// Plugin-owned non-secret configuration for the host-selected destination.
@@ -66,15 +80,16 @@ interface broadcast-plugin {
         settings: list<setting>,
     }
 
+    enum file-report-status {
+        not-applicable,
+        complete,
+    }
+
     record publication {
         /// Optional local staged output. The host adopts it only when this
         /// publication result succeeds; remote-only publication uses `none`.
         artifact: option<staged-artifact>,
-        /// Present only when the destination exposes filesystem-relative paths.
-        files: option<list<published-file>>,
-        /// Opaque plugin-owned destination receipts, including multiple remote
-        /// objects or records where needed.
-        destination-metadata: list<plugin-metadata>,
+        files: file-report-status,
     }
 
     /// A plugin-defined interactive operation on destination configuration or

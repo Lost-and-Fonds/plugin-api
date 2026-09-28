@@ -74,6 +74,11 @@ expected = {
     "broadcast-collection-next-batch",
     "broadcast-collection-eof",
     "broadcast-collection-drop",
+    "broadcast-publication-report-files",
+    "broadcast-publication-report-metadata",
+    "broadcast-publication-limit-exceeded",
+    "broadcast-publication-complete",
+    "broadcast-publication-not-applicable",
     "reentrant-correlation",
     "hello-first",
     "lifecycle-response-result",
@@ -126,8 +131,19 @@ for name, low, high in (
 
 collection_request = by_name["broadcast-publish-collection-resource"]
 collection_resource = collection_request["params"]["request"]["collection"]["$resource"]
-if collection_resource != {"type": "stashd:plugin/broadcast-host.item-collection", "id": "opaque-collection"} or collection_request["invocation"] != "inv-23":
-    raise SystemExit("Broadcast publish vector must transfer the invocation-scoped collection resource")
+request_params = collection_request["params"]["request"]
+if request_params.get("collection", {}).get("$resource") != {"type": "stashd:plugin/broadcast-host.item-collection", "id": "opaque-collection"} or request_params.get("reporter", {}).get("$resource") != {"type": "stashd:plugin/broadcast-host.publication-reporter", "id": "opaque-reporter"} or request_params.get("maximum-report-records-per-batch") != 2 or collection_request["invocation"] != "inv-23":
+    raise SystemExit("Broadcast publish vector must transfer both invocation resources and the explicit batch maximum")
+for name in ("broadcast-publication-report-files", "broadcast-publication-report-metadata"):
+    report = by_name[name]
+    batches = next(value for key, value in report["params"].items() if key in {"files", "metadata"})
+    if not batches or report["response-result"] != {"ok": None}:
+        raise SystemExit("publication report vectors must show non-empty bounded successful batches")
+oversized = by_name["broadcast-publication-limit-exceeded"]
+if oversized["response-result"] != {"error": "limit-exceeded"} or len(oversized["params"]["files"]) != 3 or len(oversized["params"]["files"]) <= request_params["maximum-report-records-per-batch"] or "zero records" not in oversized["acceptance"]:
+    raise SystemExit("publication batch limit vector must use canonical payloadless encoding and reject the entire batch over the advertised maximum")
+if by_name["broadcast-publication-complete"]["response-result"] != {"ok": {"artifact": None, "files": "complete"}} or by_name["broadcast-publication-not-applicable"]["response-result"] != {"ok": {"artifact": None, "files": "not-applicable"}}:
+    raise SystemExit("final Broadcast vectors must carry status only, not inline file or metadata lists")
 collection_read = by_name["broadcast-collection-next-batch"]
 if collection_read["params"]["max-items"] != 500 or collection_read["response-result"]["ok"] == []:
     raise SystemExit("Broadcast collection next vector must show bounded non-empty batches")

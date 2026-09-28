@@ -4,7 +4,12 @@
     {
       "name": "owned-byte-stream-handle",
       "wit-type": "stashd:plugin/io-host.byte-stream",
-      "value": {"$resource": {"type": "stashd:plugin/io-host.byte-stream", "id": "opaque-1"}},
+      "value": {
+        "$resource": {
+          "type": "stashd:plugin/io-host.byte-stream",
+          "id": "opaque-1"
+        }
+      },
       "lifetime": "the receiving endpoint owns the handle until explicit drop or invocation cleanup"
     },
     {
@@ -12,33 +17,188 @@
       "lifecycle-method": "stashd:plugin/broadcast-plugin.publish",
       "invocation": "inv-23",
       "params": {
-        "request": {"collection": {"$resource": {"type": "stashd:plugin/broadcast-host.item-collection", "id": "opaque-collection"}}},
-        "configuration": {"settings": []},
+        "request": {
+          "collection": {
+            "$resource": {
+              "type": "stashd:plugin/broadcast-host.item-collection",
+              "id": "opaque-collection"
+            }
+          },
+          "reporter": {
+            "$resource": {
+              "type": "stashd:plugin/broadcast-host.publication-reporter",
+              "id": "opaque-reporter"
+            }
+          },
+          "maximum-report-records-per-batch": 2
+        },
+        "configuration": {
+          "settings": []
+        },
         "credentials": []
       },
-      "ownership": "the host-created collection handle transfers to the plugin and is valid only for inv-23"
+      "ownership": "host-created collection and publication reporter handles transfer to the plugin and are valid only for inv-23"
+    },
+    {
+      "name": "broadcast-publication-report-files",
+      "method": "stashd:plugin/broadcast-host.publication-reporter.report-files",
+      "invocation": "inv-23",
+      "params": {
+        "self": {
+          "$resource": {
+            "type": "stashd:plugin/broadcast-host.publication-reporter",
+            "id": "opaque-reporter"
+          }
+        },
+        "files": [
+          {
+            "item-id": "item-1",
+            "asset-id": "asset-1",
+            "relative-path": "albums/one.jpg"
+          }
+        ]
+      },
+      "response-result": {
+        "ok": null
+      },
+      "batch": "non-empty and no larger than maximum-report-records-per-batch; entire batch accepted atomically"
+    },
+    {
+      "name": "broadcast-publication-report-metadata",
+      "method": "stashd:plugin/broadcast-host.publication-reporter.report-destination-metadata",
+      "invocation": "inv-23",
+      "params": {
+        "self": {
+          "$resource": {
+            "type": "stashd:plugin/broadcast-host.publication-reporter",
+            "id": "opaque-reporter"
+          }
+        },
+        "metadata": [
+          {
+            "schema": "example:receipt-v1",
+            "json": "{\"receipt\":\"opaque\"}"
+          }
+        ]
+      },
+      "response-result": {
+        "ok": null
+      },
+      "ordering": "successful call order, then record order within batch"
+    },
+    {
+      "name": "broadcast-publication-limit-exceeded",
+      "method": "stashd:plugin/broadcast-host.publication-reporter.report-files",
+      "invocation": "inv-23",
+      "params": {
+        "self": {
+          "$resource": {
+            "type": "stashd:plugin/broadcast-host.publication-reporter",
+            "id": "opaque-reporter"
+          }
+        },
+        "files": [
+          {
+            "item-id": null,
+            "asset-id": null,
+            "relative-path": "output/0.bin"
+          },
+          {
+            "item-id": null,
+            "asset-id": null,
+            "relative-path": "output/1.bin"
+          },
+          {
+            "item-id": null,
+            "asset-id": null,
+            "relative-path": "output/2.bin"
+          }
+        ]
+      },
+      "response-result": {
+        "error": "limit-exceeded"
+      },
+      "acceptance": "three records exceed the maximum of two; zero records from this batch accepted"
+    },
+    {
+      "name": "broadcast-publication-complete",
+      "lifecycle-method": "stashd:plugin/broadcast-plugin.publish",
+      "invocation": "inv-23",
+      "response-result": {
+        "ok": {
+          "artifact": null,
+          "files": "complete"
+        }
+      },
+      "meaning": "successful lifecycle result commits the complete accepted report sequences; no inline lists"
+    },
+    {
+      "name": "broadcast-publication-not-applicable",
+      "lifecycle-method": "stashd:plugin/broadcast-plugin.publish",
+      "invocation": "inv-remote",
+      "report-files-calls": 0,
+      "response-result": {
+        "ok": {
+          "artifact": null,
+          "files": "not-applicable"
+        }
+      },
+      "meaning": "no accepted file reports; remote metadata may be reported separately"
     },
     {
       "name": "broadcast-collection-next-batch",
       "method": "stashd:plugin/broadcast-host.item-collection.next",
       "invocation": "inv-23",
-      "params": {"self": {"$resource": {"type": "stashd:plugin/broadcast-host.item-collection", "id": "opaque-collection"}}, "max-items": 500},
-      "response-result": {"ok": [{"id": "item-1", "assets": [], "metadata": []}]},
+      "params": {
+        "self": {
+          "$resource": {
+            "type": "stashd:plugin/broadcast-host.item-collection",
+            "id": "opaque-collection"
+          }
+        },
+        "max-items": 500
+      },
+      "response-result": {
+        "ok": [
+          {
+            "id": "item-1",
+            "assets": [],
+            "metadata": []
+          }
+        ]
+      },
       "batch": "non-empty and no larger than requested or host maximum"
     },
     {
       "name": "broadcast-collection-eof",
       "method": "stashd:plugin/broadcast-host.item-collection.next",
       "invocation": "inv-23",
-      "params": {"self": {"$resource": {"type": "stashd:plugin/broadcast-host.item-collection", "id": "opaque-collection"}}, "max-items": 500},
-      "response-result": {"ok": null},
+      "params": {
+        "self": {
+          "$resource": {
+            "type": "stashd:plugin/broadcast-host.item-collection",
+            "id": "opaque-collection"
+          }
+        },
+        "max-items": 500
+      },
+      "response-result": {
+        "ok": null
+      },
       "meaning": "EOF; only after this may publish return successful publication"
     },
     {
       "name": "broadcast-collection-drop",
       "method": "stashd:plugin/rpc.resource-drop",
       "invocation": "inv-23",
-      "params": {"resource": {"$resource": {"type": "stashd:plugin/broadcast-host.item-collection", "id": "opaque-collection"}}},
+      "params": {
+        "resource": {
+          "$resource": {
+            "type": "stashd:plugin/broadcast-host.item-collection",
+            "id": "opaque-collection"
+          }
+        }
+      },
       "response-result": null,
       "lifetime": "drop releases the resource; invocation end invalidates any remaining collection handle"
     },
@@ -46,13 +206,23 @@
       "name": "nested-owned-http-request-body",
       "method": "stashd:plugin/http-host.http-client.request",
       "params": {
-        "self": {"$resource": {"type": "stashd:plugin/http-host.http-client", "id": "opaque-client"}},
+        "self": {
+          "$resource": {
+            "type": "stashd:plugin/http-host.http-client",
+            "id": "opaque-client"
+          }
+        },
         "request": {
           "method": "post",
           "url": "https://example.invalid/archive",
           "credential": null,
           "headers": [],
-          "body": {"$resource": {"type": "stashd:plugin/io-host.byte-stream", "id": "opaque-stream"}}
+          "body": {
+            "$resource": {
+              "type": "stashd:plugin/io-host.byte-stream",
+              "id": "opaque-stream"
+            }
+          }
         }
       },
       "ownership": "request.body is owned option<byte-stream>; acceptance consumes opaque-stream",
@@ -61,7 +231,15 @@
     {
       "name": "generic-http-method-tokens",
       "method": "stashd:plugin/http-host.http-client.request",
-      "methods": ["HEAD", "OPTIONS", "PROPFIND", "MKCOL", "MOVE", "COPY", "X-STASHD-EXT"],
+      "methods": [
+        "HEAD",
+        "OPTIONS",
+        "PROPFIND",
+        "MKCOL",
+        "MOVE",
+        "COPY",
+        "X-STASHD-EXT"
+      ],
       "validation": "each method is a non-empty ASCII tchar token; no closed method list applies; invalid syntax is rejected before dispatch"
     },
     {
@@ -70,12 +248,28 @@
       "request": {
         "method": "PROPFIND",
         "url": "https://example.invalid/webdav/",
-        "credential": {"$resource": {"type": "stashd:plugin/io-host.credential-reference", "id": "credential-1"}},
+        "credential": {
+          "$resource": {
+            "type": "stashd:plugin/io-host.credential-reference",
+            "id": "credential-1"
+          }
+        },
         "headers": [
-          {"name": "If-None-Match", "value": "\"etag-1\""},
-          {"name": "Range", "value": "bytes=0-1023"}
+          {
+            "name": "If-None-Match",
+            "value": "\"etag-1\""
+          },
+          {
+            "name": "Range",
+            "value": "bytes=0-1023"
+          }
         ],
-        "body": {"$resource": {"type": "stashd:plugin/io-host.byte-stream", "id": "opaque-stream"}}
+        "body": {
+          "$resource": {
+            "type": "stashd:plugin/io-host.byte-stream",
+            "id": "opaque-stream"
+          }
+        }
       },
       "policy": "the host mediates the opaque credential and consumes the streamed body without requiring provider-specific fields"
     },
@@ -96,24 +290,76 @@
       "name": "staged-writer-finish-canonical-descriptor",
       "method": "stashd:plugin/io-host.staged-writer.finish",
       "invocation": "inv-stage-1",
-      "params": {"self": {"$resource": {"type": "stashd:plugin/io-host.staged-writer", "id": "writer-1"}}},
-      "response-result": {"ok": {"reference": "opaque-stage-1", "media-type": "application/octet-stream", "size-bytes": "4", "metadata": [{"schema": "example:v1", "json": "{}"}] }},
+      "params": {
+        "self": {
+          "$resource": {
+            "type": "stashd:plugin/io-host.staged-writer",
+            "id": "writer-1"
+          }
+        }
+      },
+      "response-result": {
+        "ok": {
+          "reference": "opaque-stage-1",
+          "media-type": "application/octet-stream",
+          "size-bytes": "4",
+          "metadata": [
+            {
+              "schema": "example:v1",
+              "json": "{}"
+            }
+          ]
+        }
+      },
       "authority": "the host observes four successfully written bytes, records create-time media type and metadata, issues the opaque reference, registers this canonical descriptor, and leaves the writer handle live in FINISHED state"
     },
     {
       "name": "reopen-exact-canonical-staged-artifact",
       "method": "stashd:plugin/io-host.open-staged-artifact",
       "invocation": "inv-stage-1",
-      "params": {"artifact": {"reference": "opaque-stage-1", "media-type": "application/octet-stream", "size-bytes": "4", "metadata": [{"schema": "example:v1", "json": "{}"}]}, "offset": "0", "length": null},
-      "response-result": {"ok": {"$resource": {"type": "stashd:plugin/io-host.byte-stream", "id": "stream-stage-1"}}},
+      "params": {
+        "artifact": {
+          "reference": "opaque-stage-1",
+          "media-type": "application/octet-stream",
+          "size-bytes": "4",
+          "metadata": [
+            {
+              "schema": "example:v1",
+              "json": "{}"
+            }
+          ]
+        },
+        "offset": "0",
+        "length": null
+      },
+      "response-result": {
+        "ok": {
+          "$resource": {
+            "type": "stashd:plugin/io-host.byte-stream",
+            "id": "stream-stage-1"
+          }
+        }
+      },
       "lifetime": "exact canonical descriptors reopen as new streams only in the current invocation; unknown or stale references are missing and altered known descriptors are denied"
     },
     {
       "name": "staged-writer-second-finish-failed",
       "method": "stashd:plugin/io-host.staged-writer.finish",
       "invocation": "inv-stage-1",
-      "params": {"self": {"$resource": {"type": "stashd:plugin/io-host.staged-writer", "id": "writer-1"}}},
-      "response-result": {"error": {"tag": "failed", "value": "writer already finished"}},
+      "params": {
+        "self": {
+          "$resource": {
+            "type": "stashd:plugin/io-host.staged-writer",
+            "id": "writer-1"
+          }
+        }
+      },
+      "response-result": {
+        "error": {
+          "tag": "failed",
+          "value": "writer already finished"
+        }
+      },
       "state": "FINISHED is terminal; a second finish does not create another staged artifact"
     },
     {
@@ -123,7 +369,12 @@
         "name": "formatter",
         "args": [],
         "input": null,
-        "output": {"$resource": {"type": "stashd:plugin/io-host.staged-writer", "id": "opaque-writer"}},
+        "output": {
+          "$resource": {
+            "type": "stashd:plugin/io-host.staged-writer",
+            "id": "opaque-writer"
+          }
+        },
         "credentials": []
       },
       "ownership": "output is option<borrow<staged-writer>>; call does not consume opaque-writer",
@@ -132,19 +383,40 @@
     {
       "name": "stream-read-chunk",
       "method": "stashd:plugin/io-host.byte-stream.read",
-      "params": {"self": {"$resource": {"type": "stashd:plugin/io-host.byte-stream", "id": "opaque-1"}}},
-      "response-result": {"ok": [0, 1, 127, 255]}
+      "params": {
+        "self": {
+          "$resource": {
+            "type": "stashd:plugin/io-host.byte-stream",
+            "id": "opaque-1"
+          }
+        }
+      },
+      "response-result": {
+        "ok": [
+          0,
+          1,
+          127,
+          255
+        ]
+      }
     },
     {
       "name": "stream-read-eof",
-      "response-result": {"ok": null},
+      "response-result": {
+        "ok": null
+      },
       "lifetime": "the byte-stream remains owned and readable after EOF until explicit drop or invocation cleanup"
     },
     {
       "name": "explicit-resource-drop",
       "method": "stashd:plugin/rpc.resource-drop",
       "params": {
-        "resource": {"$resource": {"type": "stashd:plugin/io-host.byte-stream", "id": "opaque-1"}}
+        "resource": {
+          "$resource": {
+            "type": "stashd:plugin/io-host.byte-stream",
+            "id": "opaque-1"
+          }
+        }
       },
       "response-result": null,
       "lifetime": "the owner invalidates the handle before cleanup; a second drop is a protocol failure"
@@ -152,12 +424,20 @@
     {
       "name": "u64-boundaries",
       "wit-type": "u64",
-      "values": ["0", "9007199254740993", "18446744073709551615"]
+      "values": [
+        "0",
+        "9007199254740993",
+        "18446744073709551615"
+      ]
     },
     {
       "name": "s64-boundaries",
       "wit-type": "s64",
-      "values": ["-9223372036854775808", "9007199254740993", "9223372036854775807"]
+      "values": [
+        "-9223372036854775808",
+        "9007199254740993",
+        "9223372036854775807"
+      ]
     },
     {
       "name": "host-synthesized-collection-limit",
@@ -166,30 +446,123 @@
         "id": "host-1",
         "kind": "response",
         "invocation": "inv-1",
-        "result": {"error": {"tag": "limit-exceeded", "value": {"message": "configured limit exceeded", "retryable": false}}}
+        "result": {
+          "error": {
+            "tag": "limit-exceeded",
+            "value": {
+              "message": "configured limit exceeded",
+              "retryable": false
+            }
+          }
+        }
       }
     },
     {
       "name": "reentrant-correlation",
       "frames-in-order": [
-        {"protocol": 1, "id": "host-1", "kind": "request", "invocation": "inv-1", "method": "stashd:plugin/input-plugin.acquire", "params": {}},
-        {"protocol": 1, "id": "plugin-1", "kind": "request", "invocation": "inv-1", "method": "stashd:plugin/io-host.open-staging-area", "params": {}},
-        {"protocol": 1, "id": "plugin-1", "kind": "response", "invocation": "inv-1", "result": {"$resource": {"type": "stashd:plugin/io-host.staging-area", "id": "opaque-area"}}},
-        {"protocol": 1, "id": "host-1", "kind": "response", "invocation": "inv-1", "result": {"ok": {}}}
+        {
+          "protocol": 1,
+          "id": "host-1",
+          "kind": "request",
+          "invocation": "inv-1",
+          "method": "stashd:plugin/input-plugin.acquire",
+          "params": {}
+        },
+        {
+          "protocol": 1,
+          "id": "plugin-1",
+          "kind": "request",
+          "invocation": "inv-1",
+          "method": "stashd:plugin/io-host.open-staging-area",
+          "params": {}
+        },
+        {
+          "protocol": 1,
+          "id": "plugin-1",
+          "kind": "response",
+          "invocation": "inv-1",
+          "result": {
+            "$resource": {
+              "type": "stashd:plugin/io-host.staging-area",
+              "id": "opaque-area"
+            }
+          }
+        },
+        {
+          "protocol": 1,
+          "id": "host-1",
+          "kind": "response",
+          "invocation": "inv-1",
+          "result": {
+            "ok": {}
+          }
+        }
       ]
     },
     {
       "name": "hello-first",
       "frames-in-order": [
-        {"protocol": 1, "id": "plugin-hello", "kind": "request", "method": "hello", "params": {"min": 1, "max": 1}},
-        {"protocol": 1, "id": "plugin-hello", "kind": "response", "result": {"protocol": 1, "min": 1, "max": 1}},
-        {"protocol": 1, "id": "host-1", "kind": "request", "invocation": "inv-1", "method": "stashd:plugin/input-plugin.acquire", "params": {"item": {"id": "item-1", "reference": "source:item-1", "delegation": null, "size-bytes": null, "size-estimated": false, "metadata": []}, "options": {"options": [], "credentials": []}}}
+        {
+          "protocol": 1,
+          "id": "plugin-hello",
+          "kind": "request",
+          "method": "hello",
+          "params": {
+            "min": 1,
+            "max": 1
+          }
+        },
+        {
+          "protocol": 1,
+          "id": "plugin-hello",
+          "kind": "response",
+          "result": {
+            "protocol": 1,
+            "min": 1,
+            "max": 1
+          }
+        },
+        {
+          "protocol": 1,
+          "id": "host-1",
+          "kind": "request",
+          "invocation": "inv-1",
+          "method": "stashd:plugin/input-plugin.acquire",
+          "params": {
+            "item": {
+              "id": "item-1",
+              "reference": "source:item-1",
+              "delegation": null,
+              "size-bytes": null,
+              "size-estimated": false,
+              "metadata": []
+            },
+            "options": {
+              "options": [],
+              "credentials": []
+            }
+          }
+        }
       ],
       "startup-rule": "hello is the first frame and has no invocation; lifecycle begins only after successful hello"
     },
     {
       "name": "lifecycle-response-result",
-      "response": {"protocol": 1, "id": "host-1", "kind": "response", "invocation": "inv-1", "result": {"error": {"tag": "failed", "value": {"message": "example failure", "retryable": false}}}},
+      "response": {
+        "protocol": 1,
+        "id": "host-1",
+        "kind": "response",
+        "invocation": "inv-1",
+        "result": {
+          "error": {
+            "tag": "failed",
+            "value": {
+              "message": "example failure",
+              "retryable": false
+            }
+          }
+        }
+      },
       "meaning": "the WIT result error is nested inside required result; top-level error is forbidden"
     }
   ]
