@@ -572,6 +572,49 @@
       "meaning": "capabilities has a direct list WIT return with no typed lifecycle error wrapper; the list comes from supplied context and local installed state and advertises an attemptable operation, not guaranteed execution success"
     },
     {
+      "name": "shared-value-semantics",
+      "plugin-metadata": {
+        "valid": {
+          "schema": "example@1",
+          "json": "{\"a\":1}"
+        },
+        "invalid": [
+          "root-array",
+          "malformed-json",
+          "duplicate-member-at-any-depth"
+        ],
+        "canonicalization-required": false,
+        "core-interprets-domain-fields": false
+      },
+      "byte-stream": {
+        "valid-data": {
+          "ok": [
+            0
+          ]
+        },
+        "eof": {
+          "ok": null
+        },
+        "invalid-empty-data": {
+          "ok": []
+        },
+        "eof-sticky": true
+      },
+      "progress": {
+        "valid": [
+          null,
+          0.0,
+          1.0
+        ],
+        "invalid": [
+          -0.1,
+          1.0001
+        ],
+        "monotonicity-required": false
+      },
+      "meaning": "compact semantic examples; invalid values are contract violations, not lifecycle results"
+    },
+    {
       "name": "lifecycle-response-result",
       "response": {
         "protocol": 1,
@@ -589,6 +632,30 @@
         }
       },
       "meaning": "the WIT result error is nested inside required result; top-level error is forbidden"
+    },
+    {
+      "name": "input-size-estimate-states",
+      "valid": [
+        {
+          "size-bytes": null,
+          "size-estimated": false
+        },
+        {
+          "size-bytes": "0",
+          "size-estimated": false
+        },
+        {
+          "size-bytes": "0",
+          "size-estimated": true
+        }
+      ],
+      "invalid": [
+        {
+          "size-bytes": null,
+          "size-estimated": true
+        }
+      ],
+      "meaning": "zero is a valid u64 byte size; unknown, non-estimated, and estimated values are distinct"
     }
   ]
 }

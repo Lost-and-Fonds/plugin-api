@@ -35,6 +35,9 @@ required = (
     "Invocation end is unconditional cleanup",
     "Staged artifact descriptor",
     "Every `list<u8>` is a JSON array",
+    "least one byte",
+    "sticky",
+    "`some([])` is invalid protocol",
     "MUST NOT return `limit-exceeded`",
     "same invocation",
     "pre-1.0 package version bump from 0.15.0",
@@ -83,6 +86,8 @@ expected = {
     "hello-first",
     "lifecycle-response-result",
     "enrichment-capabilities-local-discovery",
+    "shared-value-semantics",
+    "input-size-estimate-states",
 }
 if set(by_name) != expected:
     raise SystemExit("RPC v1 conformance vector set is incomplete or unexpected")
@@ -163,6 +168,25 @@ item = acquire_params.get("item", {})
 options = acquire_params.get("options", {})
 if len(startup) != 3 or startup[0].get("method") != "hello" or "invocation" in startup[0] or startup[1].get("result", {}).get("protocol") != 1 or startup[2].get("method") != "stashd:plugin/input-plugin.acquire" or set(acquire_params) != {"item", "options"} or set(item) != {"id", "reference", "delegation", "size-bytes", "size-estimated", "metadata"} or item.get("delegation") is not None or item.get("size-bytes") is not None or item.get("size-estimated") is not False or item.get("metadata") != [] or set(options) != {"options", "credentials"} or options != {"options": [], "credentials": []}:
     raise SystemExit("RPC v1 startup vector must gate a valid typed lifecycle invocation on invocation-free hello")
+size_states = by_name["input-size-estimate-states"]
+if size_states["valid"] != [
+    {"size-bytes": None, "size-estimated": False},
+    {"size-bytes": "0", "size-estimated": False},
+    {"size-bytes": "0", "size-estimated": True},
+] or size_states["invalid"] != [{"size-bytes": None, "size-estimated": True}]:
+    raise SystemExit("Input size-estimate vector must distinguish the three valid states and reject absent estimated size")
+shared_values = by_name["shared-value-semantics"]
+if shared_values["plugin-metadata"] != {
+    "valid": {"schema": "example@1", "json": "{\"a\":1}"},
+    "invalid": ["root-array", "malformed-json", "duplicate-member-at-any-depth"],
+    "canonicalization-required": False,
+    "core-interprets-domain-fields": False,
+} or shared_values["byte-stream"] != {
+    "valid-data": {"ok": [0]}, "eof": {"ok": None}, "invalid-empty-data": {"ok": []}, "eof-sticky": True,
+} or shared_values["progress"] != {
+    "valid": [None, 0.0, 1.0], "invalid": [-0.1, 1.0001], "monotonicity-required": False,
+}:
+    raise SystemExit("shared value semantic conformance vector is incomplete or inconsistent")
 enrichment_discovery = by_name["enrichment-capabilities-local-discovery"]
 if set(enrichment_discovery["params"]) != {"context"} or enrichment_discovery["response-result"] != [
     {"id": "example.operation", "revision": "r1", "options": []}

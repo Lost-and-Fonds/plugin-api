@@ -13,8 +13,10 @@ interface plugin-types {
 
 /// Shared progress callback and value for lifecycles that report progress.
 interface progress-host {
-    /// A fractional completion estimate for work performed by one invocation.
-    /// Unknown, indeterminate, and stage-only progress use `none`.
+    /// A fractional completion value in [0.0, 1.0] for this reported work.
+    /// `none` is indeterminate/stage-only. Invalid fractions fail the active
+    /// invocation; no universal cross-callback monotonicity rule applies. See
+    /// protocol/shared-values.md.
     record progress {
         stage: string,
         fraction: option<f64>,
@@ -90,9 +92,12 @@ interface http-host {
 /// Generic, invocation-scoped byte streams and staged output. Resources are
 /// host-owned; references never expose filesystem paths or storage details.
 interface io-host {
-    /// A plugin-owned metadata facet. The host preserves its schema and JSON
-    /// without interpreting domain fields. Metadata must not contain
-    /// credential selectors or secret material.
+    /// A plugin-owned metadata facet. `schema` is non-empty and identifies a
+    /// stable plugin-owned versioned facet contract. `json` is valid JSON with
+    /// an object root and no duplicate member names at any depth. The host
+    /// validates but does not normalize or interpret domain fields. Metadata
+    /// must not contain credential selectors or secret material. See
+    /// protocol/shared-values.md.
     record plugin-metadata {
         schema: string,
         json: string,
@@ -167,9 +172,10 @@ interface io-host {
         failed(string),
     }
 
-    /// Reads at most the host's configured chunk limit. `none` signals EOF.
-    /// The stream is scoped to the current invocation and is closed when
-    /// dropped or when the invocation ends.
+    /// Reads at most the host's configured chunk limit. `none` alone signals
+    /// sticky EOF; successful data chunks are non-empty. `some([])` is invalid
+    /// protocol behavior. The stream is invocation-scoped and closed when
+    /// dropped or when the invocation ends. See protocol/shared-values.md.
     resource byte-stream {
         read: func() -> result<option<list<u8>>, stream-error>;
     }

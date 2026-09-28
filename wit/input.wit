@@ -26,8 +26,11 @@ interface input-host {
         reference: string,
     }
 
-    /// `id` is a stable plugin identity and `reference` is an opaque locator;
-    /// neither implies a URL or a media type.
+    /// The complete Item, especially stable `id` and opaque `reference`,
+    /// supports a later independent acquire with its options and credentials;
+    /// it does not depend on prior process-local state. Values are opaque to
+    /// Core and neither identity implies a URL or media type. Size-value
+    /// semantics are in protocol/input-values.md.
     record discovered-item {
         id: string,
         reference: string,
@@ -37,7 +40,9 @@ interface input-host {
         metadata: list<plugin-metadata>,
     }
 
-    /// Opaque plugin-owned restart point for one in-progress run. The host stores
+    /// Opaque plugin-owned restart point for one in-progress run. It is
+    /// self-sufficient across process boundaries and contains no credentials.
+    /// The host stores
     /// it unchanged, and advances it only atomically with the accepted batch.
     record discovery-continuation {
         value: string,
@@ -156,7 +161,11 @@ interface input-plugin {
         outcome: preservation-outcome,
     }
 
-    /// `canonical-reference`, when present, is an opaque plugin reference.
+    /// `id` is the Input identity used as `discovery-request.input-id`; it
+    /// must support later independent discover calls without prior process
+    /// state. `canonical-reference`, when present, stays opaque and must not
+    /// require a transient process-local association with the ID. Size-value
+    /// semantics are in protocol/input-values.md.
     record resolved-input {
         id: string,
         canonical-reference: option<string>,

@@ -46,8 +46,9 @@ outcomes, retaining valid artifacts with deficiency diagnostics; see the normati
 [Input preservation and completeness contract](protocol/input-preservation.md). Broadcast
 publishes caller-selected Items through an invocation-scoped bounded collection
 reader and requires EOF before success; bounded invocation-scoped result batches,
-complete versus not-applicable file reporting, opaque destination metadata, and
-final-result commit semantics are defined in the normative
+bounded publication reporter batches for filesystem results and destination
+metadata, complete versus not-applicable file status, and final-result commit
+semantics are defined in the normative
 [Broadcast collection contract](protocol/broadcast-collection.md) and
 [Broadcast publication results](protocol/broadcast-publication.md). Enrichment
 inspects generic Item/Asset context, reports applicable plugin-owned capabilities,
@@ -131,8 +132,8 @@ own invocation; only artifacts returned by a successful plugin result become
 available to Core.
 
 Contract 0.12 extends the canonical `credential-binding` model to potentially
-authenticated Broadcast calls (`prepare`, `publish`, `finalize`, and
-`operation`) and Enrichment execution (`enrich`). Each receives a list of
+authenticated Broadcast calls (`publish` and `operation`) and Enrichment
+execution (`enrich`). Each receives a list of
 bindings authorized for that invocation, separate from settings, metadata,
 capability identity, and Enrichment configuration. A call that needs no
 credential receives an empty list. Enrichment imports the existing `http-host`
@@ -210,9 +211,11 @@ identify data such as `youtube.video@…`, `podcast.episode@…`,
 `books.publication@…`, `mediawiki.revision@…`, or
 `internet-archive.item@…`; Core transports their JSON without interpreting it.
 
-A `publish-request` contains only the preserved `items` selected for this
-invocation. Core selects the configured Broadcast/destination connection and
-supplies its `destination-configuration` explicitly on every `publish` call.
+A `publish-request` contains the invocation-scoped `item-collection` and
+`publication-reporter` resources plus `maximum-report-records-per-batch`; the
+selected Items are read in bounded batches and are not embedded in the request.
+Core selects the configured Broadcast/destination connection and supplies its
+`destination-configuration` explicitly on every `publish` call.
 Core owns persistence of that configuration; the plugin owns and interprets
 its setting keys and values. Values are non-secret and may describe
 plugin-specific endpoint, library, bucket, prefix, or feed choices. Empty
@@ -227,14 +230,16 @@ requests. This contract defines durable selected-destination configuration
 only; ephemeral per-publication options are deferred until a forcing case
 requires them.
 
-A `publication` has an optional staged `artifact`, optional filesystem
-`files`, and a list of canonical `destination-metadata` facets. Remote-only
-success returns no artifact and can put one or more receipts—such as remote
-object IDs, URLs, ETags, infohashes, or destination revisions—in opaque
-plugin-owned metadata. Filesystem-relative paths appear only inside the
-optional `files` result; no empty path stands for a non-filesystem result.
-`published-file` keeps optional Item and Asset IDs for correlation and a
-relative path, while removing the provider-specific source reference.
+A `publication` has an optional staged `artifact` and a small `files` status
+(`complete` or `not-applicable`), not an inline filesystem result list.
+Filesystem-relative file records are reported incrementally through
+`publication-reporter.report-files`; destination metadata facets and remote
+receipts (such as object IDs, URLs, ETags, infohashes, or destination revisions)
+are reported through `publication-reporter.report-destination-metadata`.
+Accepted report sequences are provisional until a successful final `publish`
+result commits them. `published-file` keeps optional Item and Asset IDs for
+correlation and a relative path, while removing the provider-specific source
+reference.
 
 ## Canonical preserved Assets
 
@@ -265,17 +270,17 @@ continues to use `derived-asset` with its staged artifact and provenance; sharin
 the input descriptor does not make new staged output an existing Vault Asset.
 
 This shape covers generated Podcast feed artifacts with enclosure Assets and
-metadata-provided titles/dates; Jellyfin/Plex Asset publication with optional
+metadata-provided titles/dates; Jellyfin/Plex Asset publication with reported
 filesystem or destination records; Internet Archive and S3/WebDAV remote-only
-receipts; BitTorrent publication that returns both a local torrent artifact
-and destination metadata; OPDS catalogue artifacts built from document
+receipts; BitTorrent publication that returns a local torrent artifact and
+reports destination metadata; OPDS catalogue artifacts built from document
 metadata; and arbitrary document/binary Assets without audiovisual fields.
 
 ## Broadcast lifecycle (contract 0.14)
 
 `publish(request, configuration, credentials)` is the complete publication lifecycle and the
-only publication call. A caller may invoke it directly; there is no preceding
-`prepare` call and no following `finalize` call. The plugin may select,
+only publication call. A caller invokes it directly; there are no separate
+`prepare` or `finalize` lifecycle calls. The plugin may select,
 transform, package, upload, commit, and perform destination work needed for the
 publication before it returns. These are implementation steps within one
 invocation, not separate protocol phases. Work that does not need a separate
@@ -290,15 +295,16 @@ On a successful result the host adopts a returned artifact; an artifact not
 returned is discarded when the invocation ends. If the call fails, its staged
 outputs are not adopted and are discarded. No later invocation may rely on a
 byte-stream, staged-writer, or staged-artifact handle from an earlier call.
-Durable destination state is reported separately in
-`publication.destination-metadata`, and filesystem-relative paths are only
-reported through `publication.files`.
+Durable destination state is reported through
+`publication-reporter.report-destination-metadata`, and filesystem-relative
+paths are reported through `publication-reporter.report-files`; final
+`publication.files` is only the `complete` / `not-applicable` status.
 
-The optional publication fields are independent: local generated output is
-`artifact`, filesystem-oriented results may include `files`, and remote-only
-publication may return neither while recording receipts in
-`destination-metadata`. An empty local artifact or an empty path is not a
-placeholder for a remote result.
+The optional staged `artifact` is independent of file reporting. Filesystem
+results are delivered through the reporter and sealed by final file status;
+remote-only publication may return no artifact and report receipts through the
+reporter. An empty local artifact or an empty path is not a placeholder for a
+remote result.
 
 The former `prepare`, `preparation`, `derived-artifact`, `finalize`, and
 `finalization-request` contract is removed. In particular, prepared bytes are
@@ -334,21 +340,23 @@ repeating a failed call has no duplicate effects.
 ### Forcing cases
 
 - **Podcast feed:** build the feed and return its staged document from one
-  `publish` call; no fake preparation or finalization is needed.
+  `publish` call; no separate lifecycle phase is needed.
 - **Jellyfin/Plex:** read preserved Assets, transform or package them, publish
   files, and perform any required library refresh before `publish` returns.
-  Report filesystem paths or destination receipts as applicable.
-- **Internet Archive:** stream the authenticated upload and return remote
-  receipts in destination metadata; no local artifact is required.
+  Report filesystem paths and destination receipts through the publication
+  reporter as applicable.
+- **Internet Archive:** stream the authenticated upload and report remote
+  receipts through `publication-reporter`; no local artifact is required.
 - **BitTorrent:** generate torrent metadata in invocation staging, consume or
   return it, seed/publish as needed, then return the optional artifact and
-  destination receipt together.
+  report the destination receipt through `publication-reporter`.
 - **S3/WebDAV:** upload directly from an Asset stream (or a staged stream) and
-  return remote object receipts; no preliminary call is required.
+  report remote object receipts through `publication-reporter`; no separate
+  lifecycle phase is required.
 - **OPDS:** generate and return a staged catalogue artifact from Item and
   Asset metadata in `publish`.
-- **Arbitrary remote API:** perform the API publication and return destination
-  metadata only; no filesystem or local artifact is implied.
+- **Arbitrary remote API:** perform the API publication and report receipts
+  through `publication-reporter`; no filesystem or local artifact is implied.
 
 Contract 0.14 removes Broadcast prepare/finalize wire methods and their
 prepared-output records. This is an incompatible WIT shape change and advances
@@ -487,15 +495,21 @@ Enrichment discovery returns the full capability descriptor for host and UI
 use. Invocation receives only `capability-id`, `capability-revision`, and the
 caller's selections alongside Item/Asset context. This preserves
 revision-aware execution without making presentation labels and advertised
-option descriptors part of the plugin's execution input.
+option descriptors part of the plugin's execution input. Discovery is local,
+deterministic, credentialless, and does not probe remote availability; see
+[Enrichment capability discovery](protocol/enrichment-capabilities.md).
 
 The Input contract describes opaque plugin-owned source and Item references,
 generic byte sizes, and staged artifact descriptors (reference, media type, and
 byte size). It does not require a URL, audiovisual media kind, title, duration,
 artwork, or fixed Asset role. Provider and domain fields belong in
 plugin-owned metadata facets: each facet carries a stable versioned schema
-identifier and a JSON object, which Core treats as opaque. The HTTP capability
-is available to Inputs that need it; it is not part of every Input's identity.
+identifier and a valid JSON object without duplicate member names; the exact
+string is validated then transported opaquely by Core. Shared metadata, stream,
+and progress rules are in [shared value semantics](protocol/shared-values.md).
+The HTTP capability is available to Inputs that need it; it is not part of every
+Input's identity. Size estimates and identity across independent invocations are
+specified in [Input value semantics](protocol/input-values.md).
 Core uses opaque IDs and references to connect lifecycle records, byte estimates
 for storage decisions, and staged descriptors to ingest content and calculate
 fixity. It does not infer domain meaning from plugin metadata.
@@ -530,13 +544,15 @@ specification and conformance vectors, checks generated artifacts for
 freshness and determinism, verifies package/world identity, checks package
 component discovery against the declared WIT worlds, and enforces generic
 Input credential lifecycle access, explicit generic Enrichment configuration,
-shared progress precision, shared Input/Broadcast/Enrichment HTTP types, shared
-plugin error detail, shared logging, revision-aware Enrichment invocation, HTTP
-request and response streaming, Broadcast Item/Asset metadata, optional staged
-and filesystem publication results, opaque destination receipts, Broadcast
-Asset reads, staged-artifact reads, helper stdin, host-granted
-Broadcast/Enrichment credentials, Enrichment's shared HTTP import, and staging
-invariants. HTTP methods are arbitrary validated tokens, while redirect
+shared progress precision and range, shared Input/Broadcast/Enrichment HTTP
+types, shared plugin error detail, shared logging, revision-aware Enrichment
+invocation, HTTP request and response streaming, validated shared metadata,
+non-empty stream
+chunks and sticky EOF, Broadcast Item/Asset metadata, bounded reporter-based
+filesystem and destination results, Broadcast Asset reads, staged-artifact
+reads, helper stdin, host-granted Broadcast/Enrichment credentials, Enrichment's
+shared HTTP import, Input size-estimate/independent-identity semantics, and
+staging invariants. HTTP methods are arbitrary validated tokens, while redirect
 following, URL authorization, credential forwarding, and streamed-body replay
 remain explicit host/runtime policy. Package artifact vectors cover portable
 syntax, lexical normalization, native-path rejection, in-package symlinks,
@@ -544,13 +560,16 @@ symlink escapes, containment, existence, and regular-file requirements. It also
 proves that the semantic checks
 reject acquisition-only credentials, raw credentials in generic Input records,
 inline-only HTTP request or response bodies, missing Broadcast Asset streaming,
-missing helper stdin,
-duplicate stream abstractions, missing staged writers, implicit helper staging,
-filesystem or Vault paths in content boundaries, credentials outside explicit
-lifecycle bindings, an unnecessary second credential type, raw-secret fields
-in plugin records, universal Broadcast duration/kind fields, missing Item
-metadata facets, mandatory local artifacts or filesystem paths, and receipts
-that lose the canonical plugin-metadata representation. It also checks Input
-delegation, configuration identity, shared progress precision, HTTP
-credentials and errors, Enrichment revision-aware execution, shared plugin
-error detail, and logging.
+missing helper stdin, duplicate stream abstractions, missing staged writers,
+implicit helper staging, filesystem or Vault paths in content boundaries,
+credentials outside explicit lifecycle bindings, an unnecessary second
+credential type, raw-secret fields in plugin records, universal Broadcast
+duration/kind fields, missing Item metadata facets, mandatory local artifacts
+or filesystem paths, and receipts that lose the canonical plugin-metadata
+representation. Sensitivity mutations protect JSON/root/duplicate-key and
+non-canonicalization semantics, byte-stream chunk/EOF and progress validity,
+Input size pairs and independent-invocation identity, and current README
+Broadcast accuracy. It also checks Input delegation, configuration identity,
+HTTP credentials and errors, Enrichment revision-aware execution, shared plugin
+error detail, and logging. Historical contract notes retain removed Broadcast
+phase names only as explicitly former/removed behavior.
