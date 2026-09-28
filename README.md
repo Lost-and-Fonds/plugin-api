@@ -19,8 +19,10 @@ Its conformance examples are in
 [`protocol/rpc-v1-vectors.json`](protocol/rpc-v1-vectors.json). Large byte
 streams use opaque host resources; each read returns at most a host-configured
 chunk as `list<u8>`, and writes append chunks no larger than the host-configured
-limit. A whole large object is never an inline byte list on these streaming
-paths.
+limit. Staged artifact authority, exact descriptor validation, writer states,
+and lifecycle-result adoption are normatively specified in
+[`protocol/staging.md`](protocol/staging.md). A whole large object is never an
+inline byte list on these streaming paths.
 
 The generated `schema/plugin-package.schema.json` defines one deployable
 package identity (`id` and `version`) with a `components` object keyed by stable
