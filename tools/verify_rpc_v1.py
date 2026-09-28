@@ -40,6 +40,17 @@ required = (
 )
 if any(term not in spec for term in required):
     raise SystemExit("RPC v1 normative specification is missing a required invariant")
+response_rule = spec.split("## Framing and call model", 1)[1].split("## JSON values", 1)[0].lower()
+response_requirements = (
+    "response",
+    "must contain `result`",
+    "top-level `error`",
+    "field is invalid",
+    "typed `result<ok, error>`",
+    "encoded inside it",
+)
+if any(term not in response_rule for term in response_requirements):
+    raise SystemExit("RPC v1 response envelope must require result and forbid top-level error while retaining typed WIT errors")
 
 by_name = {vector["name"]: vector for vector in vectors.get("vectors", [])}
 expected = {
@@ -111,9 +122,13 @@ frames = by_name["reentrant-correlation"]["frames-in-order"]
 if len(frames) != 4 or frames[0]["id"] == frames[1]["id"] or frames[1]["id"] != frames[2]["id"] or frames[0]["id"] != frames[3]["id"] or {frame.get("invocation") for frame in frames} != {"inv-1"}:
     raise SystemExit("RPC v1 re-entrant vector has ambiguous correlation or invocation identity")
 startup = by_name["hello-first"]["frames-in-order"]
-if len(startup) != 3 or startup[0].get("method") != "hello" or "invocation" in startup[0] or startup[1].get("result", {}).get("protocol") != 1 or startup[2].get("method") != "stashd:plugin/input-plugin.acquire":
-    raise SystemExit("RPC v1 startup vector must gate lifecycle on invocation-free hello")
+acquire_params = startup[2].get("params", {}) if len(startup) > 2 else {}
+item = acquire_params.get("item", {})
+options = acquire_params.get("options", {})
+if len(startup) != 3 or startup[0].get("method") != "hello" or "invocation" in startup[0] or startup[1].get("result", {}).get("protocol") != 1 or startup[2].get("method") != "stashd:plugin/input-plugin.acquire" or set(acquire_params) != {"item", "options"} or set(item) != {"id", "reference", "delegation", "size-bytes", "size-estimated", "metadata"} or item.get("delegation") is not None or item.get("size-bytes") is not None or item.get("size-estimated") is not False or item.get("metadata") != [] or set(options) != {"options", "credentials"} or options != {"options": [], "credentials": []}:
+    raise SystemExit("RPC v1 startup vector must gate a valid typed lifecycle invocation on invocation-free hello")
 response = by_name["lifecycle-response-result"]["response"]
-if "error" in response or response.get("result") != {"error": {"tag": "failed"}}:
-    raise SystemExit("RPC v1 lifecycle response must require result and nest typed errors")
+expected_error = {"error": {"tag": "failed", "value": {"message": "example failure", "retryable": False}}}
+if "error" in response or response.get("result") != expected_error:
+    raise SystemExit("RPC v1 lifecycle response must require result and nest a typed plugin-error detail")
 print("RPC v1 normative specification and conformance vectors are consistent")

@@ -928,7 +928,29 @@ def verify_component_execution_semantics() -> None:
         print(f"sensitivity check caught weakened component execution semantics: {original}")
 
 
+def verify_rpc_response_envelope_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "rpc-v1.md"
+    text = document.read_text(encoding="utf-8")
+    original = "A top-level `error`\nfield is invalid."
+    replacement = "A top-level `error` field is permitted."
+    weakened = text.replace(original, replacement)
+    if weakened == text:
+        raise SystemExit("RPC response-envelope sensitivity mutation did not apply")
+    document.write_text(weakened, encoding="utf-8")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).with_name("verify_rpc_v1.py")), str(document), str(Path(__file__).resolve().parents[1] / "protocol" / "rpc-v1-vectors.json"), str(schema_path)],
+            capture_output=True, text=True, check=False,
+        )
+    finally:
+        document.write_text(text, encoding="utf-8")
+    if result.returncode == 0:
+        raise SystemExit("RPC verifier accepted a restored top-level response error")
+    print("sensitivity check caught top-level RPC response error permitted")
+
+
 verify_terminal_commit_authority()
 verify_preservation_semantics()
 verify_broadcast_collection_semantics()
 verify_component_execution_semantics()
+verify_rpc_response_envelope_semantics()
