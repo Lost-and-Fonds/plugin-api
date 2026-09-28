@@ -557,21 +557,19 @@
           "metadata": []
         }
       },
-      "response-result": {
-        "ok": [
-          {
-            "id": "example.operation",
-            "revision": "r1",
-            "options": []
-          }
-        ]
-      },
+      "response-result": [
+        {
+          "id": "example.operation",
+          "revision": "r1",
+          "options": []
+        }
+      ],
       "discovery-boundary": {
         "credentials": false,
         "configuration": false,
         "host-callbacks": false
       },
-      "meaning": "capabilities returns a direct list from supplied context and local installed state; the result advertises an attemptable operation, not guaranteed execution success"
+      "meaning": "capabilities has a direct list WIT return with no typed lifecycle error wrapper; the list comes from supplied context and local installed state and advertises an attemptable operation, not guaranteed execution success"
     },
     {
       "name": "lifecycle-response-result",
