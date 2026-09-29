@@ -131,8 +131,9 @@ interface input-plugin {
 
     /// A run's identity, intent, options, and refresh baseline must remain fixed
     /// when resuming. Continuations contain no credential material.
-    /// `maximum-items-per-batch` MUST be greater than zero and limits each
-    /// host-committed transport batch independently of the RPC message-size limit.
+    /// `maximum-items-per-batch` MUST be greater than zero and is an upper
+    /// count bound. The producer may send fewer Items to fit the negotiated RPC
+    /// receive-frame maximum; both constraints apply independently.
     record discovery-request {
         input-id: string,
         intent: discovery-intent,

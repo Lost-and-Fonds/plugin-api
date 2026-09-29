@@ -172,9 +172,11 @@ interface io-host {
         failed(string),
     }
 
-    /// Reads at most the host's configured chunk limit. `none` alone signals
-    /// sticky EOF; successful data chunks are non-empty. `some([])` is invalid
-    /// protocol behavior. The stream is invocation-scoped and closed when
+    /// The host chooses returned bytes so the encoded response fits the
+    /// plugin-advertised RPC receive-frame maximum; no hidden chunk byte limit
+    /// applies. `none` alone signals sticky EOF; successful chunks are non-empty.
+    /// `some([])` is invalid protocol behavior. The stream is invocation-scoped
+    /// and closed when
     /// dropped or when the invocation ends. See protocol/shared-values.md.
     resource byte-stream {
         read: func() -> result<option<list<u8>>, stream-error>;
@@ -187,10 +189,10 @@ interface io-host {
     /// protocol/staging.md.
     open-staged-artifact: func(artifact: staged-artifact, offset: u64, length: option<u64>) -> result<byte-stream, stream-error>;
 
-    /// Appends one byte chunk up to the host-configured limit to an
-    /// unpublished staged output. Oversized chunks fail without partial writes;
-    /// any write error makes the writer unfinalizable so its partial output is
-    /// discarded when dropped.
+    /// Appends one byte chunk to unpublished staged output. The encoded request
+    /// must fit the host-advertised RPC receive-frame maximum; no smaller hidden
+    /// RPC byte ceiling applies. Any ordinary write error makes the writer
+    /// unfinalizable, so its partial output is discarded when dropped.
     /// `finish` is the only operation that creates a staged-artifact.
     /// Dropping an unfinished writer discards its partial output. Completed
     /// artifacts remain invocation-scoped; the host makes available only
