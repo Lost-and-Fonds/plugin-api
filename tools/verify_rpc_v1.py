@@ -70,14 +70,19 @@ if any(term not in duplicate_rule for term in (
     "before envelope validation", "MUST NOT choose first-wins or last-wins semantics",
 )):
     raise SystemExit("RPC v1 must reject duplicate JSON object members before dispatch")
-raw_duplicate_frames = {
-    "duplicate top-level method": '{"kind":"request","id":"1","method":"input.discover","method":"broadcast.publish"}',
-    "duplicate top-level id": '{"kind":"request","id":"1","id":"2","method":"hello","params":{"min":1,"max":1}}',
-    "duplicate hello params": '{"kind":"request","id":"1","method":"hello","params":{"min":1,"min":1,"max":1}}',
-    "duplicate resource handle member": '{"kind":"request","id":"1","method":"x","params":{"self":{"$resource":{"type":"x","id":"a","id":"b"}}}}',
-    "duplicate nested WIT member": '{"kind":"request","id":"1","method":"x","params":{"item":{"metadata":{"schema":"x","schema":"y"}}}}',
+raw_duplicate_cases = vectors.get("raw-duplicate-member-frames", [])
+expected_duplicate_cases = {
+    "duplicate top-level method",
+    "duplicate top-level id",
+    "duplicate hello params",
+    "duplicate resource handle member",
+    "duplicate nested WIT member",
 }
-for name, raw_frame in raw_duplicate_frames.items():
+if {case.get("name") for case in raw_duplicate_cases} != expected_duplicate_cases:
+    raise SystemExit("RPC v1 raw duplicate-member fixture set is incomplete or unexpected")
+for case in raw_duplicate_cases:
+    name = case["name"]
+    raw_frame = case["raw-frame"]
     try:
         parse_rpc_frame(raw_frame)
     except DuplicateMemberError:
