@@ -34,7 +34,9 @@ slots.
 Multiple component IDs may declare the same world. The allowed world values are
 generated from this package's WIT declarations; the manifest selects those
 worlds and cannot add new ones. The complete normative manifest and component
-metadata contract is in [`protocol/plugin-package.md`](protocol/plugin-package.md).
+metadata contract, including the package loading boundary and the canonical
+`stashd-plugin.json` manifest at the unpacked package root, is in
+[`protocol/plugin-package.md`](protocol/plugin-package.md).
 Package tooling can validate each artifact against its declared world. Artifact
 normalization, native-path rejection, filesystem containment, symlink handling,
 and regular-file requirements are specified in

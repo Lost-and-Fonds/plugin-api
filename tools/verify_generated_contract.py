@@ -260,6 +260,18 @@ package_metadata_document = Path(__file__).resolve().parents[1] / "protocol" / "
 package_metadata_text = package_metadata_document.read_text(encoding="utf-8") if package_metadata_document.is_file() else ""
 if not package_metadata_text.startswith("# Plugin package metadata") or "Component credential slots" not in package_metadata_text:
     raise SystemExit("normative component credential-slot semantics must be documented")
+for loading_semantic in (
+    "`<package-root>/stashd-plugin.json`",
+    "unpacked package root representing an immutable package snapshot",
+    "UTF-8 encoded JSON",
+    "MUST NOT search directories",
+    "malformed JSON",
+    "unsupported contract identity",
+    "resolve every declared component artifact against this same package root",
+    "may begin only after all loading steps succeed",
+):
+    if loading_semantic.casefold() not in package_metadata_text.casefold():
+        raise SystemExit(f"normative package loading semantics are missing: {loading_semantic}")
 for semantic in (
     "(package id, component id, slot name)",
     "presentation metadata only",
@@ -275,11 +287,10 @@ for semantic in (
 
 for semantic in (
     "every valid package declares exactly one such identity",
-    "must reject an unsupported identity",
-    "before lifecycle invocation using that contract begins",
+    "reject unsupported identities",
+    "before launching a component process",
     "no semver compatibility is implied",
-    "rpc `hello` negotiates only the rpc protocol version",
-    "support for one does not imply support for the other",
+    "rpc `hello` version negotiation remains separate from wit contract compatibility",
 ):
     if semantic not in package_document.casefold():
         raise SystemExit(f"normative package contract binding semantics are missing: {semantic}")

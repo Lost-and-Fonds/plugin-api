@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -36,4 +37,31 @@ for vector in vectors["cases"]:
     if "rpc_protocol" in vector and vector["rpc_protocol"] != 1:
         raise SystemExit(f"unexpected RPC protocol in vector {vector['name']}")
 
-print("package contract identity vectors are consistent")
+with tempfile.TemporaryDirectory() as temporary_directory:
+    root = Path(temporary_directory)
+    canonical_path = root / "stashd-plugin.json"
+    alternate_paths = (root / "plugin.json", root / "metadata" / "stashd-plugin.json")
+    sample = vectors["cases"][0]["manifest"]
+    canonical_path.write_text(json.dumps(sample), encoding="utf-8")
+    if not canonical_path.is_file() or json.loads(canonical_path.read_text(encoding="utf-8")) != sample:
+        raise SystemExit("canonical package manifest path does not load valid JSON")
+    canonical_path.unlink()
+    if canonical_path.is_file():
+        raise SystemExit("package without the canonical manifest path unexpectedly loaded")
+    for alternate_path in alternate_paths:
+        alternate_path.parent.mkdir(parents=True, exist_ok=True)
+        alternate_path.write_text(json.dumps(sample), encoding="utf-8")
+    if canonical_path.is_file():
+        raise SystemExit("alternate manifest path incorrectly substitutes for canonical path")
+    canonical_path.write_text("{", encoding="utf-8")
+    try:
+        json.loads(canonical_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        pass
+    else:
+        raise SystemExit("malformed canonical manifest JSON unexpectedly parsed")
+    canonical_path.write_text(json.dumps({"id": "example.plugin"}), encoding="utf-8")
+    if set(json.loads(canonical_path.read_text(encoding="utf-8"))) >= {"id", "version", "contract", "components"}:
+        raise SystemExit("schema-invalid manifest unexpectedly passed required-field validation")
+
+print("package contract identity and manifest loading vectors are consistent")
