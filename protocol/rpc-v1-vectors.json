@@ -672,9 +672,10 @@
       },
       "acceptance": "payload exactly equal to peer maximum accepted; one byte over rejected before dispatch",
       "utf8-example": {
-        "text": "é",
-        "encoded-utf8-bytes": 4,
-        "character-count": 1
+        "raw-json": "{\"x\":\"é\"}",
+        "encoded-utf8-bytes": 10,
+        "character-count": 9,
+        "meaning": "transport size is the encoded UTF-8 byte length of the complete JSON payload, not its character count"
       }
     },
     {

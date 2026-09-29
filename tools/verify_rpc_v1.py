@@ -237,8 +237,12 @@ if size_states["valid"] != [
 shared_values = by_name["shared-value-semantics"]
 frame_bounds = by_name["rpc-frame-size-boundaries"]
 invalid_ads = by_name["rpc-frame-invalid-advertisements"]
-if frame_bounds["bootstrap-bytes"] != 4096 or frame_bounds["advertisements"] != {"plugin": 8192, "host": 16384} or frame_bounds["sender-rules"] != {"plugin-to-host": "16384", "host-to-plugin": "8192"} or frame_bounds["acceptance"] != "payload exactly equal to peer maximum accepted; one byte over rejected before dispatch" or frame_bounds["utf8-example"] != {"text": "é", "encoded-utf8-bytes": 4, "character-count": 1}:
-    raise SystemExit("RPC frame vector must establish UTF-8 byte sizing and asymmetric peer-direction limits")
+utf8_example = frame_bounds["utf8-example"]
+raw_json = utf8_example["raw-json"]
+if frame_bounds["bootstrap-bytes"] != 4096 or frame_bounds["advertisements"] != {"plugin": 8192, "host": 16384} or frame_bounds["sender-rules"] != {"plugin-to-host": "16384", "host-to-plugin": "8192"} or frame_bounds["acceptance"] != "payload exactly equal to peer maximum accepted; one byte over rejected before dispatch":
+    raise SystemExit("RPC frame vector must establish asymmetric peer-direction limits")
+if json.loads(raw_json) != {"x": "é"} or len(raw_json.encode("utf-8")) != utf8_example["encoded-utf8-bytes"] or len(raw_json) != utf8_example["character-count"] or utf8_example["encoded-utf8-bytes"] <= utf8_example["character-count"] or "complete JSON payload" not in utf8_example["meaning"]:
+    raise SystemExit("RPC frame vector must measure the complete non-ASCII JSON payload in encoded UTF-8 bytes")
 if invalid_ads["hello-payload-over-4096"] != "protocol failure" or any(case.get("valid") for case in invalid_ads["cases"]):
     raise SystemExit("RPC frame vector must reject missing and invalid size advertisements and oversized hello")
 if by_name["rpc-batch-fits-frame"]["records-sent"] >= by_name["rpc-batch-fits-frame"]["maximum-items-per-batch"]:
