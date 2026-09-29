@@ -25,9 +25,12 @@ and lifecycle-result adoption are normatively specified in
 inline byte list on these streaming paths.
 
 The generated `schema/plugin-package.schema.json` defines one deployable
-package identity (`id` and `version`) with a `components` object keyed by stable
-component IDs. Each component declares a canonical WIT `world`, portable logical
-package `artifact` path, and optional component-scoped credential slots.
+package identity (`id` and `version`), its exact canonical WIT package identity
+in required `contract`, and a `components` object keyed by stable component IDs.
+Hosts reject unsupported exact contract identities during package loading,
+before lifecycle invocation. Each component declares a canonical WIT `world`,
+portable logical package `artifact` path, and optional component-scoped credential
+slots.
 Multiple component IDs may declare the same world. The allowed world values are
 generated from this package's WIT declarations; the manifest selects those
 worlds and cannot add new ones. The complete normative manifest and component

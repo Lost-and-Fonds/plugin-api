@@ -149,6 +149,9 @@ schema = json.loads(schema_path.read_text(encoding="utf-8"))
 vectors = json.loads(vectors_path.read_text(encoding="utf-8"))
 if vectors.get("package") != "stashd:plugin@0.16.0":
     raise SystemExit("package artifact vectors refer to the wrong contract")
+contract_schema = schema.get("properties", {}).get("contract", {})
+if contract_schema.get("pattern") != r"^stashd:plugin@[0-9]+\.[0-9]+\.[0-9]+$":
+    raise SystemExit("package manifest contract identity must use the canonical exact-identity syntax")
 artifact_schema = schema["$defs"]["component"]["properties"]["artifact"]
 if artifact_schema.get("pattern") != r"^[^/\\:\u0000-\u001F\u007F][^\\:\u0000-\u001F\u007F]*$":
     raise SystemExit("artifact schema does not enforce the canonical portable path syntax")

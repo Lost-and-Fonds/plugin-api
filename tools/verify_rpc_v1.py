@@ -18,6 +18,8 @@ if package != "stashd:plugin@0.16.0" or vectors.get("package") != package:
 
 required = (
     "## Framing and call model",
+    "reject unsupported identities before launching a process or sending lifecycle messages",
+    "The `hello` exchange below negotiates RPC framing/protocol only",
     "## JSON values",
     "## Resource handles",
     "## Ownership, borrowing, and release",

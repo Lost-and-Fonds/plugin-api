@@ -207,8 +207,11 @@ for name, world in worlds.items():
 if package_schema.get("x-stashd-contract-package") != schema["package"] or package_schema.get("x-stashd-contract-package") != expected_package:
     raise SystemExit("plugin package schema refers to a different WIT package identity")
 package_required = set(package_schema.get("required", []))
-if not {"id", "version", "components"} <= package_required:
-    raise SystemExit("plugin package schema must declare one package id/version and its components")
+if not {"id", "version", "contract", "components"} <= package_required:
+    raise SystemExit("plugin package schema must declare its id, version, exact contract identity, and components")
+package_contract = package_schema.get("properties", {}).get("contract", {})
+if package_contract.get("type") != "string" or package_contract.get("pattern") != r"^stashd:plugin@[0-9]+\.[0-9]+\.[0-9]+$":
+    raise SystemExit("plugin package schema must require a well-formed exact WIT contract identity")
 package_properties = package_schema.get("properties", {})
 if {"role", "kind"} & package_properties.keys():
     raise SystemExit("plugin package schema must not encode a singular role or kind")
@@ -269,6 +272,17 @@ for semantic in (
 ):
     if semantic.casefold() not in package_metadata_text.casefold():
         raise SystemExit(f"normative package metadata document is missing: {semantic}")
+
+for semantic in (
+    "every valid package declares exactly one such identity",
+    "must reject an unsupported identity",
+    "before lifecycle invocation using that contract begins",
+    "no semver compatibility is implied",
+    "rpc `hello` negotiates only the rpc protocol version",
+    "support for one does not imply support for the other",
+):
+    if semantic not in package_document.casefold():
+        raise SystemExit(f"normative package contract binding semantics are missing: {semantic}")
 
 package_schema_text = json.dumps(package_schema, sort_keys=True).lower()
 implementation_terms = ("php", "composer", "class-name", "entrypoint", "implementation-language")
