@@ -26,6 +26,8 @@ MUST echo both `id` and `invocation`. `result` is the WIT return value, includin
 ordinary typed `result<ok, error>` values encoded inside it. A top-level `error`
 field is invalid. Envelope fields not defined for the frame kind are invalid.
 
+Package loading MUST first validate the manifest's exact Stashd contract identity and reject unsupported identities before launching a process or sending lifecycle messages. The `hello` exchange below negotiates RPC framing/protocol only; it neither identifies nor negotiates the WIT contract. RPC v1 support does not establish support for any particular Stashd contract identity.
+
 For every newly launched process, the plugin's first stdout frame MUST be a
 `hello` request with `protocol: 1`, `kind: "request"`, `method: "hello"`, and
 `params: {"min":1,"max":1}`; it has no invocation. The host responds to the

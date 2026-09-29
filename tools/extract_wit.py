@@ -245,11 +245,16 @@ def package_manifest_schema(package: str, worlds: dict[str, dict]) -> dict:
         "description": "One deployable package identity may contain one or more identified components implementing canonical WIT worlds.",
         "x-stashd-contract-package": package,
         "type": "object",
-        "required": ["id", "version", "components"],
+        "required": ["id", "version", "contract", "components"],
         "additionalProperties": False,
         "properties": {
             "id": {"type": "string", "minLength": 1},
             "version": {"type": "string", "minLength": 1},
+            "contract": {
+                "type": "string",
+                "pattern": r"^stashd:plugin@[0-9]+\.[0-9]+\.[0-9]+$",
+                "description": "Exact Stashd WIT package identity implemented by this package; hosts determine exact-identity support before lifecycle invocation.",
+            },
             "components": {
                 "type": "object",
                 "minProperties": 1,
