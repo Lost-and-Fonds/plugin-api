@@ -185,8 +185,10 @@ interface io-host {
     /// Opens a reader over a completed artifact produced in this invocation.
     /// The host validates the reference and exact canonical descriptor before
     /// opening. Unknown references return missing; descriptor mismatches are
-    /// denied. The optional range is bounded by artifact size. See
-    /// protocol/staging.md.
+    /// denied. The byte range follows the shared model in
+    /// protocol/byte-ranges.md, after reference validation and using canonical
+    /// host-recorded size-bytes; invalid offsets return stream-error.denied.
+    /// Staged authority and lifecycle are specified in protocol/staging.md.
     open-staged-artifact: func(artifact: staged-artifact, offset: u64, length: option<u64>) -> result<byte-stream, stream-error>;
 
     /// Appends one byte chunk to unpublished staged output. The encoded request

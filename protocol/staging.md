@@ -14,7 +14,7 @@ A plugin MAY copy a descriptor value. Any operation accepting one MUST resolve i
 
 ## Opening completed output
 
-Before opening bytes, `open-staged-artifact` MUST look up the reference in the active invocation's completed-artifact registry. Unknown, fabricated, stale, or other-invocation references return `stream-error.missing`. A known reference with any descriptor-field mismatch returns `stream-error.denied`. Underlying staged-byte read or storage failures return `stream-error.failed(...)`. Only an exact canonical descriptor may be opened; existing offset and length rules then apply. A canonical descriptor may be reopened repeatedly in the same invocation; each call returns a new invocation-scoped canonical `byte-stream`.
+Before opening bytes, `open-staged-artifact` MUST look up the reference in the active invocation's completed-artifact registry. Unknown, fabricated, stale, or other-invocation references return `stream-error.missing`. A known reference with any descriptor-field mismatch returns `stream-error.denied`. Only an exact canonical descriptor proceeds to range validation under the shared [host-mediated byte-range model](byte-ranges.md), using canonical host-recorded `size-bytes`. An invalid start offset returns `stream-error.denied`. Underlying staged-byte read or storage failures return `stream-error.failed(...)`. Reference and descriptor validation therefore precede range validation and do not reveal size for invalid references. A canonical descriptor may be reopened repeatedly in the same invocation; each call returns a new invocation-scoped canonical `byte-stream`.
 
 ## Writer state machine
 

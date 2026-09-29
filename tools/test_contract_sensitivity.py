@@ -962,6 +962,35 @@ def expect_document_semantic_rejected(name: str, env_key: str, path: Path, mutat
         print(f"sensitivity check caught weakened {name} semantics: {original}")
 
 
+def verify_byte_range_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "byte-ranges.md"
+    text = document.read_text(encoding="utf-8")
+    mutations = (
+        ("if `O > S`", "if `O >= S`"),
+        ("`O == S` is valid", "`O == S` is invalid"),
+        ("`some(0)` at any valid offset is also a successful zero-byte range", "`some(0)` is an invalid range"),
+        ("clamped to available bytes, not rejected", "rejected when extending past EOF"),
+        ("`extent = min(L, remaining)`", "`extent = L`"),
+        ("MUST NOT depend on evaluating `O + L`", "MUST evaluate `O + L`"),
+        ("the open MUST fail with the operation's `denied` error case", "the open MUST fail with the operation's `missing` error case"),
+    )
+    for original, replacement in mutations:
+        weakened = text.replace(original, replacement)
+        if weakened == text:
+            raise SystemExit(f"byte-range sensitivity mutation did not apply: {original}")
+        document.write_text(weakened, encoding="utf-8")
+        try:
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("verify_byte_ranges.py"))],
+                capture_output=True, text=True, check=False,
+            )
+        finally:
+            document.write_text(text, encoding="utf-8")
+        if result.returncode == 0:
+            raise SystemExit(f"byte-range verifier accepted weakened semantics: {original}")
+        print(f"sensitivity check caught weakened byte-range semantics: {original}")
+
+
 def verify_shared_value_semantics() -> None:
     root = Path(__file__).resolve().parents[1]
     expect_document_semantic_rejected("shared-value", "STASHD_SHARED_VALUES_SPEC", root / "protocol" / "shared-values.md", (
@@ -1204,6 +1233,7 @@ def verify_frame_negotiation_semantics() -> None:
 
 
 verify_terminal_commit_authority()
+verify_byte_range_semantics()
 verify_shared_value_semantics()
 verify_input_value_semantics()
 verify_readme_current_contract()
