@@ -1154,6 +1154,27 @@ def verify_rpc_response_envelope_semantics() -> None:
     print("sensitivity check caught top-level RPC response error permitted")
 
 
+def verify_rpc_duplicate_member_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "rpc-v1.md"
+    text = document.read_text(encoding="utf-8")
+    original = "Every JSON object anywhere\nwithin an RPC v1 frame MUST contain unique member names"
+    replacement = "Every JSON object anywhere\nwithin an RPC v1 frame MAY contain duplicate member names"
+    weakened = text.replace(original, replacement)
+    if weakened == text:
+        raise SystemExit("RPC duplicate-member sensitivity mutation did not apply")
+    document.write_text(weakened, encoding="utf-8")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).with_name("verify_rpc_v1.py")), str(document), str(Path(__file__).resolve().parents[1] / "protocol" / "rpc-v1-vectors.json"), str(schema_path)],
+            capture_output=True, text=True, check=False,
+        )
+    finally:
+        document.write_text(text, encoding="utf-8")
+    if result.returncode == 0:
+        raise SystemExit("RPC verifier accepted weakened duplicate-member semantics")
+    print("sensitivity check caught weakened RPC duplicate-member semantics")
+
+
 verify_terminal_commit_authority()
 verify_shared_value_semantics()
 verify_input_value_semantics()
@@ -1164,3 +1185,4 @@ verify_broadcast_collection_semantics()
 verify_component_execution_semantics()
 verify_shared_component_identity_semantics()
 verify_rpc_response_envelope_semantics()
+verify_rpc_duplicate_member_semantics()

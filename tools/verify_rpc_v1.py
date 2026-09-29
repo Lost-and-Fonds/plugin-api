@@ -8,6 +8,23 @@ import sys
 from pathlib import Path
 
 
+class DuplicateMemberError(ValueError):
+    pass
+
+
+def reject_duplicate_members(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise DuplicateMemberError(f"duplicate JSON object member: {key!r}")
+        result[key] = value
+    return result
+
+
+def parse_rpc_frame(raw: str) -> object:
+    return json.loads(raw, object_pairs_hook=reject_duplicate_members)
+
+
 spec_path, vectors_path, schema_path = map(Path, sys.argv[1:4])
 spec = spec_path.read_text(encoding="utf-8")
 vectors = json.loads(vectors_path.read_text(encoding="utf-8"))
@@ -46,6 +63,29 @@ required = (
 )
 if any(term not in spec for term in required):
     raise SystemExit("RPC v1 normative specification is missing a required invariant")
+duplicate_rule = spec.split("## Framing and call model", 1)[1].split("## JSON values", 1)[0]
+if any(term not in duplicate_rule for term in (
+    "Every JSON object anywhere", "MUST contain unique member names",
+    "exact JSON string", "at any nesting depth",
+    "before envelope validation", "MUST NOT choose first-wins or last-wins semantics",
+)):
+    raise SystemExit("RPC v1 must reject duplicate JSON object members before dispatch")
+raw_duplicate_frames = {
+    "duplicate top-level method": '{"kind":"request","id":"1","method":"input.discover","method":"broadcast.publish"}',
+    "duplicate top-level id": '{"kind":"request","id":"1","id":"2","method":"hello","params":{"min":1,"max":1}}',
+    "duplicate hello params": '{"kind":"request","id":"1","method":"hello","params":{"min":1,"min":1,"max":1}}',
+    "duplicate resource handle member": '{"kind":"request","id":"1","method":"x","params":{"self":{"$resource":{"type":"x","id":"a","id":"b"}}}}',
+    "duplicate nested WIT member": '{"kind":"request","id":"1","method":"x","params":{"item":{"metadata":{"schema":"x","schema":"y"}}}}',
+}
+for name, raw_frame in raw_duplicate_frames.items():
+    try:
+        parse_rpc_frame(raw_frame)
+    except DuplicateMemberError:
+        continue
+    raise SystemExit(f"RPC v1 parser accepted {name}")
+print("RPC v1 raw duplicate-member frame cases rejected")
+if parse_rpc_frame('{"id":"a","ID":"b"}') != {"id": "a", "ID": "b"}:
+    raise SystemExit("RPC v1 duplicate detection must use exact member-name equality")
 response_rule = spec.split("## Framing and call model", 1)[1].split("## JSON values", 1)[0].lower()
 response_requirements = (
     "response",

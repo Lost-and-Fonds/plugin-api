@@ -13,9 +13,17 @@ that many bytes of UTF-8 JSON. The JSON text MUST decode to one object. The
 length counts encoded JSON bytes, not characters. Endpoints MUST enforce a
 configured maximum frame size before allocating or decoding the payload. A
 truncated header or payload, invalid UTF-8/JSON, non-object JSON, zero/oversize
-length, or invalid envelope is a protocol failure. The four-byte length itself
-is the transport frame limit; an endpoint MUST also reject an otherwise valid
-JSON message that exceeds the WIT operation's configured byte or output limit.
+length, or invalid envelope is a protocol failure. Every JSON object anywhere
+within an RPC v1 frame MUST contain unique member names, using exact JSON string
+equality. A duplicate member at any nesting depth makes the entire frame
+protocol-invalid. Endpoints MUST detect duplicates in the raw JSON structure
+before envelope validation, kind or method interpretation, dispatch, invocation
+matching, resource-handle interpretation, WIT decoding, or lifecycle execution.
+They MUST NOT choose first-wins or last-wins semantics. This rule does not parse
+the contents of a JSON string that another contract defines as an independently
+serialized opaque document. The four-byte length itself is the transport frame
+limit; an endpoint MUST also reject an otherwise valid JSON message that exceeds
+the WIT operation's configured byte or output limit.
 
 After startup, every lifecycle frame has `protocol: 1`, a non-empty string
 `id`, `kind`, and the active string `invocation`. A request has
