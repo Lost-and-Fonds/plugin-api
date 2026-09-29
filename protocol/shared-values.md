@@ -12,7 +12,7 @@ This document defines semantics shared by canonical plugin value types. Core val
 
 ## Byte streams
 
-For `io-host.byte-stream.read`, `ok(none)` is the only EOF representation. A successful non-EOF result `ok(some(bytes))` MUST contain at least one byte and MUST NOT exceed the host-configured maximum chunk size. `ok(some([]))` is invalid protocol/contract behavior. A receiver MUST reject it and fail the active invocation/channel under the existing protocol-failure model; it MUST NOT treat it as EOF, retry/spin, skip it, or convert it to `none`. RPC v1 continues to encode `list<u8>` as a JSON array of byte integers.
+For `io-host.byte-stream.read`, `ok(none)` is the only EOF representation. A successful non-EOF result `ok(some(bytes))` MUST contain at least one byte and MUST be chosen so the complete encoded response fits within the plugin's advertised receive-frame maximum; no separate hidden stream chunk byte ceiling applies. `ok(some([]))` is invalid protocol/contract behavior. A receiver MUST reject it and fail the active invocation/channel under the existing protocol-failure model; it MUST NOT treat it as EOF, retry/spin, skip it, or convert it to `none`. RPC v1 continues to encode `list<u8>` as a JSON array of byte integers.
 
 EOF is sticky: after a stream returns `none`, all later successful reads while the resource remains live MUST return `none`; no later bytes may appear. The owner may drop the stream after EOF. No rewind/reset operation is defined. These rules do not define a universal chunk size.
 

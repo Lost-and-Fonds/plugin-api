@@ -19,7 +19,8 @@ interface broadcast-host {
 
     /// Reads the invocation's fixed selected collection in bounded forward batches.
     /// max-items must be positive; successful batches are non-empty and none means
-    /// sticky EOF. The host may return fewer than requested and enforces its own limit.
+    /// sticky EOF. The host may return fewer than requested or the semantic count
+    /// maximum to fit the requester's negotiated RPC frame maximum.
     /// The host creates this resource for one publication; it is invalid at invocation end.
     resource item-collection {
         next: func(max-items: u32) -> result<option<list<item>>, collection-read-error>;

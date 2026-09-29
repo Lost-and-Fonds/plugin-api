@@ -9,11 +9,14 @@ launch and stdin/stdout/stderr binding are normatively defined in
 ## Framing and call model
 
 Each frame is a four-byte unsigned big-endian byte length followed by exactly
-that many bytes of UTF-8 JSON. The JSON text MUST decode to one object. The
-length counts encoded JSON bytes, not characters. Endpoints MUST enforce a
-configured maximum frame size before allocating or decoding the payload. A
-truncated header or payload, invalid UTF-8/JSON, non-object JSON, zero/oversize
-length, or invalid envelope is a protocol failure. Every JSON object anywhere
+that many bytes of UTF-8 JSON. The JSON text MUST decode to one object. The length counts encoded JSON bytes,
+not characters. The four-byte header represents
+an unsigned 32-bit payload length. Every endpoint MUST be able to receive a
+hello payload of at most 4096 UTF-8 bytes. After hello, endpoints MUST enforce
+their advertised receive maximum before allocating or decoding a normal payload.
+A truncated header or payload, invalid UTF-8/JSON, non-object JSON,
+zero/oversize length, or invalid envelope is a protocol failure. Every JSON
+object anywhere
 within an RPC v1 frame MUST contain unique member names, using exact JSON string
 equality. A duplicate member at any nesting depth makes the entire frame
 protocol-invalid. Endpoints MUST detect duplicates in the raw JSON structure
@@ -21,9 +24,14 @@ before envelope validation, kind or method interpretation, dispatch, invocation
 matching, resource-handle interpretation, WIT decoding, or lifecycle execution.
 They MUST NOT choose first-wins or last-wins semantics. This rule does not parse
 the contents of a JSON string that another contract defines as an independently
-serialized opaque document. The four-byte length itself is the transport frame
-limit; an endpoint MUST also reject an otherwise valid JSON message that exceeds
-the WIT operation's configured byte or output limit.
+serialized opaque document. The four-byte length itself is only the framing
+representation, not the interoperability capacity. A receiver MUST accept every
+otherwise valid post-hello payload within
+its advertised maximum; it MUST NOT impose a smaller private encoded-message
+limit. The four-byte prefix is excluded from this payload count. A sender MUST
+check the actual encoded UTF-8 JSON payload size before transmission. If an
+indivisible value cannot fit, the sender MUST fail locally or use an existing
+typed operation failure, never send an over-limit probe.
 
 After startup, every lifecycle frame has `protocol: 1`, a non-empty string
 `id`, `kind`, and the active string `invocation`. A request has
@@ -38,9 +46,18 @@ Package loading MUST first validate the manifest's exact Stashd contract identit
 
 For every newly launched process, the plugin's first stdout frame MUST be a
 `hello` request with `protocol: 1`, `kind: "request"`, `method: "hello"`, and
-`params: {"min":1,"max":1}`; it has no invocation. The host responds to the
-same ID with `result: {"protocol":1,"min":1,"max":1}`. Only after successful
-hello validation and response may the host start one exported lifecycle call. Its `method` is the
+`params: {"min":1,"max":1,"max-frame-bytes":N}`; it has no invocation. The
+host responds to the same ID with
+`result: {"protocol":1,"min":1,"max":1,"max-frame-bytes":M}`.
+`N` and `M` are unsigned 32-bit integers from 4096 through 4294967295. Each
+advertises the sender's own maximum receive payload, measured as UTF-8 bytes of
+JSON excluding the four-byte prefix. Both hello payloads MUST be no more than
+4096 bytes. Missing, non-integer, zero, below-minimum, or unrepresentable
+advertisements, or an oversized hello frame, are protocol failures; no
+lifecycle call may start. After successful hello, the plugin MUST NOT send a
+payload exceeding `M` and the host MUST NOT send a payload exceeding `N`; these
+are independent directional limits. Only after successful hello validation
+and response may the host start one exported lifecycle call. Its `method` is the
 package-qualified WIT interface and function, for example
 `stashd:plugin/input-plugin.acquire`; `params` is the record of named WIT
 arguments. Imported functions and resource methods use the same method form,
@@ -101,7 +118,8 @@ runtime has exact JSON integer support.
 Every `list<u8>` is a JSON array of integer numbers from 0 through 255,
 inclusive. This applies equally to inline values and each bounded stream chunk.
 Base64, byte strings, and implementation-specific binary values are not RPC v1
-encodings. A stream read returns `{"ok":null}` (`none`) at EOF or
+encodings. A stream producer MUST size each response against the peer's advertised receive
+maximum; there is no separate hidden stream-chunk byte ceiling. A stream read returns `{"ok":null}` (`none`) at EOF or
 `{"ok":[byte,...]}` (`some(bytes)`) for a chunk. A successful non-EOF chunk MUST contain at
 least one byte; `none` is the only EOF value, and `some([])` is invalid protocol
 behavior. EOF is sticky: once `none` is returned, subsequent successful reads
@@ -238,22 +256,22 @@ read-error, and successful-exhaustion requirements.
 ## Collection Export host result
 
 Collection Export's WIT `plugin-error.limit-exceeded` is reserved for the host.
-If the serialized request exceeds the host's configured request limit, the host
-does not invoke the plugin and returns the ordinary lifecycle response whose
-WIT `result` is `{"error":{"tag":"limit-exceeded","value":DETAIL}}`.
-If the plugin returns artifact bytes or a serialized result exceeding the
-configured artifact/result limit, the host rejects that output and returns the
-same synthesized WIT result instead. `DETAIL` is the canonical
+If an indivisible serialized request cannot fit the host's advertised receive
+maximum, the sender fails locally without transmitting an oversized frame.
+Collection Export's `limit-exceeded` remains reserved for host-enforced
+artifact/domain constraints, not transport sizing. `DETAIL` is the canonical
 `plugin-error-detail` record. Thus the lifecycle result is a valid WIT outcome;
-it is not the response envelope's top-level RPC `error`.
+it is not the response envelope's top-level RPC `error`. If plugin output cannot
+fit the host's advertised maximum, the host fails the invocation at the
+appropriate boundary without transmitting an oversized frame.
 
 A plugin MUST NOT return `limit-exceeded`. If it does, the host rejects the
 plugin's lifecycle response as a contract violation, fails the invocation, and
 reports a protocol/contract failure out of band; it MUST NOT accept or relay the
 reserved case as a plugin-authored lifecycle result. The host-synthesized case
-is permitted only when the host itself rejected the request or output for the
-configured limit, and the host MUST NOT synthesize it for a plugin-authored
-failure. SDKs can consequently distinguish host synthesis from a plugin
+is permitted only when the host itself rejected the request or output for an
+explicit artifact/domain limit, and the host MUST NOT synthesize it for a
+plugin-authored failure. SDKs can consequently distinguish host synthesis from a plugin
 outcome without guessing from error text or direction.
 
 ## Conformance flows

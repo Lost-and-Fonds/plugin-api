@@ -713,7 +713,7 @@ expect_staging_rule_rejected("metadata mutable after finish", "`media-type` and 
 expect_staging_rule_rejected("forged reference reopened", "Unknown, fabricated, stale, or other-invocation references return `stream-error.missing`.")
 expect_staging_rule_rejected("old invocation reference reused", "A descriptor from an earlier invocation is never resolved against that invocation, durable Vault storage, another component/process, or another artifact with coincidentally similar fields.")
 expect_staging_rule_rejected("descriptor matching ignores non-reference fields", "A plugin MAY copy a descriptor value. Any operation accepting one MUST resolve its reference in the current invocation's completed-artifact registry and compare the entire supplied descriptor against the canonical descriptor: `reference`, `media-type`, `size-bytes`, and `metadata`.")
-expect_staging_rule_rejected("write errors do not poison writer", "because the write returns `staging-error`, it transitions OPEN to POISONED.")
+expect_staging_rule_rejected("write errors do not poison writer", "because it returns `staging-error`, transitions OPEN to POISONED.")
 expect_staging_rule_rejected("poisoned writer can recover", "A POISONED writer cannot recover or produce an artifact.")
 expect_staging_rule_rejected("second finish creates another artifact", "FINISHED is terminal: subsequent `write` and second `finish` calls fail deterministically with `staging-error.failed(...)`.")
 expect_staging_rule_rejected("write after finish allowed", "FINISHED is terminal: subsequent `write` and second `finish` calls fail deterministically with `staging-error.failed(...)`.")
@@ -1058,7 +1058,7 @@ def verify_broadcast_collection_semantics() -> None:
         ("The host MUST accept `Ok(publication)` only after the collection has\nreached EOF.", "Publication may succeed before the collection reaches EOF."),
         ("Selected Items MUST NOT silently disappear due to unrelated state changes.", "Selected Items may silently disappear due to unrelated state changes."),
         ("host MUST return every selected Item at most once", "host may return selected Items more than once"),
-        ("single Item that\ncannot fit within the configured RPC response limit MUST fail", "single Item may exceed the configured RPC response limit"),
+        ("single Item that\ncannot fit within the peer-advertised receive maximum", "single Item may exceed the negotiated RPC receive limit"),
         ("There is no cross-invocation Broadcast continuation, cursor, checkpoint, or\nresume state.", "Broadcast continuation state may be reused across invocations."),
     )
     for original, replacement in mutations:
@@ -1157,8 +1157,8 @@ def verify_rpc_response_envelope_semantics() -> None:
 def verify_rpc_duplicate_member_semantics() -> None:
     document = Path(__file__).resolve().parents[1] / "protocol" / "rpc-v1.md"
     text = document.read_text(encoding="utf-8")
-    original = "Every JSON object anywhere\nwithin an RPC v1 frame MUST contain unique member names"
-    replacement = "Every JSON object anywhere\nwithin an RPC v1 frame MAY contain duplicate member names"
+    original = "Every JSON\nobject anywhere\nwithin an RPC v1 frame MUST contain unique member names"
+    replacement = "Every JSON\nobject anywhere\nwithin an RPC v1 frame MAY contain duplicate member names"
     weakened = text.replace(original, replacement)
     if weakened == text:
         raise SystemExit("RPC duplicate-member sensitivity mutation did not apply")
@@ -1175,6 +1175,34 @@ def verify_rpc_duplicate_member_semantics() -> None:
     print("sensitivity check caught weakened RPC duplicate-member semantics")
 
 
+def verify_frame_negotiation_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "rpc-v1.md"
+    text = document.read_text(encoding="utf-8")
+    mutations = (
+        ("max-frame-bytes", "private-frame-limit"),
+        ("4096 bytes", "8192 bytes"),
+        ("plugin MUST NOT send a\npayload exceeding `M`", "plugin MAY send a\npayload exceeding `M`"),
+        ("MUST NOT impose a smaller private encoded-message\nlimit", "MAY impose a smaller private encoded-message\nlimit"),
+    )
+    verifier = Path(__file__).with_name("verify_rpc_v1.py")
+    vectors = Path(__file__).resolve().parents[1] / "protocol" / "rpc-v1-vectors.json"
+    for original, replacement in mutations:
+        weakened = text.replace(original, replacement)
+        if weakened == text:
+            raise SystemExit(f"frame negotiation sensitivity mutation did not apply: {original}")
+        document.write_text(weakened, encoding="utf-8")
+        try:
+            result = subprocess.run(
+                [sys.executable, str(verifier), str(document), str(vectors), str(schema_path)],
+                capture_output=True, text=True, check=False,
+            )
+        finally:
+            document.write_text(text, encoding="utf-8")
+        if result.returncode == 0:
+            raise SystemExit(f"RPC verifier accepted weakened frame negotiation semantics: {original}")
+        print(f"sensitivity check caught weakened frame negotiation: {original}")
+
+
 verify_terminal_commit_authority()
 verify_shared_value_semantics()
 verify_input_value_semantics()
@@ -1186,3 +1214,4 @@ verify_component_execution_semantics()
 verify_shared_component_identity_semantics()
 verify_rpc_response_envelope_semantics()
 verify_rpc_duplicate_member_semantics()
+verify_frame_negotiation_semantics()

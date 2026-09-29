@@ -78,7 +78,7 @@ shared_values_requirements = (
     ("must reject the containing protocol value", "convert the violation to a lifecycle `plugin-error`", "drop only the invalid facet"),
     ("a successful non-eof result `ok(some(bytes))` must contain at least one byte", "`ok(some([]))` is invalid"),
     ("`ok(none)` is the only eof representation", "eof is sticky"),
-    ("configured maximum chunk size",),
+    ("advertised receive-frame maximum", "no separate hidden stream chunk byte ceiling"),
     ("fraction = none` means indeterminate or stage-only", "must not derive a percentage"),
     ("inclusive range `[0.0, 1.0]`", "must be finite"),
     ("must reject it, not clamp it", "no universal monotonicity rule applies"),
@@ -147,7 +147,7 @@ staging_requirements = (
     ("unknown, fabricated, stale, or other-invocation references return `stream-error.missing`", "known reference with any descriptor-field mismatch returns `stream-error.denied`"),
     ("canonical descriptor may be reopened repeatedly in the same invocation", "new invocation-scoped canonical `byte-stream`"),
     ("**open**", "**poisoned**", "**finished**"),
-    ("because the write returns `staging-error`, it transitions open to poisoned", "oversized or rejected chunk is not partially appended"),
+    ("because it returns `staging-error`, transitions open to poisoned", "host's advertised receive-frame maximum", "must not impose a smaller private rpc/chunk byte ceiling"),
     ("subsequent `write` and `finish` calls fail deterministically with `staging-error.failed(...)`", "a poisoned writer cannot recover"),
     ("subsequent `write` and second `finish` calls fail deterministically", "finish does not consume the writer resource"),
     ("dropping an open or poisoned writer discards partial unpublished output", "dropping a finished writer releases only the writer resource handle"),
@@ -483,7 +483,7 @@ for semantic in (
     "Selected Items MUST NOT silently disappear due to unrelated state changes",
     "host MUST return every selected Item at most once",
     "A successful response before EOF is a protocol/contract violation",
-    "single Item that\ncannot fit within the configured RPC response limit",
+    "single Item that\ncannot fit within the peer-advertised receive maximum",
 ):
     if semantic.casefold() not in collection_text.casefold():
         raise SystemExit(f"normative Broadcast collection semantics are missing: {semantic}")

@@ -37,6 +37,12 @@ required = (
     "## Framing and call model",
     "reject unsupported identities before launching a process or sending lifecycle messages",
     "The `hello` exchange below negotiates RPC framing/protocol only",
+    "max-frame-bytes",
+    "4096 bytes",
+    "unsigned 32-bit integers from 4096 through 4294967295",
+    "actual encoded UTF-8 JSON payload size",
+    "smaller private encoded-message",
+    "MUST NOT impose a smaller private encoded-message\nlimit",
     "## JSON values",
     "## Resource handles",
     "## Ownership, borrowing, and release",
@@ -64,8 +70,10 @@ required = (
 if any(term not in spec for term in required):
     raise SystemExit("RPC v1 normative specification is missing a required invariant")
 duplicate_rule = spec.split("## Framing and call model", 1)[1].split("## JSON values", 1)[0]
+if "host MUST NOT send a payload exceeding `N`" not in duplicate_rule or "plugin MUST NOT send a\npayload exceeding `M`" not in duplicate_rule or "Each\nadvertises the sender's own maximum receive payload" not in duplicate_rule or "MUST be no more than\n4096 bytes" not in duplicate_rule:
+    raise SystemExit("RPC v1 hello must define independent directional frame maxima")
 if any(term not in duplicate_rule for term in (
-    "Every JSON object anywhere", "MUST contain unique member names",
+    "Every JSON\nobject anywhere", "MUST contain unique member names",
     "exact JSON string", "at any nesting depth",
     "before envelope validation", "MUST NOT choose first-wins or last-wins semantics",
 )):
@@ -135,6 +143,10 @@ expected = {
     "enrichment-capabilities-local-discovery",
     "shared-value-semantics",
     "input-size-estimate-states",
+    "rpc-frame-size-boundaries",
+    "rpc-frame-invalid-advertisements",
+    "rpc-batch-fits-frame",
+    "staged-writer-frame-sizing",
 }
 if set(by_name) != expected:
     raise SystemExit("RPC v1 conformance vector set is incomplete or unexpected")
@@ -213,7 +225,7 @@ startup = by_name["hello-first"]["frames-in-order"]
 acquire_params = startup[2].get("params", {}) if len(startup) > 2 else {}
 item = acquire_params.get("item", {})
 options = acquire_params.get("options", {})
-if len(startup) != 3 or startup[0].get("method") != "hello" or "invocation" in startup[0] or startup[1].get("result", {}).get("protocol") != 1 or startup[2].get("method") != "stashd:plugin/input-plugin.acquire" or set(acquire_params) != {"item", "options"} or set(item) != {"id", "reference", "delegation", "size-bytes", "size-estimated", "metadata"} or item.get("delegation") is not None or item.get("size-bytes") is not None or item.get("size-estimated") is not False or item.get("metadata") != [] or set(options) != {"options", "credentials"} or options != {"options": [], "credentials": []}:
+if len(startup) != 3 or startup[0].get("method") != "hello" or "invocation" in startup[0] or startup[0].get("params", {}).get("max-frame-bytes") != 2097152 or startup[1].get("result", {}).get("max-frame-bytes") != 1048576 or startup[1].get("result", {}).get("protocol") != 1 or startup[2].get("method") != "stashd:plugin/input-plugin.acquire" or set(acquire_params) != {"item", "options"} or set(item) != {"id", "reference", "delegation", "size-bytes", "size-estimated", "metadata"} or item.get("delegation") is not None or item.get("size-bytes") is not None or item.get("size-estimated") is not False or item.get("metadata") != [] or set(options) != {"options", "credentials"} or options != {"options": [], "credentials": []}:
     raise SystemExit("RPC v1 startup vector must gate a valid typed lifecycle invocation on invocation-free hello")
 size_states = by_name["input-size-estimate-states"]
 if size_states["valid"] != [
@@ -223,6 +235,16 @@ if size_states["valid"] != [
 ] or size_states["invalid"] != [{"size-bytes": None, "size-estimated": True}]:
     raise SystemExit("Input size-estimate vector must distinguish the three valid states and reject absent estimated size")
 shared_values = by_name["shared-value-semantics"]
+frame_bounds = by_name["rpc-frame-size-boundaries"]
+invalid_ads = by_name["rpc-frame-invalid-advertisements"]
+if frame_bounds["bootstrap-bytes"] != 4096 or frame_bounds["advertisements"] != {"plugin": 8192, "host": 16384} or frame_bounds["sender-rules"] != {"plugin-to-host": "16384", "host-to-plugin": "8192"} or frame_bounds["acceptance"] != "payload exactly equal to peer maximum accepted; one byte over rejected before dispatch" or frame_bounds["utf8-example"] != {"text": "é", "encoded-utf8-bytes": 4, "character-count": 1}:
+    raise SystemExit("RPC frame vector must establish UTF-8 byte sizing and asymmetric peer-direction limits")
+if invalid_ads["hello-payload-over-4096"] != "protocol failure" or any(case.get("valid") for case in invalid_ads["cases"]):
+    raise SystemExit("RPC frame vector must reject missing and invalid size advertisements and oversized hello")
+if by_name["rpc-batch-fits-frame"]["records-sent"] >= by_name["rpc-batch-fits-frame"]["maximum-items-per-batch"]:
+    raise SystemExit("batch vector must permit fewer records than the semantic count maximum")
+if "no private chunk ceiling" not in by_name["staged-writer-frame-sizing"]["rule"]:
+    raise SystemExit("staged writer vector must rule out a private chunk ceiling")
 if shared_values["plugin-metadata"] != {
     "valid": {"schema": "example@1", "json": "{\"a\":1}"},
     "invalid": ["root-array", "malformed-json", "duplicate-member-at-any-depth"],

@@ -26,17 +26,19 @@ memory to establish this behavior.
 
 `next(max-items)` requires `max-items > 0`. The requested value is an upper
 bound, not provider pagination. The host MAY return fewer Items and MUST enforce
-its own configured maximum; a request larger than that maximum SHOULD return a
-smaller batch rather than fail. Each response is independently subject to the
-RPC frame and configured operation limits.
+its explicit semantic count maximum; a request larger than that maximum SHOULD
+return a smaller batch rather than fail. Each response is independently subject
+to the peer-advertised RPC frame maximum, measured on encoded UTF-8 JSON. The
+producer MUST return fewer Items as needed to fit; no hidden smaller encoded-byte
+limit applies.
 
 `some(non-empty-list)` returns a batch. `none` means EOF. An empty successful
 batch is invalid and MUST NOT be used as another EOF spelling. Once reached,
 EOF SHOULD remain sticky. An empty selected collection therefore reads as
 `none` immediately. A final partial batch is valid. A valid single Item that
-cannot fit within the configured RPC response limit MUST fail in a controlled
-way with `limit-exceeded` (or an equivalent typed error), never as an oversized
-frame.
+cannot fit within the peer-advertised receive maximum MUST fail at the
+appropriate boundary using an existing typed error where available, never by
+sending an oversized frame.
 
 `rejected` covers invalid operations such as a zero maximum; `limit-exceeded`
 means even one next Item cannot fit; `unavailable` means backing state/service

@@ -509,7 +509,8 @@
           "method": "hello",
           "params": {
             "min": 1,
-            "max": 1
+            "max": 1,
+            "max-frame-bytes": 2097152
           }
         },
         {
@@ -519,7 +520,8 @@
           "result": {
             "protocol": 1,
             "min": 1,
-            "max": 1
+            "max": 1,
+            "max-frame-bytes": 1048576
           }
         },
         {
@@ -544,7 +546,7 @@
           }
         }
       ],
-      "startup-rule": "hello is the first frame and has no invocation; lifecycle begins only after successful hello"
+      "startup-rule": "hello is first, invocation-free; plugin receive max is 2097152 bytes and host receive max is 1048576 bytes; lifecycle begins only after successful asymmetric negotiation"
     },
     {
       "name": "enrichment-capabilities-local-discovery",
@@ -656,6 +658,66 @@
         }
       ],
       "meaning": "zero is a valid u64 byte size; unknown, non-estimated, and estimated values are distinct"
+    },
+    {
+      "name": "rpc-frame-size-boundaries",
+      "bootstrap-bytes": 4096,
+      "advertisements": {
+        "plugin": 8192,
+        "host": 16384
+      },
+      "sender-rules": {
+        "plugin-to-host": "16384",
+        "host-to-plugin": "8192"
+      },
+      "acceptance": "payload exactly equal to peer maximum accepted; one byte over rejected before dispatch",
+      "utf8-example": {
+        "text": "é",
+        "encoded-utf8-bytes": 4,
+        "character-count": 1
+      }
+    },
+    {
+      "name": "rpc-frame-invalid-advertisements",
+      "cases": [
+        {
+          "value": null,
+          "valid": false
+        },
+        {
+          "value": 0,
+          "valid": false
+        },
+        {
+          "value": 4095,
+          "valid": false
+        },
+        {
+          "value": 4294967296,
+          "valid": false
+        },
+        {
+          "value": 4096.0,
+          "valid": false
+        },
+        {
+          "missing": true,
+          "valid": false
+        }
+      ],
+      "hello-payload-over-4096": "protocol failure"
+    },
+    {
+      "name": "rpc-batch-fits-frame",
+      "maximum-items-per-batch": 100,
+      "peer-frame-bytes": 1200,
+      "records-sent": 46,
+      "reason": "producer sends fewer than semantic count maximum when the next record would exceed encoded frame maximum"
+    },
+    {
+      "name": "staged-writer-frame-sizing",
+      "host-advertised-max-frame-bytes": 1048576,
+      "rule": "plugin encodes the complete write request and MUST keep payload within host advertisement; no private chunk ceiling or probe"
     }
   ],
   "raw-duplicate-member-frames": [
