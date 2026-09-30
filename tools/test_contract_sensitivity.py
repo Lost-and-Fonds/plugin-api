@@ -962,6 +962,36 @@ def expect_document_semantic_rejected(name: str, env_key: str, path: Path, mutat
         print(f"sensitivity check caught weakened {name} semantics: {original}")
 
 
+def verify_preserved_asset_grant_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "preserved-asset-grants.md"
+    text = document.read_text(encoding="utf-8")
+    mutations = (
+        ("Possession, copying, guessing, or global validity of the string grants no authority.", "Possession or guessing of the string grants authority."),
+        ("The host MUST NOT first search all preserved Assets", "The host MAY first search all preserved Assets"),
+        ("References for Items not yet delivered are not granted", "References for Items not yet delivered are granted"),
+        ("Invocation cleanup invalidates it.", "Invocation cleanup preserves it."),
+        ("Grants do not transfer between invocations, from Broadcast to Enrichment, from Enrichment to Broadcast, or through another lifecycle API.", "Grants transfer between invocations, from Broadcast to Enrichment, from Enrichment to Broadcast, and through another lifecycle API."),
+        ("| Known to Core but not granted; fabricated/guessed; prior invocation; another invocation; or another lifecycle host | `stream-error.denied` | `asset-error.denied` |", "| Known to Core but not granted; fabricated/guessed; prior invocation; another invocation; or another lifecycle host | `stream-error.missing` | `asset-error.missing` |"),
+        ("Fabricated and known-but-ungranted references MUST have the same authority failure.", "Fabricated and known-but-ungranted references MAY have different authority failures."),
+        ("both in-range and out-of-range requests for an ungranted reference return denied before global existence, target size, or range is evaluated.", "Range validation may precede grant validation for ungranted references."),
+    )
+    for original, replacement in mutations:
+        weakened = text.replace(original, replacement, 1)
+        if weakened == text:
+            raise SystemExit(f"preserved Asset grant sensitivity mutation did not apply: {original}")
+        with tempfile.TemporaryDirectory(prefix="stashd-asset-grant-sensitivity-") as temp:
+            candidate = Path(temp) / "preserved-asset-grants.md"
+            candidate.write_text(weakened, encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("verify_preserved_asset_grants.py"))],
+                capture_output=True, text=True, check=False,
+                env={**os.environ, "STASHD_PRESERVED_ASSET_GRANTS_SPEC": str(candidate)},
+            )
+        if result.returncode == 0:
+            raise SystemExit(f"grant verifier accepted weakened semantics: {original}")
+        print(f"sensitivity check caught weakened preserved Asset grant semantics: {original}")
+
+
 def verify_byte_range_semantics() -> None:
     document = Path(__file__).resolve().parents[1] / "protocol" / "byte-ranges.md"
     text = document.read_text(encoding="utf-8")
@@ -1233,6 +1263,7 @@ def verify_frame_negotiation_semantics() -> None:
 
 
 verify_terminal_commit_authority()
+verify_preserved_asset_grant_semantics()
 verify_byte_range_semantics()
 verify_shared_value_semantics()
 verify_input_value_semantics()

@@ -15,11 +15,13 @@ interface enrichment-host {
         failed(string),
     }
 
-    /// Opens a host-controlled byte-stream over an existing Asset, scoped to
-    /// this enrichment invocation. After reference/authority validation, the
-    /// host applies the shared range model in protocol/byte-ranges.md; an
-    /// invalid offset returns asset-error.denied. Range extent is independent
-    /// of RPC frame size; no host path or random-access API is exposed.
+    /// Opens a byte-stream over an Asset granted by this invocation's supplied
+    /// item-context.assets. The host validates this invocation's grant before
+    /// resolving the target, then applies protocol/byte-ranges.md. Ungranted or
+    /// invalid-range references return asset-error.denied; unavailable granted
+    /// targets return asset-error.missing. See
+    /// protocol/preserved-asset-grants.md. Range extent is independent of RPC
+    /// frame size; no host path or random-access API is exposed.
     open-asset: func(reference: string, offset: u64, length: option<u64>) -> result<byte-stream, asset-error>;
 }
 

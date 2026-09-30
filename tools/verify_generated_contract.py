@@ -19,6 +19,7 @@ input_values_path = Path(os.environ.get("STASHD_INPUT_VALUES_SPEC", repo_root / 
 readme_path = Path(os.environ.get("STASHD_README", repo_root / "README.md"))
 enrichment_path = Path(os.environ.get("STASHD_ENRICHMENT_SPEC", repo_root / "protocol" / "enrichment-capabilities.md"))
 byte_ranges_path = repo_root / "protocol" / "byte-ranges.md"
+preserved_asset_grants_path = repo_root / "protocol" / "preserved-asset-grants.md"
 if not enrichment_path.is_file():
     raise SystemExit("normative Enrichment capability discovery document is missing")
 enrichment_text = enrichment_path.read_text(encoding="utf-8").casefold()
@@ -43,6 +44,8 @@ if any(any(term not in enrichment_text for term in group) for group in enrichmen
     raise SystemExit("Enrichment capability discovery specification is missing a required semantic invariant")
 if not byte_ranges_path.is_file():
     raise SystemExit("shared host-mediated byte-range specification is missing")
+if not preserved_asset_grants_path.is_file():
+    raise SystemExit("shared preserved Asset invocation grant specification is missing")
 if not execution_path.is_file():
     raise SystemExit("normative component execution document is missing")
 execution = execution_path.read_text(encoding="utf-8").lower()
@@ -127,6 +130,9 @@ if readme_path.is_file():
         "Input size-estimate/independent-identity semantics",
         "protocol/shared-values.md",
         "protocol/input-values.md",
+        "protocol/preserved-asset-grants.md",
+        "Broadcast grants follow Item delivery",
+        "The reference string alone\nis not authority",
     ):
         if required_phrase not in readme_text:
             raise SystemExit(f"README is missing current shared invariant guidance: {required_phrase}")
@@ -395,6 +401,20 @@ if item_fields != {
     raise SystemExit("Broadcast Items must use the canonical io-host.plugin-metadata facets")
 if item_fields["assets"] != {"kind": "list", "value": {"kind": "named", "name": "preserved-asset"}}:
     raise SystemExit("Broadcast Items must expose a generic list of preserved Assets")
+preserved_asset_grants_text = preserved_asset_grants_path.read_text(encoding="utf-8").casefold()
+for semantic in (
+    "grant table", "possession, copying, guessing, or global validity of the string grants no authority",
+    "item-collection.next(...)".casefold(), "references for items not yet delivered are not granted",
+    "grants accumulate", "supplied `item-context.assets`", "capabilities(context)",
+    "each grant belongs to exactly one lifecycle invocation", "grants do not transfer between invocations",
+    "look up the exact supplied reference in the current invocation's grant table",
+    "must not first search all preserved Assets", "if absent, return denied",
+    "if that target is no longer available, return missing", "only then apply the shared",
+    "fabricated and known-but-ungranted references must have the same authority failure".casefold(),
+    "both in-range and out-of-range requests for an ungranted reference return denied",
+):
+    if semantic.casefold() not in preserved_asset_grants_text:
+        raise SystemExit(f"preserved Asset grant semantics are missing: {semantic}")
 legacy_item_fields = {"source-reference", "title", "description", "published-at", "duration-seconds", "resources"}
 domain_item_fields = {
     "kind", "audio", "video", "author", "artist", "season", "episode", "language", "genre",
@@ -480,6 +500,7 @@ if {"preparation", "derived-artifact", "finalization-request", "continuation", "
 collection_text = (Path(__file__).resolve().parents[1] / "protocol" / "broadcast-collection.md").read_text(encoding="utf-8")
 for semantic in (
     "fixed for", "at most once", "max-items > 0", "sticky",
+    "granted only as each Item is successfully returned by `next(...)`",
     "limit-exceeded", "MUST accept `Ok(publication)` only after the collection has",
     "Remote side effects already performed may remain", "no cross-invocation Broadcast continuation",
     "new Items arriving in Core during publication MUST NOT be added",
