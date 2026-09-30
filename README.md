@@ -553,9 +553,10 @@ shared progress precision and range, shared Input/Broadcast/Enrichment HTTP
 types, shared plugin error detail, shared logging, revision-aware Enrichment
 invocation, HTTP request and response streaming, validated shared metadata,
 non-empty stream
-chunks and sticky EOF, Broadcast Item/Asset metadata, bounded reporter-based
-filesystem and destination results, Broadcast Asset reads, staged-artifact
-reads, helper stdin, host-granted Broadcast/Enrichment credentials, Enrichment's
+chunks and sticky EOF, shared byte-range semantics and vectors for staged,
+Broadcast, and Enrichment reads, Broadcast Item/Asset metadata, bounded reporter-based
+filesystem and destination results, helper stdin, host-granted
+Broadcast/Enrichment credentials, Enrichment's
 shared HTTP import, Input size-estimate/independent-identity semantics, and
 staging invariants. HTTP methods are arbitrary validated tokens, while redirect
 following, URL authorization, credential forwarding, and streamed-body replay

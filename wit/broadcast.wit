@@ -46,8 +46,10 @@ interface broadcast-host {
         relative-path: string,
     }
 
-    /// Opens bounded chunks from a preserved resource using its opaque
-    /// reference. The host retains control of storage and path resolution.
+    /// Opens a byte-stream over a preserved Asset using its opaque reference.
+    /// After reference/authority validation, the host applies the shared range
+    /// model in protocol/byte-ranges.md; an invalid offset returns
+    /// stream-error.denied. Range extent is independent of RPC frame size.
     open-asset: func(reference: string, offset: u64, length: option<u64>) -> result<byte-stream, stream-error>;
 }
 

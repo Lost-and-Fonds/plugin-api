@@ -18,6 +18,7 @@ shared_values_path = Path(os.environ.get("STASHD_SHARED_VALUES_SPEC", repo_root 
 input_values_path = Path(os.environ.get("STASHD_INPUT_VALUES_SPEC", repo_root / "protocol" / "input-values.md"))
 readme_path = Path(os.environ.get("STASHD_README", repo_root / "README.md"))
 enrichment_path = Path(os.environ.get("STASHD_ENRICHMENT_SPEC", repo_root / "protocol" / "enrichment-capabilities.md"))
+byte_ranges_path = repo_root / "protocol" / "byte-ranges.md"
 if not enrichment_path.is_file():
     raise SystemExit("normative Enrichment capability discovery document is missing")
 enrichment_text = enrichment_path.read_text(encoding="utf-8").casefold()
@@ -40,6 +41,8 @@ enrichment_requirements = (
 )
 if any(any(term not in enrichment_text for term in group) for group in enrichment_requirements):
     raise SystemExit("Enrichment capability discovery specification is missing a required semantic invariant")
+if not byte_ranges_path.is_file():
+    raise SystemExit("shared host-mediated byte-range specification is missing")
 if not execution_path.is_file():
     raise SystemExit("normative component execution document is missing")
 execution = execution_path.read_text(encoding="utf-8").lower()

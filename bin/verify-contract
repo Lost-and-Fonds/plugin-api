@@ -30,6 +30,7 @@ python3 "$repo_root/tools/verify_package_artifact.py" \
 python3 "$repo_root/tools/verify_package_contract.py" \
     "$temporary_root/first/plugin-package.schema.json" \
     "$repo_root/protocol/package-contract-vectors.json"
+python3 "$repo_root/tools/verify_byte_ranges.py"
 python3 "$repo_root/tools/test_contract_sensitivity.py" \
     "$temporary_root/first/wit-schema.json" \
     "$temporary_root/first/plugin-package.schema.json"
