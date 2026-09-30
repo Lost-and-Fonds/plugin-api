@@ -46,10 +46,14 @@ interface broadcast-host {
         relative-path: string,
     }
 
-    /// Opens a byte-stream over a preserved Asset using its opaque reference.
-    /// After reference/authority validation, the host applies the shared range
-    /// model in protocol/byte-ranges.md; an invalid offset returns
-    /// stream-error.denied. Range extent is independent of RPC frame size.
+    /// Opens a byte-stream over a preserved Asset granted by delivering its
+    /// Item through this invocation's item-collection.next(...). Undelivered
+    /// Items grant no access. The host validates this invocation's grant before
+    /// resolving the target, then applies protocol/byte-ranges.md. Ungranted or
+    /// invalid-range references return stream-error.denied; unavailable granted
+    /// targets return stream-error.missing. See
+    /// protocol/preserved-asset-grants.md. Range extent is independent of RPC
+    /// frame size.
     open-asset: func(reference: string, offset: u64, length: option<u64>) -> result<byte-stream, stream-error>;
 }
 

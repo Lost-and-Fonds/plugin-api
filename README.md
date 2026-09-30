@@ -446,8 +446,13 @@ receive the canonical `staged-artifact` descriptor. A writer dropped before
 keeps output unpublished until finalization succeeds. Completed artifacts stay
 invocation-scoped: plugins may reopen them as streams during that invocation,
 and Core adopts them only when returned by a successful plugin result.
-Enrichment and Broadcast each open an existing Asset at an offset with an
-optional length, then read bounded chunks using the same canonical stream.
+Enrichment and Broadcast open only Assets granted to their current lifecycle
+invocation, then read them at an offset with optional length using the shared
+byte-range model and canonical stream. Broadcast grants follow Item delivery;
+Enrichment grants come from `item-context.assets`. The reference string alone
+is not authority. See the invocation grant and range models in
+[`protocol/preserved-asset-grants.md`](protocol/preserved-asset-grants.md) and
+[`protocol/byte-ranges.md`](protocol/byte-ranges.md).
 Input and Broadcast HTTP responses use the same stream resource; HTTP request
 bodies may also consume it. Methods are arbitrary validated HTTP tokens, so
 HEAD, OPTIONS, WebDAV, extension methods, conditional headers, and range
@@ -574,8 +579,9 @@ duration/kind fields, missing Item metadata facets, mandatory local artifacts
 or filesystem paths, and receipts that lose the canonical plugin-metadata
 representation. Sensitivity mutations protect JSON/root/duplicate-key and
 non-canonicalization semantics, byte-stream chunk/EOF and progress validity,
-Input size pairs and independent-invocation identity, and current README
-Broadcast accuracy. It also checks Input delegation, configuration identity,
+Input size pairs and independent-invocation identity, preserved Asset invocation
+grants, Broadcast delivery timing, authority-before-range validation, and current
+README Broadcast accuracy. It also checks Input delegation, configuration identity,
 HTTP credentials and errors, Enrichment revision-aware execution, shared plugin
 error detail, and logging. Historical contract notes retain removed Broadcast
 phase names only as explicitly former/removed behavior.

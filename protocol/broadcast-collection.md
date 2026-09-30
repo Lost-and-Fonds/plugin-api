@@ -11,7 +11,9 @@ The host supplies an opaque `broadcast-host.item-collection` resource in
 rules, is valid only for that invocation, may be explicitly dropped, and is
 unconditionally invalidated at invocation end. It MUST NOT be persisted or
 reused in another invocation. No database identity/query, Vault path,
-filesystem handle, or provider cursor is exposed.
+filesystem handle, or provider cursor is exposed. Preserved Asset read authority
+is granted only as each Item is successfully returned by `next(...)`, not by
+membership in the selected collection; see [preserved Asset invocation grants](preserved-asset-grants.md).
 
 The resource represents the caller-selected logical collection as fixed for
 the invocation. New Items arriving in Core during publication MUST NOT be added.
