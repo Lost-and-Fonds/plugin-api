@@ -269,12 +269,32 @@ if shared_values["byte-stream"] != {
 }:
     raise SystemExit("shared value semantic conformance vector is incomplete or inconsistent")
 enrichment_discovery = by_name["enrichment-capabilities-local-discovery"]
-if set(enrichment_discovery["params"]) != {"context"} or enrichment_discovery["response-result"] != [
-    {"id": "example.operation", "revision": "r1", "options": []}
+capabilities = enrichment_discovery["response-result"]
+if set(enrichment_discovery["params"]) != {"context"} or len(capabilities) != 2 or capabilities[0] != {
+    "id": "example.fixed", "revision": "r1", "options": []
+} or capabilities[1].get("id") != "example.operation" or capabilities[1].get("revision") != "r1" or capabilities[1].get("options") != [
+    {"key": "mode", "label": "Mode", "required": True, "choices": [{"value": "fast", "label": "Fast"}, {"value": "accurate", "label": "Accurate"}]},
+    {"key": "language", "label": "Language", "required": False, "choices": [{"value": "auto", "label": "Automatic"}, {"value": "en", "label": "English"}]},
 ] or "direct list WIT return" not in enrichment_discovery["meaning"] or "no typed lifecycle error wrapper" not in enrichment_discovery["meaning"] or enrichment_discovery["discovery-boundary"] != {
     "credentials": False, "configuration": False, "host-callbacks": False
 }:
-    raise SystemExit("Enrichment capability discovery vector must show context-only direct-list discovery without credentials, configuration, or callbacks")
+    raise SystemExit("Enrichment capability discovery vector must show context-only direct-list discovery and valid unique choices")
+uniqueness = enrichment_discovery.get("uniqueness-vectors", {})
+invalid_descriptors = {case.get("name"): case.get("expected") for case in uniqueness.get("invalid-descriptors", [])}
+if invalid_descriptors != {name: "contract/protocol violation" for name in ("duplicate-capability-id", "duplicate-option-key", "empty-option-choices", "duplicate-choice-value")}:
+    raise SystemExit("Enrichment invalid descriptor vectors must distinguish producer contract/protocol violations")
+valid_configurations = {case.get("name"): case.get("expected") for case in uniqueness.get("valid-configurations", [])}
+if valid_configurations != {"required-mode-only-optional-language-omitted": "valid", "required-and-optional-selected": "valid", "optional-only-empty": "valid", "fixed-capability-empty": "valid"}:
+    raise SystemExit("Enrichment valid caller configuration vectors are incomplete")
+invalid_configurations = {case.get("name"): case.get("expected") for case in uniqueness.get("invalid-configurations", [])}
+if invalid_configurations != {name: "invalid-configuration" for name in ("duplicate-identical", "duplicate-different", "unknown-option", "missing-required", "unsupported-choice", "extra-on-fixed-capability")}:
+    raise SystemExit("Enrichment invalid caller configuration vectors are incomplete")
+if uniqueness.get("failure-boundary") != {"invalid-discovered-descriptor": "contract/protocol violation", "invalid-caller-selection": "plugin-error.invalid-configuration", "unknown-inapplicable-or-stale-identity": "plugin-error.unsupported"}:
+    raise SystemExit("Enrichment vectors must distinguish descriptor, caller, and capability identity failures")
+for cases in (uniqueness["valid-configurations"], uniqueness["invalid-configurations"]):
+    for case in cases:
+        if case["name"] in {"duplicate-identical", "duplicate-different"} and len([selection for selection in case["configuration"] if selection["key"] == "mode"]) != 2:
+            raise SystemExit("Enrichment duplicate-selection vectors must contain repeated keys")
 response = by_name["lifecycle-response-result"]["response"]
 expected_error = {"error": {"tag": "failed", "value": {"message": "example failure", "retryable": False}}}
 if "error" in response or response.get("result") != expected_error:
