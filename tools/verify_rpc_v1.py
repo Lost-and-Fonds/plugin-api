@@ -65,7 +65,10 @@ required = (
     "`some([])` is invalid protocol",
     "MUST NOT return `limit-exceeded`",
     "same invocation",
-    "pre-1.0 package version bump from 0.15.0",
+    "Final whole-contract checkpoint #32 freezes the",
+    "`stashd:plugin@0.17.0`, the exact",
+    "SDK/runtime migration target",
+    "Subsequent incompatible contract changes require",
 )
 if any(term not in spec for term in required):
     raise SystemExit("RPC v1 normative specification is missing a required invariant")
