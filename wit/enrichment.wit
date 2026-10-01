@@ -31,11 +31,13 @@ interface enrichment-plugin {
     use io-host.{credential-binding, plugin-metadata, staged-artifact};
 
     /// An opaque, plugin-owned operation and revision that apply to the
-    /// supplied Item/Asset context. The host does not interpret either value.
-    /// `revision` identifies the advertised configuration/execution contract;
-    /// `options` describes accepted invocation settings and is not identity.
-    /// An empty list represents a fixed capability. See
-    /// protocol/enrichment-capabilities.md for normative semantics.
+    /// supplied Item/Asset context. IDs are unique within one discovery result;
+    /// revision does not permit multiple descriptors for one ID. The host does
+    /// not interpret either value. `revision` identifies the advertised
+    /// configuration/execution contract; `options` describes accepted
+    /// invocation settings and is not identity. An empty list represents a
+    /// fixed capability. See protocol/enrichment-capabilities.md for normative
+    /// semantics.
     record capability {
         id: string,
         revision: string,
@@ -43,6 +45,9 @@ interface enrichment-plugin {
     }
 
     /// One generic caller-selectable setting advertised by a capability.
+    /// Keys are unique within the capability; choices are non-empty and each
+    /// choice value is unique within this option. A caller selects at most one
+    /// value. See protocol/enrichment-capabilities.md for normative semantics.
     record configuration-option {
         key: string,
         label: string,
@@ -50,13 +55,17 @@ interface enrichment-plugin {
         choices: list<configuration-choice>,
     }
 
-    /// One accepted opaque string value and its human-readable label.
+    /// One accepted opaque string value and its human-readable label. Values
+    /// are unique within the option; labels are presentation text, not identity.
     record configuration-choice {
         value: string,
         label: string,
     }
 
     /// A caller's selected value for one advertised configuration option.
+    /// Each key may occur at most once. Duplicate keys, unknown keys, missing
+    /// required selections, and unsupported values return
+    /// `invalid-configuration`; see protocol/enrichment-capabilities.md.
     record configuration-value {
         key: string,
         /// Configuration selections must not carry credentials or secrets.
@@ -104,7 +113,9 @@ interface enrichment-plugin {
     /// and/or durable derived Assets. See
     /// protocol/enrichment-capabilities.md for normative semantics. The
     /// plugin validates selections against the capability's advertised
-    /// options and reports invalid values with `invalid-configuration`.
+    /// options and reports duplicate, unknown, missing-required, or unsupported
+    /// selections with `invalid-configuration`. Configuration is single-select
+    /// per unique option key. See protocol/enrichment-capabilities.md.
     enrich: func(context: item-context, capability-id: string, capability-revision: string, configuration: list<configuration-value>, credentials: list<credential-binding>) -> result<enrichment-result, plugin-error>;
 }
 

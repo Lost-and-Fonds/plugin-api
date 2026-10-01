@@ -39,6 +39,19 @@ enrichment_requirements = (
     ("unsupported/stale revision, it must return `plugin-error.unsupported`",),
     ("must return `plugin-error.invalid-configuration`",),
     ("an empty list is an ordinary successful result",),
+    ("each `capability.id` must occur at most once", "regardless of revision"),
+    ("for caller configuration, each option key may occur at most once",),
+    ("an advertised option must have at least one choice",),
+    ("`configuration-choice.value` must be unique",),
+    ("within one capability, every `configuration-option.key` must be unique",),
+    ("require exactly one selection for each required option", "zero or one for each optional option"),
+    ("duplicate `configuration-value.key`", "even when values are identical"),
+    ("reject unknown keys",),
+    ("every supplied value must exactly equal one advertised choice value",),
+    ("do not choose first/last, deduplicate, or treat repeated keys as multi-select",),
+    ("must not discard, select, rewrite, or convert these producer violations to `plugin-error.invalid-configuration`", "contract/protocol"),
+    ("not rpc/protocol failures", "duplicate selections, unknown keys"),
+    ("identity comparisons use exact transported string equality", "must not trim, case-fold, unicode-normalize"),
 )
 if any(any(term not in enrichment_text for term in group) for group in enrichment_requirements):
     raise SystemExit("Enrichment capability discovery specification is missing a required semantic invariant")

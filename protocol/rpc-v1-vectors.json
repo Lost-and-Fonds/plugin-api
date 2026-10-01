@@ -561,9 +561,33 @@
       },
       "response-result": [
         {
-          "id": "example.operation",
+          "id": "example.fixed",
           "revision": "r1",
           "options": []
+        },
+        {
+          "id": "example.operation",
+          "revision": "r1",
+          "options": [
+            {
+              "key": "mode",
+              "label": "Mode",
+              "required": true,
+              "choices": [
+                {"value": "fast", "label": "Fast"},
+                {"value": "accurate", "label": "Accurate"}
+              ]
+            },
+            {
+              "key": "language",
+              "label": "Language",
+              "required": false,
+              "choices": [
+                {"value": "auto", "label": "Automatic"},
+                {"value": "en", "label": "English"}
+              ]
+            }
+          ]
         }
       ],
       "discovery-boundary": {
@@ -571,7 +595,59 @@
         "configuration": false,
         "host-callbacks": false
       },
-      "meaning": "capabilities has a direct list WIT return with no typed lifecycle error wrapper; the list comes from supplied context and local installed state and advertises an attemptable operation, not guaranteed execution success"
+      "meaning": "capabilities has a direct list WIT return with no typed lifecycle error wrapper; the list comes from supplied context and local installed state and advertises an attemptable operation, not guaranteed execution success",
+      "uniqueness-vectors": {
+        "invalid-descriptors": [
+          {
+            "name": "duplicate-capability-id",
+            "discovery-result": [
+              {"id": "example.operation", "revision": "r1", "options": []},
+              {"id": "example.operation", "revision": "r2", "options": []}
+            ],
+            "expected": "contract/protocol violation"
+          },
+          {
+            "name": "duplicate-option-key",
+            "capability": {"id": "example.operation", "revision": "r1", "options": [
+              {"key": "mode", "label": "Mode", "required": true, "choices": [{"value": "fast", "label": "Fast"}]},
+              {"key": "mode", "label": "Alternative mode", "required": false, "choices": [{"value": "accurate", "label": "Accurate"}]}
+            ]},
+            "expected": "contract/protocol violation"
+          },
+          {
+            "name": "empty-option-choices",
+            "capability": {"id": "example.operation", "revision": "r1", "options": [
+              {"key": "mode", "label": "Mode", "required": false, "choices": []}
+            ]},
+            "expected": "contract/protocol violation"
+          },
+          {
+            "name": "duplicate-choice-value",
+            "capability": {"id": "example.operation", "revision": "r1", "options": [
+              {"key": "mode", "label": "Mode", "required": true, "choices": [
+                {"value": "fast", "label": "Fast"},
+                {"value": "fast", "label": "Very Fast"}
+              ]}
+            ]},
+            "expected": "contract/protocol violation"
+          }
+        ],
+        "valid-configurations": [
+          {"name": "required-mode-only-optional-language-omitted", "configuration": [{"key": "mode", "value": "fast"}], "expected": "valid"},
+          {"name": "required-and-optional-selected", "configuration": [{"key": "mode", "value": "accurate"}, {"key": "language", "value": "en"}], "expected": "valid"},
+          {"name": "optional-only-empty", "options": [{"key": "language", "required": false, "choices": [{"value": "en"}]}], "configuration": [], "expected": "valid"},
+          {"name": "fixed-capability-empty", "options": [], "configuration": [], "expected": "valid"}
+        ],
+        "invalid-configurations": [
+          {"name": "duplicate-identical", "configuration": [{"key": "mode", "value": "fast"}, {"key": "mode", "value": "fast"}], "expected": "invalid-configuration"},
+          {"name": "duplicate-different", "configuration": [{"key": "mode", "value": "fast"}, {"key": "mode", "value": "accurate"}], "expected": "invalid-configuration"},
+          {"name": "unknown-option", "configuration": [{"key": "unknown", "value": "x"}], "expected": "invalid-configuration"},
+          {"name": "missing-required", "configuration": [], "expected": "invalid-configuration"},
+          {"name": "unsupported-choice", "configuration": [{"key": "mode", "value": "turbo"}], "expected": "invalid-configuration"},
+          {"name": "extra-on-fixed-capability", "options": [], "configuration": [{"key": "extra", "value": "x"}], "expected": "invalid-configuration"}
+        ],
+        "failure-boundary": {"invalid-discovered-descriptor": "contract/protocol violation", "invalid-caller-selection": "plugin-error.invalid-configuration", "unknown-inapplicable-or-stale-identity": "plugin-error.unsupported"}
+      }
     },
     {
       "name": "shared-value-semantics",
