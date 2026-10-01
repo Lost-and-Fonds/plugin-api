@@ -76,12 +76,17 @@ if not shared_values_path.is_file() or not input_values_path.is_file():
     raise SystemExit("normative shared-value or Input-value specification is missing")
 shared_values_text = shared_values_path.read_text(encoding="utf-8").casefold()
 shared_values_requirements = (
+    ("receiver-enforceable validation", "producer obligations", "receiver-valid; that does not prove producer conformance"),
     ("json` must be syntactically valid interoperable json", "parsed root is an object"),
     ("objects at every depth must not contain duplicate member names",),
-    ("no canonical json/jcs requirement applies", "must not reconstruct, normalize"),
-    ("schema` must be non-empty", "versioned/revision-bearing", "incompatible change", "different schema identifier/version"),
-    ("core must not infer compatibility", "inspect it to derive provider/domain taxonomy"),
-    ("must reject the containing protocol value", "convert the violation to a lifecycle `plugin-error`", "drop only the invalid facet"),
+    ("no canonical json/jcs requirement applies", "host must not interpret", "normalize or reconstruct json"),
+    ("`schema` must have a string length greater than zero", "receivers must not trim whitespace", "`example`"),
+    ("receivers must not trim whitespace", "properties that do not require interpreting plugin-owned schema", "`example`, `example@1`"),
+    ("must use a schema identifier it owns/defines", "make it versioned or revision-bearing according to its own identifier scheme", "different schema identity/revision"),
+    ("core maintains no universal schema ownership registry", "the generic core/host validator must not infer them by parsing opaque schema names"),
+    ("must reject the containing protocol value", "convert the violation to a lifecycle `plugin-error`", "drop only the bad facet"),
+    ("must not enforce this by scanning names", "structurally valid metadata remains receiver-valid"),
+    ("canonical host does not maintain schema histories", "does not compare old/new json structures", "parse version components", "order revisions"),
     ("a successful non-eof result `ok(some(bytes))` must contain at least one byte", "`ok(some([]))` is invalid"),
     ("`ok(none)` is the only eof representation", "eof is sticky"),
     ("advertised receive-frame maximum", "no separate hidden stream chunk byte ceiling"),

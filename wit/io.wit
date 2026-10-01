@@ -92,12 +92,11 @@ interface http-host {
 /// Generic, invocation-scoped byte streams and staged output. Resources are
 /// host-owned; references never expose filesystem paths or storage details.
 interface io-host {
-    /// A plugin-owned metadata facet. `schema` is non-empty and identifies a
-    /// stable plugin-owned versioned facet contract. `json` is valid JSON with
-    /// an object root and no duplicate member names at any depth. The host
-    /// validates but does not normalize or interpret domain fields. Metadata
-    /// must not contain credential selectors or secret material. See
-    /// protocol/shared-values.md.
+    /// Metadata facet. The host validates non-empty schema text and JSON
+    /// structure only (object root, no duplicate members at any depth).
+    /// Ownership and revision/evolution meaning, plus credential/secret
+    /// exclusion, are producer obligations. Core keeps domain JSON opaque and
+    /// does not infer producer conformance. See protocol/shared-values.md.
     record plugin-metadata {
         schema: string,
         json: string,

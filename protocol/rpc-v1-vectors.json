@@ -576,15 +576,25 @@
     {
       "name": "shared-value-semantics",
       "plugin-metadata": {
-        "valid": {
-          "schema": "example@1",
+        "valid-schema-values": [
+          "example",
+          " ",
+          "example@1"
+        ],
+        "invalid-schema-values": [
+          ""
+        ],
+        "valid-json-example": {
+          "schema": "example",
           "json": "{\"a\":1}"
         },
-        "invalid": [
-          "root-array",
+        "invalid-json-cases": [
           "malformed-json",
+          "root-array",
           "duplicate-member-at-any-depth"
         ],
+        "receiver-validity-proves-producer-conformance": false,
+        "producer-conformance-inferable-from-schema": false,
         "canonicalization-required": false,
         "core-interprets-domain-fields": false
       },
