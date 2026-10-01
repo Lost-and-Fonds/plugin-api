@@ -1,6 +1,6 @@
 # Plugin package metadata
 
-This document normatively defines package manifest discovery, loading, identity, and component metadata. The generated [`plugin-package.schema.json`](../schema/plugin-package.schema.json) validates the manifest shape. Each package has one stable `id`, a `version`, a required `contract` containing the exact canonical Stashd WIT package identity (for example, `stashd:plugin@0.16.0`), and a `components` object keyed by stable component IDs.
+This document normatively defines package manifest discovery, loading, identity, and component metadata. The generated [`plugin-package.schema.json`](../schema/plugin-package.schema.json) validates the manifest shape. Each package has one stable `id`, a `version`, a required `contract` containing the exact canonical Stashd WIT package identity (for example, `stashd:plugin@0.17.0`), and a `components` object keyed by stable component IDs.
 
 ## Package loading boundary
 

@@ -225,7 +225,7 @@ if any(term not in package_document for term in component_identity_requirements)
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
-expected_package = "stashd:plugin@0.16.0"
+expected_package = "stashd:plugin@0.17.0"
 if len(packages) != 1 or None in packages or packages != {schema["package"]} or schema["package"] != expected_package:
     raise SystemExit("WIT package identity mismatch")
 
