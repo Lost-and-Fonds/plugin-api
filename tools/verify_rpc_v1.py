@@ -30,7 +30,7 @@ spec = spec_path.read_text(encoding="utf-8")
 vectors = json.loads(vectors_path.read_text(encoding="utf-8"))
 schema = json.loads(schema_path.read_text(encoding="utf-8"))
 package = schema.get("package")
-if package != "stashd:plugin@0.17.0" or vectors.get("package") != package:
+if package != "stashd:plugin@0.18.0" or vectors.get("package") != package:
     raise SystemExit("RPC v1 conformance material has a conflicting contract identity")
 
 required = (
@@ -66,7 +66,7 @@ required = (
     "MUST NOT return `limit-exceeded`",
     "same invocation",
     "Final whole-contract checkpoint #32 freezes the",
-    "`stashd:plugin@0.17.0`, the exact",
+    "`stashd:plugin@0.18.0`, the exact",
     "SDK/runtime migration target",
     "Subsequent incompatible contract changes require",
 )

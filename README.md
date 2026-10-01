@@ -9,11 +9,11 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.17.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.18.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and Collection Export.
-Contract `stashd:plugin@0.17.0` is the frozen SDK/runtime migration target
-established by final whole-contract checkpoint #32. Subsequent incompatible
-contract changes require a new exact package identity.
+Version 0.18.0 adds the live helper-process resource and byte-event contract in
+[`protocol/helper-process.md`](protocol/helper-process.md). Subsequent
+incompatible contract changes require a new exact package identity.
 [RPC v1](protocol/rpc-v1.md) is the canonical wire specification, including
 framing, exact JSON value encodings, re-entrant call correlation, and
 invocation-scoped WIT resource handles. The process launch and stdin/stdout/stderr

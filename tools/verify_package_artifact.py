@@ -147,7 +147,7 @@ def check_filesystem_vectors(vectors: dict[str, Any]) -> None:
 
 schema = json.loads(schema_path.read_text(encoding="utf-8"))
 vectors = json.loads(vectors_path.read_text(encoding="utf-8"))
-if vectors.get("package") != "stashd:plugin@0.17.0":
+if vectors.get("package") != "stashd:plugin@0.18.0":
     raise SystemExit("package artifact vectors refer to the wrong contract")
 contract_schema = schema.get("properties", {}).get("contract", {})
 if contract_schema.get("pattern") != r"^stashd:plugin@[0-9]+\.[0-9]+\.[0-9]+$":

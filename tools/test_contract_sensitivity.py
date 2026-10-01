@@ -181,7 +181,7 @@ def remove_world_io_import(candidate: dict, filename: str, world_name: str) -> N
 
 
 def remove_helper_staging_capability(candidate: dict) -> None:
-    helper = next(function for function in interface(candidate, "wit/io.wit", "io-host")["functions"] if function["name"] == "run-helper")
+    helper = next(function for function in interface(candidate, "wit/io.wit", "io-host")["functions"] if function["name"] == "start-helper")
     helper["arguments"] = [argument for argument in helper["arguments"] if argument["name"] != "output"]
 
 
@@ -191,7 +191,7 @@ def remove_broadcast_asset_stream(candidate: dict) -> None:
 
 
 def remove_helper_input(candidate: dict) -> None:
-    helper = next(function for function in interface(candidate, "wit/io.wit", "io-host")["functions"] if function["name"] == "run-helper")
+    helper = next(function for function in interface(candidate, "wit/io.wit", "io-host")["functions"] if function["name"] == "start-helper")
     helper["arguments"] = [argument for argument in helper["arguments"] if argument["name"] != "input"]
 
 
@@ -423,7 +423,7 @@ def remove_early_credential_access(candidate: dict) -> None:
 def remove_helper_credential_mediation(candidate: dict) -> None:
     helper = next(
         function for function in interface(candidate, "wit/io.wit", "io-host")["functions"]
-        if function["name"] == "run-helper"
+        if function["name"] == "start-helper"
     )
     helper["arguments"] = [argument for argument in helper["arguments"] if argument["name"] != "credentials"]
 

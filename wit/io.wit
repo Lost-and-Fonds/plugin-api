@@ -1,4 +1,4 @@
-package stashd:plugin@0.17.0;
+package stashd:plugin@0.18.0;
 
 /// Lifecycle-independent plugin value contracts. Metadata facets remain in
 /// `io-host` with the shared host-managed I/O boundary.
@@ -157,10 +157,26 @@ interface io-host {
         failed(string),
     }
 
-    record helper-result {
-        exit-code: s32,
-        stdout: string,
-        stderr: string,
+    enum helper-output-stream {
+        stdout,
+        stderr,
+    }
+
+    record helper-output {
+        channel: helper-output-stream,
+        bytes: list<u8>,
+    }
+
+    variant helper-terminal {
+        exited(s32),
+        cancelled,
+        timed-out,
+        failed(string),
+    }
+
+    variant helper-event {
+        output(helper-output),
+        terminal(helper-terminal),
     }
 
     variant helper-error {
@@ -212,16 +228,25 @@ interface io-host {
 
     open-staging-area: func() -> staging-area;
 
-    /// Runs a host-approved helper. Named credentials are exposed to the helper
-    /// as environment variables and never passed in `args` or returned to the
-    /// plugin. Each selected binding must be authorized for this invocation
-    /// and available at use time. With `input`, the host streams the supplied
-    /// bytes to stdin and takes ownership of the stream until EOF or helper
-    /// termination. With
-    /// `output`, stdout bytes are streamed
-    /// directly into that writer and the returned stdout is empty. A helper or
-    /// output-stream failure makes the writer unfinalizable. Otherwise
-    /// stdout and stderr are bounded diagnostic text. The host exposes no path
-    /// or implicit mount to the helper.
-    run-helper: func(name: string, args: list<string>, input: option<byte-stream>, output: option<borrow<staged-writer>>, credentials: list<credential-binding>) -> result<helper-result, helper-error>;
+    /// A helper process is host-owned and invocation-scoped. The host starts
+    /// draining stdout and stderr independently of event consumption, retaining
+    /// every accepted byte using bounded buffering and/or spooling so a slow
+    /// consumer cannot fill child pipes. Events expose non-empty arbitrary byte
+    /// chunks in host-observed delivery order; no cross-stream OS write order
+    /// is implied. With `output`, stdout is also streamed to the staged writer;
+    /// output remains observable as events. Credentials remain host-mediated,
+    /// input is streamed to stdin, and no filesystem path is exposed.
+    /// All accepted output precedes exactly one terminal event. No event follows
+    /// it. EOF from `next-event` follows terminal consumption. Dropping the
+    /// resource or ending the invocation terminates/reaps the child and cleans
+    /// up its streams. Process existence alone is not meaningful liveness.
+    resource helper-process {
+        next-event: func() -> option<helper-event>;
+        cancel: func();
+    }
+
+    /// Starts a host-approved helper. Failure to start is a typed host/runtime
+    /// failure returned here. Child completion, timeout, cancellation and
+    /// runtime failure are reported as terminal events by the process resource.
+    start-helper: func(name: string, args: list<string>, input: option<byte-stream>, output: option<borrow<staged-writer>>, credentials: list<credential-binding>) -> result<helper-process, helper-error>;
 }
