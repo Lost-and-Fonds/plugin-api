@@ -20,16 +20,19 @@ interface collection-export-plugin {
 
     record collection {
         title: option<string>,
-        /// Inline interchange input, bounded by the host's configured maximum
-        /// serialized invocation-message size; entry count is not universal.
+        /// Inline interchange input. The complete encoded lifecycle request MUST
+        /// fit the host-advertised RPC receive-frame maximum; entry count has no
+        /// separate universal limit or hidden smaller request-message byte ceiling.
         entries: list<collection-entry>,
     }
 
     record exported-artifact {
         filename: string,
         media-type: string,
-        /// Inline bytes, bounded by the host's configured maximum artifact
-        /// size. The complete serialized result must also fit the RPC limit.
+        /// Inline bytes. A host MAY enforce an explicit Collection Export artifact
+        /// size limit. Independently, the complete encoded lifecycle response MUST
+        /// fit the plugin-advertised RPC receive-frame maximum; there is no
+        /// separate hidden encoded-response ceiling.
         contents: list<u8>,
     }
 
@@ -40,17 +43,18 @@ interface collection-export-plugin {
         rate-limited(plugin-error-detail),
         unavailable(plugin-error-detail),
         invalid-data(plugin-error-detail),
-        /// Reserved for the host runtime when the input message, artifact bytes,
-        /// or serialized result exceeds its configured limit; plugins MUST NOT
-        /// return this case.
+        /// Reserved for the host runtime when an explicit Collection Export
+        /// artifact/domain constraint is exceeded. RPC frame-size failures are not
+        /// `limit-exceeded`; plugins MUST NOT return this case.
         limit-exceeded(plugin-error-detail),
         failed(plugin-error-detail),
     }
 
-    /// One-shot bounded interchange. The host rejects input over its configured
-    /// request-message limit before invocation and output over its artifact or
-    /// response-message limit before accepting it, normalizing either case to
-    /// `limit-exceeded`.
+    /// One-shot bounded interchange. Request and response frames MUST fit the
+    /// receiver's negotiated RPC receive maximum. The host may separately reject
+    /// an explicit Collection Export artifact/domain constraint with
+    /// `limit-exceeded`. Transport oversize is not normalized to that lifecycle
+    /// error.
     export-collection: func(exporter: string, collection: collection, options: list<setting>) -> result<exported-artifact, plugin-error>;
 }
 

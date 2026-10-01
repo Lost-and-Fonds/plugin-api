@@ -20,9 +20,21 @@ readme_path = Path(os.environ.get("STASHD_README", repo_root / "README.md"))
 enrichment_path = Path(os.environ.get("STASHD_ENRICHMENT_SPEC", repo_root / "protocol" / "enrichment-capabilities.md"))
 byte_ranges_path = repo_root / "protocol" / "byte-ranges.md"
 preserved_asset_grants_path = repo_root / "protocol" / "preserved-asset-grants.md"
+collection_export_wit_path = Path(os.environ.get("STASHD_COLLECTION_EXPORT_WIT", repo_root / "wit" / "collection-export.wit"))
 if not enrichment_path.is_file():
     raise SystemExit("normative Enrichment capability discovery document is missing")
 enrichment_text = enrichment_path.read_text(encoding="utf-8").casefold()
+collection_export_wit_text = collection_export_wit_path.read_text(encoding="utf-8").casefold()
+collection_export_requirements = (
+    ("complete encoded lifecycle request must", "host-advertised rpc receive-frame maximum"),
+    ("hidden smaller request-message byte ceiling", "entry count has no"),
+    ("entry count has no", "separate universal limit"),
+    ("host may enforce an explicit collection export artifact", "complete encoded lifecycle response must", "plugin-advertised rpc receive-frame maximum", "separate hidden encoded-response ceiling"),
+    ("explicit collection export", "artifact/domain constraint is exceeded", "rpc frame-size failures are not", "plugins must not return this case"),
+    ("receiver's negotiated rpc receive maximum", "transport oversize is not normalized to that lifecycle\n    /// error"),
+)
+if any(any(term not in collection_export_wit_text for term in group) for group in collection_export_requirements):
+    raise SystemExit("Collection Export WIT comments must distinguish negotiated frame maxima from explicit artifact/domain limits")
 enrichment_requirements = (
     ("deterministic, local, credentialless discovery",),
     ("must not perform remote service discovery, preflight execution, or an availability check",),
@@ -139,6 +151,16 @@ if readme_path.is_file():
     )
     if any(claim in readme_text for claim in stale_claims):
         raise SystemExit("README retains a contradicted current Broadcast claim")
+    collection_export_readme_requirements = (
+        ("each encoded stream read/write message must", "peer-advertised rpc receive-frame maximum"),
+        ("no separate hidden", "stream-chunk byte ceiling"),
+        ("requests and responses must fit the negotiated rpc frame maxima",),
+        ("hosts may separately enforce explicit\ncollection export artifact/domain limits", "host-reserved `limit-exceeded` outcome"),
+        ("rpc transport oversize itself is not", "normalized to `limit-exceeded`"),
+        ("when the goal\nis to generate or publish a large catalogue, use broadcast",),
+    )
+    if any(any(term not in readme_text.casefold() for term in group) for group in collection_export_readme_requirements):
+        raise SystemExit("README must align stream and Collection Export sizing with negotiated RPC frames and explicit artifact/domain limits")
     for required_phrase in (
         "bounded reporter-based",
         "Filesystem-relative file records are reported incrementally through\n`publication-reporter.report-files`",
