@@ -249,12 +249,20 @@ if by_name["rpc-batch-fits-frame"]["records-sent"] >= by_name["rpc-batch-fits-fr
     raise SystemExit("batch vector must permit fewer records than the semantic count maximum")
 if "no private chunk ceiling" not in by_name["staged-writer-frame-sizing"]["rule"]:
     raise SystemExit("staged writer vector must rule out a private chunk ceiling")
-if shared_values["plugin-metadata"] != {
-    "valid": {"schema": "example@1", "json": "{\"a\":1}"},
-    "invalid": ["root-array", "malformed-json", "duplicate-member-at-any-depth"],
-    "canonicalization-required": False,
-    "core-interprets-domain-fields": False,
-} or shared_values["byte-stream"] != {
+metadata_vector = shared_values["plugin-metadata"]
+if metadata_vector.get("valid-schema-values") != ["example", " ", "example@1"]:
+    raise SystemExit("plugin metadata vector must accept opaque, whitespace-only, and revision-looking non-empty schema strings")
+if metadata_vector.get("invalid-schema-values") != [""]:
+    raise SystemExit("plugin metadata vector must reject the empty schema string")
+if metadata_vector.get("valid-json-example") != {"schema": "example", "json": "{\"a\":1}"}:
+    raise SystemExit("plugin metadata vector must show that schema=example is receiver-valid")
+if metadata_vector.get("invalid-json-cases") != ["malformed-json", "root-array", "duplicate-member-at-any-depth"]:
+    raise SystemExit("plugin metadata vector must retain malformed JSON, non-object root, and recursive duplicate-member failures")
+if metadata_vector.get("receiver-validity-proves-producer-conformance") is not False or metadata_vector.get("producer-conformance-inferable-from-schema") is not False:
+    raise SystemExit("plugin metadata vector must distinguish receiver validity from producer conformance")
+if metadata_vector.get("canonicalization-required") is not False or metadata_vector.get("core-interprets-domain-fields") is not False:
+    raise SystemExit("plugin metadata vector must retain exact opaque transport semantics")
+if shared_values["byte-stream"] != {
     "valid-data": {"ok": [0]}, "eof": {"ok": None}, "invalid-empty-data": {"ok": []}, "eof-sticky": True,
 } or shared_values["progress"] != {
     "valid": [None, 0.0, 1.0], "invalid": [-0.1, 1.0001], "monotonicity-required": False,
