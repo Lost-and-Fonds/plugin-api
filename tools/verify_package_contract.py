@@ -81,7 +81,7 @@ with tempfile.TemporaryDirectory() as temporary_directory:
     else:
         raise SystemExit("malformed canonical manifest JSON unexpectedly parsed")
     duplicate_cases = {
-        "duplicate top-level contract": '{"contract":"stashd:plugin@0.16.0","contract":"stashd:plugin@0.17.0"}',
+        "duplicate top-level contract": '{"contract":"stashd:plugin@0.17.0","contract":"stashd:plugin@0.18.0"}',
         "duplicate top-level components": '{"components":{},"components":{}}',
         "duplicate nested component member": '{"components":{"main":{"world":"input-plugin","world":"broadcast-plugin"}}}',
     }
