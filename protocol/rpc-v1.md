@@ -353,7 +353,9 @@ as opaque invocation-scoped references, but left their actual representation,
 correlation, ownership and lifecycle unspecified. This document makes those
 unspecified semantics precise without changing a previously specified wire
 value or WIT shape. The HTTP method model established `stashd:plugin@0.16.0` as the canonical
-identity at that stage. Final whole-contract checkpoint #32 freezes the
-subsequently hardened WIT/wire contract as `stashd:plugin@0.18.0`, the exact
-SDK/runtime migration target. Subsequent incompatible contract changes require
-another explicit package identity change.
+identity at that stage. Final whole-contract checkpoint #32 froze the
+subsequently hardened WIT/wire contract as `stashd:plugin@0.17.0`, the exact
+SDK/runtime migration target at that time. Issue #57 exposed a contract-level
+process-observability gap; `stashd:plugin@0.18.0` supersedes that frozen target
+with the live helper-process contract. Subsequent incompatible contract changes
+require another explicit package identity change.

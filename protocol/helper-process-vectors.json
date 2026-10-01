@@ -1,0 +1,39 @@
+{
+  "contract": "stashd:plugin@0.18.0",
+  "event_order": [
+    {"name": "stdout-only-live", "events": [{"output": {"channel": "stdout", "bytes_hex": "6869"}}, {"terminal": {"exited": 0}}]},
+    {"name": "stderr-only-live", "events": [{"output": {"channel": "stderr", "bytes_hex": "7761726e"}}, {"terminal": {"exited": 0}}]},
+    {"name": "interleaved-streams", "events": [{"output": {"channel": "stdout", "bytes_hex": "6f6e65"}}, {"output": {"channel": "stderr", "bytes_hex": "74776f"}}, {"output": {"channel": "stdout", "bytes_hex": "7468726565"}}, {"terminal": {"exited": 0}}]},
+    {"name": "arbitrary-cr-progress-bytes", "events": [{"output": {"channel": "stderr", "bytes_hex": "3130250d3230250d"}}, {"terminal": {"exited": 0}}]},
+    {"name": "zero-exit-after-output", "events": [{"output": {"channel": "stdout", "bytes_hex": "7061796c6f6164"}}, {"terminal": {"exited": 0}}]},
+    {"name": "nonzero-normal-exit", "events": [{"output": {"channel": "stderr", "bytes_hex": "6572726f72"}}, {"terminal": {"exited": 23}}]},
+    {"name": "cancel-retains-pending-output", "events": [{"output": {"channel": "stderr", "bytes_hex": "70656e64696e67"}}, {"terminal": "cancelled"}]},
+    {"name": "timeout-retains-output", "events": [{"output": {"channel": "stdout", "bytes_hex": "776f726b"}}, {"terminal": "timed-out"}]},
+    {"name": "runtime-failure-retains-output", "events": [{"output": {"channel": "stderr", "bytes_hex": "63726173682d64657461696c"}}, {"terminal": {"failed": "runtime failure"}}]},
+    {"name": "child-crash-retains-output", "events": [{"output": {"channel": "stdout", "bytes_hex": "6265666f72652d6372617368"}}, {"terminal": {"failed": "child/runtime failure"}}]}
+  ],
+  "lifecycle": {
+    "terminal_event_count": 1,
+    "events_after_terminal": 0,
+    "eof_after_terminal_consumed": true,
+    "dropping_live_resource_terminates_and_reaps_child": true,
+    "invocation_end_terminates_and_reaps_child": true,
+    "start_failure": {"returned_as": "helper-error.failed", "child_exit": false}
+  },
+  "slow_consumer": {
+    "child_output_bytes": 1073741824,
+    "consumer_delay_seconds": 3600,
+    "stdout_and_stderr_drained_independently_of_consumer": true,
+    "bounded_buffering_or_spooling_required": true,
+    "os_pipe_may_block_child": false,
+    "silent_truncation_allowed": false,
+    "accepted_bytes_delivered_before_terminal": true
+  },
+  "staged_stdout": {
+    "writer_receives_all_stdout_payload_bytes": true,
+    "stdout_payload_bytes_in_output_events": false,
+    "stdout_activity_event": {"stdout-activity": 1073741824},
+    "stdout_activity_is_cumulative_and_live": true,
+    "stderr_diagnostic_events_retained": true
+  }
+}

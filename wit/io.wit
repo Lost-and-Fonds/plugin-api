@@ -176,6 +176,7 @@ interface io-host {
 
     variant helper-event {
         output(helper-output),
+        stdout-activity(u64),
         terminal(helper-terminal),
     }
 
@@ -233,8 +234,11 @@ interface io-host {
     /// every accepted byte using bounded buffering and/or spooling so a slow
     /// consumer cannot fill child pipes. Events expose non-empty arbitrary byte
     /// chunks in host-observed delivery order; no cross-stream OS write order
-    /// is implied. With `output`, stdout is also streamed to the staged writer;
-    /// output remains observable as events. Credentials remain host-mediated,
+    /// is implied. Without `output`, stdout and stderr are delivered as byte
+    /// events. With `output`, stdout bytes go only to the staged writer and are
+    /// not duplicated in byte events; the host emits cumulative stdout byte
+    /// activity events instead. Stderr remains fully available as byte events.
+    /// Credentials remain host-mediated,
     /// input is streamed to stdin, and no filesystem path is exposed.
     /// All accepted output precedes exactly one terminal event. No event follows
     /// it. EOF from `next-event` follows terminal consumption. Dropping the

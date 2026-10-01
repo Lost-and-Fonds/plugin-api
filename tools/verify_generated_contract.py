@@ -1060,6 +1060,14 @@ if set(helper_methods) != {"next-event", "cancel"}:
     raise SystemExit("helper process must expose event consumption and explicit cancellation")
 if helper_methods["next-event"].get("result") != {"kind": "option", "value": {"kind": "named", "name": "helper-event"}}:
     raise SystemExit("helper event consumption must terminate only after terminal event consumption")
+helper_events = {value["name"] for value in io_host.get("variants", {}).get("helper-event", {}).get("values", [])}
+if helper_events != {"output", "stdout-activity", "terminal"}:
+    raise SystemExit("helper event stream must include output, staged stdout activity, and terminal events")
+if next(
+    (value for value in io_host.get("variants", {}).get("helper-event", {}).get("values", []) if value["name"] == "stdout-activity"),
+    {},
+).get("type") != {"kind": "scalar", "name": "u64"}:
+    raise SystemExit("staged stdout activity must expose a cumulative byte count")
 if {value["name"] for value in io_host.get("variants", {}).get("helper-terminal", {}).get("values", [])} != {"exited", "cancelled", "timed-out", "failed"}:
     raise SystemExit("helper terminal outcomes must distinguish exit, cancellation, timeout, and host failure")
 if set(io_host.get("enums", {}).get("helper-output-stream", {}).get("values", [])) != {"stdout", "stderr"}:
