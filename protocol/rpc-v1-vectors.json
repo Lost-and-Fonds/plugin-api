@@ -598,10 +598,39 @@
       "meaning": "capabilities has a direct list WIT return with no typed lifecycle error wrapper; the list comes from supplied context and local installed state and advertises an attemptable operation, not guaranteed execution success",
       "uniqueness-vectors": {
         "invalid-descriptors": [
-          {"name": "duplicate-capability-id", "expected": "contract/protocol violation"},
-          {"name": "duplicate-option-key", "expected": "contract/protocol violation"},
-          {"name": "empty-option-choices", "expected": "contract/protocol violation"},
-          {"name": "duplicate-choice-value", "expected": "contract/protocol violation"}
+          {
+            "name": "duplicate-capability-id",
+            "discovery-result": [
+              {"id": "example.operation", "revision": "r1", "options": []},
+              {"id": "example.operation", "revision": "r2", "options": []}
+            ],
+            "expected": "contract/protocol violation"
+          },
+          {
+            "name": "duplicate-option-key",
+            "capability": {"id": "example.operation", "revision": "r1", "options": [
+              {"key": "mode", "label": "Mode", "required": true, "choices": [{"value": "fast", "label": "Fast"}]},
+              {"key": "mode", "label": "Alternative mode", "required": false, "choices": [{"value": "accurate", "label": "Accurate"}]}
+            ]},
+            "expected": "contract/protocol violation"
+          },
+          {
+            "name": "empty-option-choices",
+            "capability": {"id": "example.operation", "revision": "r1", "options": [
+              {"key": "mode", "label": "Mode", "required": false, "choices": []}
+            ]},
+            "expected": "contract/protocol violation"
+          },
+          {
+            "name": "duplicate-choice-value",
+            "capability": {"id": "example.operation", "revision": "r1", "options": [
+              {"key": "mode", "label": "Mode", "required": true, "choices": [
+                {"value": "fast", "label": "Fast"},
+                {"value": "fast", "label": "Very Fast"}
+              ]}
+            ]},
+            "expected": "contract/protocol violation"
+          }
         ],
         "valid-configurations": [
           {"name": "required-mode-only-optional-language-omitted", "configuration": [{"key": "mode", "value": "fast"}], "expected": "valid"},

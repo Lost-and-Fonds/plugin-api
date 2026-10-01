@@ -262,6 +262,64 @@ if metadata_vector.get("receiver-validity-proves-producer-conformance") is not F
     raise SystemExit("plugin metadata vector must distinguish receiver validity from producer conformance")
 if metadata_vector.get("canonicalization-required") is not False or metadata_vector.get("core-interprets-domain-fields") is not False:
     raise SystemExit("plugin metadata vector must retain exact opaque transport semantics")
+
+
+def validate_capability_result(capabilities: list[dict[str, object]]) -> str:
+    capability_ids: set[str] = set()
+    for capability in capabilities:
+        capability_id = capability.get("id")
+        if not isinstance(capability_id, str) or capability_id in capability_ids:
+            return "contract/protocol violation"
+        capability_ids.add(capability_id)
+        options = capability.get("options")
+        if not isinstance(options, list):
+            return "contract/protocol violation"
+        option_keys: set[str] = set()
+        for option in options:
+            if not isinstance(option, dict):
+                return "contract/protocol violation"
+            key = option.get("key")
+            choices = option.get("choices")
+            if not isinstance(key, str) or key in option_keys or not isinstance(choices, list) or not choices:
+                return "contract/protocol violation"
+            option_keys.add(key)
+            choice_values: set[str] = set()
+            for choice in choices:
+                if not isinstance(choice, dict):
+                    return "contract/protocol violation"
+                value = choice.get("value")
+                if not isinstance(value, str) or value in choice_values:
+                    return "contract/protocol violation"
+                choice_values.add(value)
+    return "valid"
+
+
+def validate_configuration(options: list[dict[str, object]], selections: list[dict[str, object]]) -> str:
+    options_by_key: dict[str, dict[str, object]] = {}
+    for option in options:
+        key = option.get("key")
+        if not isinstance(key, str) or key in options_by_key:
+            return "invalid-configuration"
+        options_by_key[key] = option
+    selections_by_key: dict[str, str] = {}
+    for selection in selections:
+        key = selection.get("key")
+        value = selection.get("value")
+        if not isinstance(key, str) or not isinstance(value, str) or key in selections_by_key or key not in options_by_key:
+            return "invalid-configuration"
+        selections_by_key[key] = value
+    for key, option in options_by_key.items():
+        selected = selections_by_key.get(key)
+        if selected is None:
+            if option.get("required") is True:
+                return "invalid-configuration"
+            continue
+        choices = option.get("choices")
+        if not isinstance(choices, list) or not any(isinstance(choice, dict) and choice.get("value") == selected for choice in choices):
+            return "invalid-configuration"
+    return "valid"
+
+
 if shared_values["byte-stream"] != {
     "valid-data": {"ok": [0]}, "eof": {"ok": None}, "invalid-empty-data": {"ok": []}, "eof-sticky": True,
 } or shared_values["progress"] != {
@@ -270,31 +328,44 @@ if shared_values["byte-stream"] != {
     raise SystemExit("shared value semantic conformance vector is incomplete or inconsistent")
 enrichment_discovery = by_name["enrichment-capabilities-local-discovery"]
 capabilities = enrichment_discovery["response-result"]
-if set(enrichment_discovery["params"]) != {"context"} or len(capabilities) != 2 or capabilities[0] != {
-    "id": "example.fixed", "revision": "r1", "options": []
-} or capabilities[1].get("id") != "example.operation" or capabilities[1].get("revision") != "r1" or capabilities[1].get("options") != [
-    {"key": "mode", "label": "Mode", "required": True, "choices": [{"value": "fast", "label": "Fast"}, {"value": "accurate", "label": "Accurate"}]},
-    {"key": "language", "label": "Language", "required": False, "choices": [{"value": "auto", "label": "Automatic"}, {"value": "en", "label": "English"}]},
-] or "direct list WIT return" not in enrichment_discovery["meaning"] or "no typed lifecycle error wrapper" not in enrichment_discovery["meaning"] or enrichment_discovery["discovery-boundary"] != {
+if set(enrichment_discovery["params"]) != {"context"} or len(capabilities) != 2 or "direct list WIT return" not in enrichment_discovery["meaning"] or "no typed lifecycle error wrapper" not in enrichment_discovery["meaning"] or enrichment_discovery["discovery-boundary"] != {
     "credentials": False, "configuration": False, "host-callbacks": False
 }:
-    raise SystemExit("Enrichment capability discovery vector must show context-only direct-list discovery and valid unique choices")
+    raise SystemExit("Enrichment capability discovery vector must show context-only direct-list discovery without credentials, configuration, or callbacks")
+if validate_capability_result(capabilities) != "valid":
+    raise SystemExit("Enrichment representative discovery result must be a valid descriptor list")
+fixed_capability = next((capability for capability in capabilities if capability.get("id") == "example.fixed"), None)
+representative = next((capability for capability in capabilities if capability.get("id") == "example.operation"), None)
+if fixed_capability is None or fixed_capability.get("options") != [] or representative is None:
+    raise SystemExit("Enrichment valid discovery must include a fixed capability and representative configurable capability")
 uniqueness = enrichment_discovery.get("uniqueness-vectors", {})
-invalid_descriptors = {case.get("name"): case.get("expected") for case in uniqueness.get("invalid-descriptors", [])}
-if invalid_descriptors != {name: "contract/protocol violation" for name in ("duplicate-capability-id", "duplicate-option-key", "empty-option-choices", "duplicate-choice-value")}:
-    raise SystemExit("Enrichment invalid descriptor vectors must distinguish producer contract/protocol violations")
-valid_configurations = {case.get("name"): case.get("expected") for case in uniqueness.get("valid-configurations", [])}
-if valid_configurations != {"required-mode-only-optional-language-omitted": "valid", "required-and-optional-selected": "valid", "optional-only-empty": "valid", "fixed-capability-empty": "valid"}:
-    raise SystemExit("Enrichment valid caller configuration vectors are incomplete")
-invalid_configurations = {case.get("name"): case.get("expected") for case in uniqueness.get("invalid-configurations", [])}
-if invalid_configurations != {name: "invalid-configuration" for name in ("duplicate-identical", "duplicate-different", "unknown-option", "missing-required", "unsupported-choice", "extra-on-fixed-capability")}:
-    raise SystemExit("Enrichment invalid caller configuration vectors are incomplete")
+invalid_descriptor_cases = uniqueness.get("invalid-descriptors", [])
+expected_descriptor_names = {"duplicate-capability-id", "duplicate-option-key", "empty-option-choices", "duplicate-choice-value"}
+if {case.get("name") for case in invalid_descriptor_cases} != expected_descriptor_names:
+    raise SystemExit("Enrichment invalid descriptor fixture set is incomplete")
+for case in invalid_descriptor_cases:
+    descriptor_result = case.get("discovery-result")
+    if descriptor_result is None:
+        descriptor = case.get("capability")
+        descriptor_result = [descriptor] if isinstance(descriptor, dict) else []
+    computed = validate_capability_result(descriptor_result) if isinstance(descriptor_result, list) else "valid"
+    if computed != case.get("expected") or computed != "contract/protocol violation":
+        raise SystemExit(f"Enrichment descriptor fixture {case.get('name')} does not compute to its declared producer violation")
+valid_configuration_cases = uniqueness.get("valid-configurations", [])
+invalid_configuration_cases = uniqueness.get("invalid-configurations", [])
+if {case.get("name") for case in valid_configuration_cases} != {"required-mode-only-optional-language-omitted", "required-and-optional-selected", "optional-only-empty", "fixed-capability-empty"}:
+    raise SystemExit("Enrichment valid caller configuration fixture set is incomplete")
+if {case.get("name") for case in invalid_configuration_cases} != {"duplicate-identical", "duplicate-different", "unknown-option", "missing-required", "unsupported-choice", "extra-on-fixed-capability"}:
+    raise SystemExit("Enrichment invalid caller configuration fixture set is incomplete")
+for case in valid_configuration_cases + invalid_configuration_cases:
+    selected_options = case.get("options", representative["options"])
+    computed = validate_configuration(selected_options, case.get("configuration", []))
+    if computed != case.get("expected"):
+        raise SystemExit(f"Enrichment configuration fixture {case.get('name')} computes {computed!r}, expected {case.get('expected')!r}")
+if any(case.get("expected") != "valid" for case in valid_configuration_cases) or any(case.get("expected") != "invalid-configuration" for case in invalid_configuration_cases):
+    raise SystemExit("Enrichment configuration fixtures must declare the normative valid and invalid outcomes")
 if uniqueness.get("failure-boundary") != {"invalid-discovered-descriptor": "contract/protocol violation", "invalid-caller-selection": "plugin-error.invalid-configuration", "unknown-inapplicable-or-stale-identity": "plugin-error.unsupported"}:
     raise SystemExit("Enrichment vectors must distinguish descriptor, caller, and capability identity failures")
-for cases in (uniqueness["valid-configurations"], uniqueness["invalid-configurations"]):
-    for case in cases:
-        if case["name"] in {"duplicate-identical", "duplicate-different"} and len([selection for selection in case["configuration"] if selection["key"] == "mode"]) != 2:
-            raise SystemExit("Enrichment duplicate-selection vectors must contain repeated keys")
 response = by_name["lifecycle-response-result"]["response"]
 expected_error = {"error": {"tag": "failed", "value": {"message": "example failure", "retryable": False}}}
 if "error" in response or response.get("result") != expected_error:
