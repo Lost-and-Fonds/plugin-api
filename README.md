@@ -17,12 +17,12 @@ invocation-scoped WIT resource handles. The process launch and stdin/stdout/stde
 binding is specified in [`protocol/component-execution.md`](protocol/component-execution.md).
 Its conformance examples are in
 [`protocol/rpc-v1-vectors.json`](protocol/rpc-v1-vectors.json). Large byte
-streams use opaque host resources; each read returns at most a host-configured
-chunk as `list<u8>`, and writes append chunks no larger than the host-configured
-limit. Staged artifact authority, exact descriptor validation, writer states,
-and lifecycle-result adoption are normatively specified in
-[`protocol/staging.md`](protocol/staging.md). A whole large object is never an
-inline byte list on these streaming paths.
+streams use opaque host resources. Each encoded stream read/write message must
+fit the peer-advertised RPC receive-frame maximum; there is no separate hidden
+stream-chunk byte ceiling. Large objects are transferred across multiple bounded
+stream calls, never as one inline byte list on these paths. Staged artifact
+authority, exact descriptor validation, writer states, and lifecycle-result
+adoption are normatively specified in [`protocol/staging.md`](protocol/staging.md).
 
 The generated `schema/plugin-package.schema.json` defines one deployable
 package identity (`id` and `version`), its exact canonical WIT package identity
@@ -369,15 +369,13 @@ the pre-1.0 contract from 0.13.0 to 0.14.0; it does not change RPC framing,
 credential bindings, generic publication results, or shared staging.
 
 Contract 0.15 defines Collection Export as bounded, one-shot interchange. The
-collection entries and exported artifact bytes remain inline. Each host MUST
-configure and enforce a maximum serialized input-message size, maximum artifact
-`contents` byte size, and maximum serialized result-message size that fits its
-RPC transport. Message limits include all values and encoding overhead. This
-bounds entry count by encoded size without imposing an arbitrary universal
-count. The host rejects oversized input before plugin invocation and refuses
-oversized output, reporting either as the typed `limit-exceeded` outcome.
-Plugins cannot assume arbitrarily large inline lists. `limit-exceeded` is
-reserved for the host runtime; plugins must not use it for plugin failures.
+collection entries and exported artifact bytes remain inline, so complete
+requests and responses must fit the negotiated RPC frame maxima. This bounds
+entry count in practice without imposing a universal count; plugins cannot
+assume arbitrarily large inline lists. Hosts may separately enforce explicit
+Collection Export artifact/domain limits; those explicit limits use the
+host-reserved `limit-exceeded` outcome. RPC transport oversize itself is not
+normalized to `limit-exceeded`, and the plugin MUST NOT return that variant.
 
 Small OPML and similarly sized JSON/XML interchange documents fit this
 one-shot contract. Large podcast subscription catalogues, book/document

@@ -1089,6 +1089,28 @@ def verify_readme_current_contract() -> None:
         ("`publish(request, configuration, credentials)` is the complete publication lifecycle and the\nonly publication call.", "`prepare`, `publish`, `finalize` are current lifecycle calls. `publish(request, configuration, credentials)` remains the complete publication lifecycle and the\nonly publication call."),
         ("  receipts through `publication-reporter`; no local artifact is required.", "  receipts in inline destination metadata; no local artifact is required."),
     ))
+    expect_document_semantic_rejected("README collection transport", "STASHD_README", root / "README.md", (
+        ("Each encoded stream read/write message must", "Each stream message must fit a host-configured chunk limit instead of the peer-advertised RPC receive-frame maximum"),
+        ("there is no separate hidden\nstream-chunk byte ceiling", "the host enforces a hidden smaller encoded-message stream chunk ceiling"),
+        ("no separate hidden\nstream-chunk byte ceiling", "the host enforces a hidden smaller encoded-message stream chunk ceiling"),
+        ("requests and responses must fit the negotiated RPC frame maxima", "requests and responses must fit separate host-configured request-message and response-message limits"),
+        ("Hosts may separately enforce explicit\nCollection Export artifact/domain limits", "Transport oversize may use a limit-exceeded response instead of explicit\nCollection Export artifact/domain limits"),
+        ("RPC transport oversize itself is not\nnormalized to `limit-exceeded`", "RPC transport oversize itself is normalized to `limit-exceeded`"),
+    ))
+
+
+def verify_collection_export_transport_sensitivity() -> None:
+    root = Path(__file__).resolve().parents[1]
+    wit_path = root / "wit" / "collection-export.wit"
+    expect_document_semantic_rejected("Collection Export WIT transport", "STASHD_COLLECTION_EXPORT_WIT", wit_path, (
+        ("host-advertised RPC receive-frame maximum", "host-configured request-message maximum"),
+        ("plugin-advertised RPC receive-frame maximum", "host-configured response-message limit"),
+        ("hidden smaller request-message byte ceiling", "a host-configured request-message byte limit"),
+        ("separate hidden encoded-response ceiling", "a host-configured response-message ceiling"),
+        ("RPC frame-size failures are not\n        /// `limit-exceeded`", "RPC frame-size failures are\n        /// `limit-exceeded`"),
+        ("Transport oversize is not normalized to that lifecycle\n    /// error", "Transport oversize is normalized to that lifecycle\n    /// error"),
+        ("an explicit Collection Export\n        /// artifact/domain constraint is exceeded", "any transport or artifact limit\n        /// is exceeded"),
+    ))
 
 
 def verify_preservation_semantics() -> None:
@@ -1293,6 +1315,7 @@ verify_byte_range_semantics()
 verify_shared_value_semantics()
 verify_input_value_semantics()
 verify_readme_current_contract()
+verify_collection_export_transport_sensitivity()
 verify_enrichment_capability_semantics()
 verify_preservation_semantics()
 verify_broadcast_collection_semantics()
