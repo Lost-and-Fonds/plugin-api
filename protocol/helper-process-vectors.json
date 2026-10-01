@@ -4,6 +4,9 @@
     {"name": "stdout-only-live", "events": [{"output": {"channel": "stdout", "bytes_hex": "6869"}}, {"terminal": {"exited": 0}}]},
     {"name": "stderr-only-live", "events": [{"output": {"channel": "stderr", "bytes_hex": "7761726e"}}, {"terminal": {"exited": 0}}]},
     {"name": "interleaved-streams", "events": [{"output": {"channel": "stdout", "bytes_hex": "6f6e65"}}, {"output": {"channel": "stderr", "bytes_hex": "74776f"}}, {"output": {"channel": "stdout", "bytes_hex": "7468726565"}}, {"terminal": {"exited": 0}}]},
+    {"name": "single-large-write-split-to-fit-frame", "frame_max_bytes": 64, "logical_write_bytes_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f", "events": [{"output": {"channel": "stdout", "bytes_hex": "000102030405060708090a0b0c0d0e0f", "encoded_response_bytes": 48}}, {"output": {"channel": "stdout", "bytes_hex": "101112131415161718191a1b1c1d1e1f", "encoded_response_bytes": 48}}, {"output": {"channel": "stdout", "bytes_hex": "202122232425262728292a2b2c2d2e2f", "encoded_response_bytes": 48}}, {"output": {"channel": "stdout", "bytes_hex": "303132333435363738393a3b3c3d3e3f", "encoded_response_bytes": 48}}, {"terminal": {"exited": 0}}]},
+    {"name": "natural-exit-before-cancel", "race": ["exited", "cancel"], "terminal": {"exited": 0}, "cancel_result": "no-op"},
+    {"name": "cancel-before-natural-exit", "race": ["cancel-accepted", "natural-exit"], "terminal": "cancelled"},
     {"name": "arbitrary-cr-progress-bytes", "events": [{"output": {"channel": "stderr", "bytes_hex": "3130250d3230250d"}}, {"terminal": {"exited": 0}}]},
     {"name": "zero-exit-after-output", "events": [{"output": {"channel": "stdout", "bytes_hex": "7061796c6f6164"}}, {"terminal": {"exited": 0}}]},
     {"name": "nonzero-normal-exit", "events": [{"output": {"channel": "stderr", "bytes_hex": "6572726f72"}}, {"terminal": {"exited": 23}}]},
@@ -12,6 +15,13 @@
     {"name": "runtime-failure-retains-output", "events": [{"output": {"channel": "stderr", "bytes_hex": "63726173682d64657461696c"}}, {"terminal": {"failed": "runtime failure"}}]},
     {"name": "child-crash-retains-output", "events": [{"output": {"channel": "stdout", "bytes_hex": "6265666f72652d6372617368"}}, {"terminal": {"failed": "child/runtime failure"}}]}
   ],
+  "ownership": {
+    "start-helper-output": "owned transfer into helper-process",
+    "while-running": "helper-process owns writer; plugin cannot use it",
+    "normal-exit": "writer returned in exited.output for finish()",
+    "abnormal-or-drop": "writer discarded by host and not returned",
+    "start-failure-after-request-acceptance": "input and output remain consumed and are cleaned up"
+  },
   "lifecycle": {
     "terminal_event_count": 1,
     "events_after_terminal": 0,
@@ -32,8 +42,16 @@
   "staged_stdout": {
     "writer_receives_all_stdout_payload_bytes": true,
     "stdout_payload_bytes_in_output_events": false,
+    "events": [{"stdout-activity": 16}, {"output": {"channel": "stderr", "bytes_hex": "64696167"}}, {"stdout-activity": 1024}, {"stdout-activity": 1073741824}, {"terminal": {"exited": {"code": 0, "output": "writer-1"}}}],
     "stdout_activity_event": {"stdout-activity": 1073741824},
-    "stdout_activity_is_cumulative_and_live": true,
+    "activity_counts": [16, 1024, 1073741824],
+    "activity_counts_monotonic_cumulative": true,
+    "activity_may_be_coalesced": true,
+    "final_activity_before_terminal_catches_writer_accepted_bytes": true,
     "stderr_diagnostic_events_retained": true
+  },
+  "unstaged_stdout": {
+    "stdout_as_live_byte_output_events": true,
+    "stdout_activity_must_not_appear": true
   }
 }

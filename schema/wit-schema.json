@@ -2346,11 +2346,8 @@
                   "type": {
                     "kind": "option",
                     "value": {
-                      "kind": "borrow",
-                      "value": {
-                        "kind": "named",
-                        "name": "staged-writer"
-                      }
+                      "kind": "named",
+                      "name": "staged-writer"
                     }
                   }
                 },
@@ -2405,6 +2402,27 @@
                   "type": {
                     "kind": "scalar",
                     "name": "string"
+                  }
+                }
+              ]
+            },
+            "helper-exit": {
+              "fields": [
+                {
+                  "name": "code",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "s32"
+                  }
+                },
+                {
+                  "name": "output",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "staged-writer"
+                    }
                   }
                 }
               ]
@@ -2734,8 +2752,8 @@
                 {
                   "name": "exited",
                   "type": {
-                    "kind": "scalar",
-                    "name": "s32"
+                    "kind": "named",
+                    "name": "helper-exit"
                   }
                 },
                 {

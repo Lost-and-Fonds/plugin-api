@@ -123,7 +123,7 @@ expected = {
     "generic-http-method-tokens",
     "conditional-range-authenticated-stream",
     "redirect-under-host-policy",
-    "borrowed-helper-output",
+    "start-helper-owned-writer-transfer",
     "staged-writer-finish-canonical-descriptor",
     "reopen-exact-canonical-staged-artifact",
     "staged-writer-second-finish-failed",
@@ -155,6 +155,17 @@ expected = {
 }
 if set(by_name) != expected:
     raise SystemExit("RPC v1 conformance vector set is incomplete or unexpected")
+if any("run-helper" in json.dumps(vector) or "borrow<staged-writer>" in json.dumps(vector) for vector in vectors.get("vectors", [])):
+    raise SystemExit("RPC v1 vectors retain stale helper method or borrowed writer semantics")
+if "run-helper" in spec or "borrow<staged-writer>" in spec:
+    raise SystemExit("RPC v1 normative text retains stale helper method or borrowed writer semantics")
+helper_transfer = by_name["start-helper-owned-writer-transfer"]
+if helper_transfer.get("ownership") != "output is option<staged-writer>; accepted request transfers writer ownership to helper-process" or "finish" not in helper_transfer.get("normal-exit", "") or "discards" not in helper_transfer.get("abnormal-or-drop", ""):
+    raise SystemExit("helper process vectors do not specify output writer ownership across the process lifetime")
+helper_spec = (spec_path.parent / "helper-process.md").read_text(encoding="utf-8")
+for stale in ("run-helper", "borrow<staged-writer>"):
+    if stale in helper_spec or stale in (spec_path.parent.parent / "README.md").read_text(encoding="utf-8"):
+        raise SystemExit("current helper documentation retains stale method or borrowed-writer semantics")
 staged_finish = by_name["staged-writer-finish-canonical-descriptor"]
 if staged_finish["response-result"]["ok"] != {
     "reference": "opaque-stage-1",

@@ -167,8 +167,13 @@ interface io-host {
         bytes: list<u8>,
     }
 
+    record helper-exit {
+        code: s32,
+        output: option<staged-writer>,
+    }
+
     variant helper-terminal {
-        exited(s32),
+        exited(helper-exit),
         cancelled,
         timed-out,
         failed(string),
@@ -235,13 +240,19 @@ interface io-host {
     /// consumer cannot fill child pipes. Events expose non-empty arbitrary byte
     /// chunks in host-observed delivery order; no cross-stream OS write order
     /// is implied. Without `output`, stdout and stderr are delivered as byte
-    /// events. With `output`, stdout bytes go only to the staged writer and are
-    /// not duplicated in byte events; the host emits cumulative stdout byte
-    /// activity events instead. Stderr remains fully available as byte events.
-    /// Credentials remain host-mediated,
+    /// events. With an owned `output` writer, the process owns it until
+    /// termination. On normal exit, terminal returns its valid writer to the
+    /// caller; on cancellation, timeout, failure, drop, or invocation end, the
+    /// host discards it. Stdout bytes go only to that writer, not byte events;
+    /// cumulative stdout byte activity events remain live. Stderr remains fully
+    /// available as byte events. Credentials remain host-mediated,
     /// input is streamed to stdin, and no filesystem path is exposed.
-    /// All accepted output precedes exactly one terminal event. No event follows
-    /// it. EOF from `next-event` follows terminal consumption. Dropping the
+    /// All accepted output precedes exactly one terminal event. Each encoded
+    /// next-event response fits the plugin-advertised receive-frame maximum;
+    /// larger logical writes split into ordered chunks without a smaller hidden
+    /// helper-output ceiling or loss/reordering within each stream. Cancellation
+    /// is idempotent: the first terminal condition determined wins, and a later
+    /// cancel cannot rewrite it. EOF follows terminal consumption. Dropping the
     /// resource or ending the invocation terminates/reaps the child and cleans
     /// up its streams. Process existence alone is not meaningful liveness.
     resource helper-process {
@@ -250,7 +261,9 @@ interface io-host {
     }
 
     /// Starts a host-approved helper. Failure to start is a typed host/runtime
-    /// failure returned here. Child completion, timeout, cancellation and
-    /// runtime failure are reported as terminal events by the process resource.
-    start-helper: func(name: string, args: list<string>, input: option<byte-stream>, output: option<borrow<staged-writer>>, credentials: list<credential-binding>) -> result<helper-process, helper-error>;
+    /// failure returned here. On accepted calls, `input` and `output` are
+    /// transferred to the host. The process owns an output writer until a
+    /// normal-exit terminal transfers it back. Start failure consumes and
+    /// cleans up transferred resources. Credentials remain host-mediated.
+    start-helper: func(name: string, args: list<string>, input: option<byte-stream>, output: option<staged-writer>, credentials: list<credential-binding>) -> result<helper-process, helper-error>;
 }
