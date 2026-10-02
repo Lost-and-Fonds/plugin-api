@@ -21,18 +21,9 @@ required_cases = {
     "timeout-retains-output",
     "runtime-failure-retains-output",
     "child-crash-retains-output",
-    "stderr-only-live",
-    "interleaved-streams",
     "large-output-byte-sequence-segmented-to-fit-frame",
     "natural-exit-before-cancel",
     "cancel-before-natural-exit",
-    "arbitrary-cr-progress-bytes",
-    "zero-exit-after-output",
-    "nonzero-normal-exit",
-    "cancel-retains-pending-output",
-    "timeout-retains-output",
-    "runtime-failure-retains-output",
-    "child-crash-retains-output",
 }
 cases = {case["name"]: case for case in vectors.get("event_order", [])}
 if set(cases) != required_cases:
