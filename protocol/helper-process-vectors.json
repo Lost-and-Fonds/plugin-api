@@ -1,0 +1,79 @@
+{
+  "contract": "stashd:plugin@0.18.0",
+  "event_order": [
+    {"name": "stdout-only-live", "events": [{"output": {"channel": "stdout", "bytes_hex": "6869"}}, {"terminal": {"exited": {"code": 0, "output": null}}}]},
+    {"name": "stderr-only-live", "events": [{"output": {"channel": "stderr", "bytes_hex": "7761726e"}}, {"terminal": {"exited": {"code": 0, "output": null}}}]},
+    {"name": "interleaved-streams", "events": [{"output": {"channel": "stdout", "bytes_hex": "6f6e65"}}, {"output": {"channel": "stderr", "bytes_hex": "74776f"}}, {"output": {"channel": "stdout", "bytes_hex": "7468726565"}}, {"terminal": {"exited": {"code": 0, "output": null}}}]},
+    {"name": "large-output-byte-sequence-segmented-to-fit-frame", "frame_max_bytes": 4096, "logical_output_byte_count": 5120, "logical_output_pattern": "bytes 0x00 through 0xff repeated 20 times", "events": [
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"output": {"channel": "stdout", "bytes_pattern": "bytes 0x00 through 0xff repeated 1 times"}},
+      {"terminal": {"exited": {"code": 0, "output": null}}}
+    ]},
+    {"name": "natural-exit-before-cancel", "race": ["exited", "cancel"], "terminal": {"exited": {"code": 0, "output": null}}, "cancel_result": "no-op"},
+    {"name": "cancel-before-natural-exit", "race": ["cancel-accepted", "natural-exit"], "terminal": "cancelled", "cancel_result": "accepted"},
+    {"name": "arbitrary-cr-progress-bytes", "events": [{"output": {"channel": "stderr", "bytes_hex": "3130250d3230250d"}}, {"terminal": {"exited": {"code": 0, "output": null}}}]},
+    {"name": "zero-exit-after-output", "events": [{"output": {"channel": "stdout", "bytes_hex": "7061796c6f6164"}}, {"terminal": {"exited": {"code": 0, "output": null}}}]},
+    {"name": "nonzero-normal-exit", "events": [{"output": {"channel": "stderr", "bytes_hex": "6572726f72"}}, {"terminal": {"exited": {"code": 23, "output": null}}}]},
+    {"name": "cancel-retains-pending-output", "events": [{"output": {"channel": "stderr", "bytes_hex": "70656e64696e67"}}, {"terminal": "cancelled"}]},
+    {"name": "timeout-retains-output", "events": [{"output": {"channel": "stdout", "bytes_hex": "776f726b"}}, {"terminal": "timed-out"}]},
+    {"name": "runtime-failure-retains-output", "events": [{"output": {"channel": "stderr", "bytes_hex": "63726173682d64657461696c"}}, {"terminal": {"failed": "runtime failure"}}]},
+    {"name": "child-crash-retains-output", "events": [{"output": {"channel": "stdout", "bytes_hex": "6265666f72652d6372617368"}}, {"terminal": {"failed": "child/runtime failure"}}]}
+  ],
+  "ownership": {
+    "start-helper-output": "owned transfer into helper-process",
+    "while-running": "helper-process owns writer; plugin cannot use it",
+    "normal-exit": "writer returned in exited.output for finish()",
+    "abnormal-or-drop": "writer discarded by host and not returned",
+    "start-failure-after-request-acceptance": "input and output remain consumed and are cleaned up"
+  },
+  "lifecycle": {
+    "terminal_event_count": 1,
+    "events_after_terminal": 0,
+    "eof_after_terminal_consumed": true,
+    "dropping_live_resource_terminates_and_reaps_child": true,
+    "invocation_end_terminates_and_reaps_child": true,
+    "start_failure": {"returned_as": "helper-error.failed", "child_exit": false}
+  },
+  "slow_consumer": {
+    "child_output_bytes": 1073741824,
+    "consumer_delay_seconds": 3600,
+    "stdout_and_stderr_drained_independently_of_consumer": true,
+    "bounded_buffering_or_spooling_required": true,
+    "os_pipe_may_block_child": false,
+    "silent_truncation_allowed": false,
+    "accepted_bytes_delivered_before_terminal": true
+  },
+  "staged_stdout": {
+    "writer_receives_all_stdout_payload_bytes": true,
+    "stdout_payload_bytes_in_output_events": false,
+    "events": [{"stdout-activity": 16}, {"output": {"channel": "stderr", "bytes_hex": "64696167"}}, {"stdout-activity": 1024}, {"stdout-activity": 1073741824}, {"terminal": {"exited": {"code": 0, "output": {"$resource": {"type": "stashd:plugin/io-host.staged-writer", "id": "writer-1"}}}}}],
+    "stdout_activity_event": {"stdout-activity": 1073741824},
+    "activity_counts": [16, 1024, 1073741824],
+    "activity_counts_monotonic_cumulative": true,
+    "activity_may_be_coalesced": true,
+    "final_activity_before_terminal_catches_writer_accepted_bytes": true,
+    "stderr_diagnostic_events_retained": true
+  },
+  "unstaged_stdout": {
+    "stdout_as_live_byte_output_events": true,
+    "stdout_activity_must_not_appear": true
+  }
+}

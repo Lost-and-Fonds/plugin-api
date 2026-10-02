@@ -768,7 +768,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.17.0",
+      "package": "stashd:plugin@0.18.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -1365,7 +1365,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.17.0",
+      "package": "stashd:plugin@0.18.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -1802,7 +1802,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.17.0",
+      "package": "stashd:plugin@0.18.0",
       "worlds": {
         "enrichment-world": {
           "exports": [
@@ -2052,7 +2052,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.17.0",
+      "package": "stashd:plugin@0.18.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2255,7 +2255,14 @@
           }
         },
         "io-host": {
-          "enums": {},
+          "enums": {
+            "helper-output-stream": {
+              "values": [
+                "stdout",
+                "stderr"
+              ]
+            }
+          },
           "functions": [
             {
               "arguments": [
@@ -2339,11 +2346,8 @@
                   "type": {
                     "kind": "option",
                     "value": {
-                      "kind": "borrow",
-                      "value": {
-                        "kind": "named",
-                        "name": "staged-writer"
-                      }
+                      "kind": "named",
+                      "name": "staged-writer"
                     }
                   }
                 },
@@ -2358,7 +2362,7 @@
                   }
                 }
               ],
-              "name": "run-helper",
+              "name": "start-helper",
               "result": {
                 "error": {
                   "kind": "named",
@@ -2367,7 +2371,7 @@
                 "kind": "result",
                 "ok": {
                   "kind": "named",
-                  "name": "helper-result"
+                  "name": "helper-process"
                 }
               }
             }
@@ -2402,27 +2406,44 @@
                 }
               ]
             },
-            "helper-result": {
+            "helper-exit": {
               "fields": [
                 {
-                  "name": "exit-code",
+                  "name": "code",
                   "type": {
                     "kind": "scalar",
                     "name": "s32"
                   }
                 },
                 {
-                  "name": "stdout",
+                  "name": "output",
                   "type": {
-                    "kind": "scalar",
-                    "name": "string"
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "staged-writer"
+                    }
+                  }
+                }
+              ]
+            },
+            "helper-output": {
+              "fields": [
+                {
+                  "name": "channel",
+                  "type": {
+                    "kind": "named",
+                    "name": "helper-output-stream"
                   }
                 },
                 {
-                  "name": "stderr",
+                  "name": "bytes",
                   "type": {
-                    "kind": "scalar",
-                    "name": "string"
+                    "kind": "list",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "u8"
+                    }
                   }
                 }
               ]
@@ -2639,6 +2660,27 @@
                 }
               ],
               "name": "staging-area"
+            },
+            {
+              "functions": [
+                {
+                  "arguments": [],
+                  "name": "next-event",
+                  "result": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "named",
+                      "name": "helper-event"
+                    }
+                  }
+                },
+                {
+                  "arguments": [],
+                  "name": "cancel",
+                  "result": null
+                }
+              ],
+              "name": "helper-process"
             }
           ],
           "uses": {},
@@ -2670,6 +2712,57 @@
                     "kind": "scalar",
                     "name": "string"
                   }
+                },
+                {
+                  "name": "failed",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
+            },
+            "helper-event": {
+              "values": [
+                {
+                  "name": "output",
+                  "type": {
+                    "kind": "named",
+                    "name": "helper-output"
+                  }
+                },
+                {
+                  "name": "stdout-activity",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "u64"
+                  }
+                },
+                {
+                  "name": "terminal",
+                  "type": {
+                    "kind": "named",
+                    "name": "helper-terminal"
+                  }
+                }
+              ]
+            },
+            "helper-terminal": {
+              "values": [
+                {
+                  "name": "exited",
+                  "type": {
+                    "kind": "named",
+                    "name": "helper-exit"
+                  }
+                },
+                {
+                  "name": "cancelled",
+                  "type": null
+                },
+                {
+                  "name": "timed-out",
+                  "type": null
                 },
                 {
                   "name": "failed",
@@ -2810,10 +2903,10 @@
           "variants": {}
         }
       },
-      "package": "stashd:plugin@0.17.0",
+      "package": "stashd:plugin@0.18.0",
       "worlds": {}
     }
   ],
-  "package": "stashd:plugin@0.17.0",
+  "package": "stashd:plugin@0.18.0",
   "schema_version": 1
 }

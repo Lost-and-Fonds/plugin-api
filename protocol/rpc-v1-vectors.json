@@ -1,5 +1,5 @@
 {
-  "package": "stashd:plugin@0.17.0",
+  "package": "stashd:plugin@0.18.0",
   "vectors": [
     {
       "name": "owned-byte-stream-handle",
@@ -363,22 +363,20 @@
       "state": "FINISHED is terminal; a second finish does not create another staged artifact"
     },
     {
-      "name": "borrowed-helper-output",
-      "method": "stashd:plugin/io-host.run-helper",
+      "name": "start-helper-owned-writer-transfer",
+      "method": "stashd:plugin/io-host.start-helper",
       "params": {
         "name": "formatter",
         "args": [],
         "input": null,
-        "output": {
-          "$resource": {
-            "type": "stashd:plugin/io-host.staged-writer",
-            "id": "opaque-writer"
-          }
-        },
+        "output": {"$resource": {"type": "stashd:plugin/io-host.staged-writer", "id": "opaque-writer"}},
         "credentials": []
       },
-      "ownership": "output is option<borrow<staged-writer>>; call does not consume opaque-writer",
-      "after-response": "the borrow expires; the plugin retains the writer and the host cannot use or drop this handle"
+      "ownership": "output is option<staged-writer>; accepted request transfers writer ownership to helper-process",
+      "while-running": "plugin cannot use the writer; process owns it",
+      "normal-exit": "terminal returns still-valid writer handle for finish",
+      "abnormal-or-drop": "host discards writer and does not return it",
+      "start-failure-after-accepted-frame": "transferred input and output remain consumed and host-cleaned"
     },
     {
       "name": "stream-read-chunk",

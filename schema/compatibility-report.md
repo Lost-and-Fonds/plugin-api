@@ -15,7 +15,7 @@ This file is generated from the active WIT files; it is not a second contract.
 | `wit/io.wit` | `progress-host` | 1 | 0 | 0 | 0 | 1 |
 | `wit/io.wit` | `logging-host` | 0 | 0 | 0 | 0 | 1 |
 | `wit/io.wit` | `http-host` | 3 | 1 | 0 | 1 | 1 |
-| `wit/io.wit` | `io-host` | 6 | 3 | 0 | 3 | 3 |
+| `wit/io.wit` | `io-host` | 7 | 5 | 1 | 4 | 3 |
 
 ## Component worlds
 

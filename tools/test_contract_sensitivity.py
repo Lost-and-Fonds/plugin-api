@@ -181,8 +181,19 @@ def remove_world_io_import(candidate: dict, filename: str, world_name: str) -> N
 
 
 def remove_helper_staging_capability(candidate: dict) -> None:
-    helper = next(function for function in interface(candidate, "wit/io.wit", "io-host")["functions"] if function["name"] == "run-helper")
+    helper = next(function for function in interface(candidate, "wit/io.wit", "io-host")["functions"] if function["name"] == "start-helper")
     helper["arguments"] = [argument for argument in helper["arguments"] if argument["name"] != "output"]
+
+
+def borrow_helper_staging_writer(candidate: dict) -> None:
+    helper = next(function for function in interface(candidate, "wit/io.wit", "io-host")["functions"] if function["name"] == "start-helper")
+    output = next(argument for argument in helper["arguments"] if argument["name"] == "output")
+    output["type"] = {"kind": "option", "value": {"kind": "borrow", "value": {"kind": "named", "name": "staged-writer"}}}
+
+
+def remove_helper_exit_writer_return(candidate: dict) -> None:
+    exit_record = interface(candidate, "wit/io.wit", "io-host")["records"]["helper-exit"]
+    exit_record["fields"] = [field for field in exit_record["fields"] if field["name"] != "output"]
 
 
 def remove_broadcast_asset_stream(candidate: dict) -> None:
@@ -191,7 +202,7 @@ def remove_broadcast_asset_stream(candidate: dict) -> None:
 
 
 def remove_helper_input(candidate: dict) -> None:
-    helper = next(function for function in interface(candidate, "wit/io.wit", "io-host")["functions"] if function["name"] == "run-helper")
+    helper = next(function for function in interface(candidate, "wit/io.wit", "io-host")["functions"] if function["name"] == "start-helper")
     helper["arguments"] = [argument for argument in helper["arguments"] if argument["name"] != "input"]
 
 
@@ -423,7 +434,7 @@ def remove_early_credential_access(candidate: dict) -> None:
 def remove_helper_credential_mediation(candidate: dict) -> None:
     helper = next(
         function for function in interface(candidate, "wit/io.wit", "io-host")["functions"]
-        if function["name"] == "run-helper"
+        if function["name"] == "start-helper"
     )
     helper["arguments"] = [argument for argument in helper["arguments"] if argument["name"] != "credentials"]
 
@@ -730,6 +741,8 @@ expect_rejected("inline-only HTTP request body", inline_http_body)
 expect_rejected("inline-only HTTP response body", inline_broadcast_http_body)
 expect_rejected("missing staged output writer", remove_staged_writer)
 expect_rejected("helper without explicit staging capability", remove_helper_staging_capability)
+expect_rejected("helper retains borrowed staged writer", borrow_helper_staging_writer)
+expect_rejected("normal helper exit does not return staged writer", remove_helper_exit_writer_return)
 expect_rejected("host path exposed by staging", leak_host_path_into_staging)
 expect_rejected("Input without the shared I/O import", lambda candidate: remove_world_io_import(candidate, "wit/input.wit", "input-world"))
 expect_rejected("Enrichment without the shared I/O import", lambda candidate: remove_world_io_import(candidate, "wit/enrichment.wit", "enrichment-world"))

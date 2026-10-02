@@ -9,11 +9,11 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.17.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.18.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and Collection Export.
-Contract `stashd:plugin@0.17.0` is the frozen SDK/runtime migration target
-established by final whole-contract checkpoint #32. Subsequent incompatible
-contract changes require a new exact package identity.
+Version 0.18.0 adds the live helper-process resource and byte-event contract in
+[`protocol/helper-process.md`](protocol/helper-process.md). Subsequent
+incompatible contract changes require a new exact package identity.
 [RPC v1](protocol/rpc-v1.md) is the canonical wire specification, including
 framing, exact JSON value encodings, re-entrant call correlation, and
 invocation-scoped WIT resource handles. The process launch and stdin/stdout/stderr
@@ -123,10 +123,10 @@ opens bounded reads from an opaque preserved reference as the shared
 `io-host.byte-stream`; it never returns a Vault or filesystem path. The shared
 HTTP request body is absent or an owned byte stream, so it can carry preserved
 Asset bytes or a completed staged artifact reopened with
-`io-host.open-staged-artifact`. `run-helper` can likewise take an owned stream
-for helper stdin while retaining its optional staged-writer stdout. All of
-these paths use the canonical byte-stream and preserve chunked transport for
-large objects.
+`io-host.open-staged-artifact`. `io-host.start-helper` can likewise take an
+owned stream for helper stdin and optionally take an owned staged writer for
+stdout; writer ownership follows the helper process lifetime. All of these paths
+use the canonical byte-stream and preserve chunked transport for large objects.
 
 Opening a missing or unauthorized Asset fails with the existing `stream-error`;
 read failures use that same typed error and terminate the stream. HTTP reports a
@@ -420,7 +420,7 @@ host-managed streams and staging; it is not a substitute Collection Export
 entry model.
 
 Inputs can select the same reference on `http-request`; the HTTP host applies
-it without exposing secret material to the plugin. `run-helper` accepts the
+it without exposing secret material to the plugin. `start-helper` accepts the
 same bindings and supplies selected credentials to the helper as named
 environment variables without putting them in helper arguments or plugin
 memory. For protocol clients that cannot use host-mediated HTTP or helper

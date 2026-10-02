@@ -308,13 +308,16 @@ bounded unsigned-byte arrays and calls `finish`. The result contains a
 staging-area handles. Invocation end discards any unfinished writer and any
 completed artifact not accepted from a successful lifecycle result.
 
-### Borrowed helper output
+### Helper process and staged output ownership
 
-The plugin owns a `staged-writer` and passes its handle at the
-`option<borrow<staged-writer>>` position in `run-helper`. The host uses it only
-for that helper call. When the response arrives, the borrow expires and the
-plugin still owns the writer and can call `finish`; the host cannot retain or
-drop the borrowed writer.
+The plugin transfers an optional owned `staged-writer` in `start-helper`. The
+host owns it while the helper process is live. A normal `exited` terminal event
+returns the valid writer in its payload so the plugin can call `finish`; an
+abnormal terminal outcome, process drop, or invocation cleanup discards it
+without returning a handle. Accepted `start-helper` calls consume transferred
+input and output even if startup then fails. See
+[`helper-process.md`](helper-process.md) for event, draining, cancellation, and
+output semantics.
 
 ### Raw Input credential
 
@@ -353,7 +356,9 @@ as opaque invocation-scoped references, but left their actual representation,
 correlation, ownership and lifecycle unspecified. This document makes those
 unspecified semantics precise without changing a previously specified wire
 value or WIT shape. The HTTP method model established `stashd:plugin@0.16.0` as the canonical
-identity at that stage. Final whole-contract checkpoint #32 freezes the
+identity at that stage. Final whole-contract checkpoint #32 froze the
 subsequently hardened WIT/wire contract as `stashd:plugin@0.17.0`, the exact
-SDK/runtime migration target. Subsequent incompatible contract changes require
-another explicit package identity change.
+SDK/runtime migration target at that time. Issue #57 exposed a contract-level
+process-observability gap; `stashd:plugin@0.18.0` supersedes that frozen target
+with the live helper-process contract. Subsequent incompatible contract changes
+require another explicit package identity change.

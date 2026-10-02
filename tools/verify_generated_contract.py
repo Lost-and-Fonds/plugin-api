@@ -225,7 +225,7 @@ if any(term not in package_document for term in component_identity_requirements)
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
-expected_package = "stashd:plugin@0.17.0"
+expected_package = "stashd:plugin@0.18.0"
 if len(packages) != 1 or None in packages or packages != {schema["package"]} or schema["package"] != expected_package:
     raise SystemExit("WIT package identity mismatch")
 
@@ -841,7 +841,7 @@ if not {"authentication", "unavailable", "failed"} <= {
 }:
     raise SystemExit("Broadcast must retain authentication and ordinary service failure outcomes")
 
-helper = next((function for function in io_host.get("functions", []) if function["name"] == "run-helper"), None)
+helper = next((function for function in io_host.get("functions", []) if function["name"] == "start-helper"), None)
 helper_credentials = next((argument for argument in helper["arguments"] if argument["name"] == "credentials"), None) if helper else None
 if helper_credentials is None or helper_credentials["type"] != {"kind": "list", "value": credential_binding}:
     raise SystemExit("helpers must be able to consume the same credentials through host mediation")
@@ -1047,13 +1047,52 @@ for interface_name in ("input-plugin", "broadcast-plugin", "enrichment-plugin", 
     if "plugin-types" not in worlds[owning_world]["imports"]:
         raise SystemExit(f"{owning_world} must import the shared plugin value types")
 
-helper = next((function for function in io_host.get("functions", []) if function["name"] == "run-helper"), None)
+helper = next((function for function in io_host.get("functions", []) if function["name"] == "start-helper"), None)
 output_argument = next((argument for argument in helper.get("arguments", []) if argument["name"] == "output"), None) if helper else None
 if output_argument is None or output_argument["type"] != {
     "kind": "option",
-    "value": {"kind": "borrow", "value": {"kind": "named", "name": "staged-writer"}},
+    "value": {"kind": "named", "name": "staged-writer"},
 }:
-    raise SystemExit("helper output must have an explicit staged-writer boundary")
+    raise SystemExit("helper output must be an owned staged-writer transfer")
+helper_spec = (repo_root / "protocol" / "helper-process.md").read_text(encoding="utf-8")
+for phrase in (
+    "complete encoded `next-event` response MUST fit the plugin-advertised receive-frame maximum",
+    "no smaller hidden helper-output chunk ceiling applies",
+    "first-terminal-condition-wins",
+    "Counts MUST be monotonic",
+    "MUST NOT appear as `output(stdout, ...)`",
+    "`stdout-activity` MUST NOT appear",
+    "writer is returned in the `exited` terminal payload",
+    "it is discarded and not returned",
+):
+    if phrase not in helper_spec:
+        raise SystemExit(f"helper process contract is missing: {phrase}")
+helper_resource = next((resource for resource in io_host.get("resources", []) if resource["name"] == "helper-process"), None)
+helper_methods = {function["name"]: function for function in helper_resource["functions"]} if helper_resource else {}
+if set(helper_methods) != {"next-event", "cancel"}:
+    raise SystemExit("helper process must expose event consumption and explicit cancellation")
+if helper_methods["next-event"].get("result") != {"kind": "option", "value": {"kind": "named", "name": "helper-event"}}:
+    raise SystemExit("helper event consumption must terminate only after terminal event consumption")
+start_output = next((argument for argument in helper.get("arguments", []) if argument["name"] == "output"), None) if helper else None
+if start_output is None or start_output["type"] != {"kind": "option", "value": {"kind": "named", "name": "staged-writer"}}:
+    raise SystemExit("start-helper must transfer an owned staged-writer, not retain a borrow")
+if "run-helper" in (repo_root / "README.md").read_text(encoding="utf-8") or "borrow<staged-writer>" in (repo_root / "protocol/rpc-v1.md").read_text(encoding="utf-8"):
+    raise SystemExit("current helper documentation retains stale method or borrowed-writer semantics")
+exit_payload = next((value for value in io_host.get("variants", {}).get("helper-terminal", {}).get("values", []) if value["name"] == "exited"), {}).get("type")
+if exit_payload != {"kind": "named", "name": "helper-exit"} or {field["name"] for field in io_host.get("records", {}).get("helper-exit", {}).get("fields", [])} != {"code", "output"}:
+    raise SystemExit("normal helper exit must return the exit code and optional owned writer")
+helper_events = {value["name"] for value in io_host.get("variants", {}).get("helper-event", {}).get("values", [])}
+if helper_events != {"output", "stdout-activity", "terminal"}:
+    raise SystemExit("helper event stream must include output, staged stdout activity, and terminal events")
+if next(
+    (value for value in io_host.get("variants", {}).get("helper-event", {}).get("values", []) if value["name"] == "stdout-activity"),
+    {},
+).get("type") != {"kind": "scalar", "name": "u64"}:
+    raise SystemExit("staged stdout activity must expose a cumulative byte count")
+if {value["name"] for value in io_host.get("variants", {}).get("helper-terminal", {}).get("values", [])} != {"exited", "cancelled", "timed-out", "failed"}:
+    raise SystemExit("helper terminal outcomes must distinguish exit, cancellation, timeout, and host failure")
+if set(io_host.get("enums", {}).get("helper-output-stream", {}).get("values", [])) != {"stdout", "stderr"}:
+    raise SystemExit("helper output events must distinguish stdout and stderr")
 for filename in ("wit/io.wit", "wit/input.wit", "wit/enrichment.wit", "wit/broadcast.wit"):
     contract = next(item for item in contracts if item["file"] == filename)
     for interface in contract["interfaces"].values():
