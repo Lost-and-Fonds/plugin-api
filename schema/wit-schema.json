@@ -94,12 +94,12 @@
                   }
                 },
                 {
-                  "name": "delegation",
+                  "name": "source",
                   "type": {
                     "kind": "option",
                     "value": {
                       "kind": "named",
-                      "name": "input-delegation"
+                      "name": "source"
                     }
                   }
                 },
@@ -175,17 +175,6 @@
                 }
               ]
             },
-            "input-delegation": {
-              "fields": [
-                {
-                  "name": "reference",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                }
-              ]
-            },
             "outcome-diagnostic": {
               "fields": [
                 {
@@ -203,6 +192,48 @@
                       "kind": "named",
                       "name": "plugin-metadata"
                     }
+                  }
+                }
+              ]
+            },
+            "source": {
+              "fields": [
+                {
+                  "name": "reference",
+                  "type": {
+                    "kind": "option",
+                    "value": {
+                      "kind": "scalar",
+                      "name": "string"
+                    }
+                  }
+                },
+                {
+                  "name": "values",
+                  "type": {
+                    "kind": "list",
+                    "value": {
+                      "kind": "named",
+                      "name": "source-value"
+                    }
+                  }
+                }
+              ]
+            },
+            "source-value": {
+              "fields": [
+                {
+                  "name": "key",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "value",
+                  "type": {
+                    "kind": "named",
+                    "name": "option-value"
                   }
                 }
               ]
@@ -303,6 +334,31 @@
                   }
                 }
               ]
+            },
+            "option-value": {
+              "values": [
+                {
+                  "name": "boolean",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "bool"
+                  }
+                },
+                {
+                  "name": "number",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "s64"
+                  }
+                },
+                {
+                  "name": "text",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "string"
+                  }
+                }
+              ]
             }
           }
         },
@@ -321,11 +377,24 @@
                 {
                   "name": "source",
                   "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "source-value"
-                    }
+                    "kind": "named",
+                    "name": "source"
+                  }
+                }
+              ],
+              "name": "can-resolve",
+              "result": {
+                "kind": "scalar",
+                "name": "bool"
+              }
+            },
+            {
+              "arguments": [
+                {
+                  "name": "source",
+                  "type": {
+                    "kind": "named",
+                    "name": "source"
                   }
                 },
                 {
@@ -340,39 +409,6 @@
                 }
               ],
               "name": "resolve",
-              "result": {
-                "error": {
-                  "kind": "named",
-                  "name": "plugin-error"
-                },
-                "kind": "result",
-                "ok": {
-                  "kind": "named",
-                  "name": "resolved-input"
-                }
-              }
-            },
-            {
-              "arguments": [
-                {
-                  "name": "delegation",
-                  "type": {
-                    "kind": "named",
-                    "name": "input-delegation"
-                  }
-                },
-                {
-                  "name": "credentials",
-                  "type": {
-                    "kind": "list",
-                    "value": {
-                      "kind": "named",
-                      "name": "credential-binding"
-                    }
-                  }
-                }
-              ],
-              "name": "resolve-delegation",
               "result": {
                 "error": {
                   "kind": "named",
@@ -622,24 +658,6 @@
                   }
                 }
               ]
-            },
-            "source-value": {
-              "fields": [
-                {
-                  "name": "key",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                },
-                {
-                  "name": "value",
-                  "type": {
-                    "kind": "named",
-                    "name": "option-value"
-                  }
-                }
-              ]
             }
           },
           "resources": [],
@@ -649,37 +667,13 @@
             "discovered-item": "input-host",
             "discovery-continuation": "input-host",
             "discovery-refresh-state": "input-host",
-            "input-delegation": "input-host",
+            "option-value": "input-host",
             "plugin-error-detail": "plugin-types",
             "plugin-metadata": "io-host",
+            "source": "input-host",
             "staged-artifact": "io-host"
           },
           "variants": {
-            "option-value": {
-              "values": [
-                {
-                  "name": "boolean",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "bool"
-                  }
-                },
-                {
-                  "name": "number",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "s64"
-                  }
-                },
-                {
-                  "name": "text",
-                  "type": {
-                    "kind": "scalar",
-                    "name": "string"
-                  }
-                }
-              ]
-            },
             "plugin-error": {
               "values": [
                 {

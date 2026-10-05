@@ -1,6 +1,6 @@
 # Input value semantics
 
-This document normatively defines Input size estimates and identity across independent lifecycle invocations. The Input WIT shapes remain unchanged.
+This document normatively defines Input size estimates and identity across independent lifecycle invocations. Canonical source and routing semantics are defined in [Input source routing](input-routing.md).
 
 ## Size estimate values
 
@@ -19,11 +19,11 @@ Zero is a valid `u64` size. A host receiving the invalid combination MUST reject
 
 Process reuse is host policy. Plugin correctness MUST NOT depend on mutable process-local state surviving between lifecycle invocations, consistent with [component execution](component-execution.md).
 
-A successful `resolve` or `resolve-delegation` returns `resolved-input.id`, which the host later supplies as `discovery-request.input-id`. The plugin MUST be able to interpret and use that ID in a later `discover` invocation without an undocumented in-memory mapping established by the earlier resolve call. The ID remains opaque to Core; it need not be a URL, provider ID, human-readable value, or reversible by Core. Any needed meaning must be recoverable from the token itself or independently available durable/external/plugin state.
+A successful `resolve` returns `resolved-input.id`, which the host later supplies as `discovery-request.input-id`. The plugin MUST be able to interpret and use that ID in a later `discover` invocation without an undocumented in-memory mapping established by the earlier resolve call. The ID remains opaque to Core; it need not be a URL, provider ID, human-readable value, or reversible by Core. Any needed meaning must be recoverable from the token itself or independently available durable/external/plugin state.
 
 `resolved-input.canonical-reference`, when present, remains an opaque plugin-owned reference, not a host-parsed URL or provider identity. Since `discover` receives `input-id`, the plugin MUST NOT require a transient process-local association between the ID and canonical reference. Any required relationship must remain usable across process/invocation boundaries.
 
-`acquire` receives the complete `discovered-item` in a later invocation. The supplied Item values, in particular stable `id`, opaque `reference`, metadata and delegation fields, together with explicit acquisition options and credentials, MUST provide the plugin-visible information needed to attempt acquisition under its defined external/durable state model. The plugin MUST NOT require an undocumented process-local object retained from the earlier discovery invocation.
+`acquire` receives the complete `discovered-item` in a later invocation. The supplied Item values, in particular stable `id`, opaque `reference`, metadata and optional canonical source fields, together with explicit acquisition options and credentials, MUST provide the plugin-visible information needed to attempt acquisition under its defined external/durable state model. The plugin MUST NOT require an undocumented process-local object retained from the earlier discovery invocation.
 
 These rules do not require all state to be encoded inline. Plugins MAY consult the provider/source, package-owned immutable/static data, independently durable plugin state where available, and credentials explicitly granted to the new invocation. Correctness MUST NOT depend on an undocumented mutable process-local mapping surviving from a previous lifecycle call.
 

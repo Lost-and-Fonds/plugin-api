@@ -670,7 +670,7 @@ if input_http_credential != {"kind": "option", "value": credential_reference}:
 http_errors = {value["name"] for value in http_host["variants"].get("http-error", {}).get("values", [])}
 if not {"denied", "credential-unavailable", "authentication-rejected"} <= http_errors:
     raise SystemExit("shared HTTP must distinguish access denial, unavailable credentials, and authentication rejection")
-source_value_fields = fields(input_plugin, "source-value")
+source_value_fields = fields(input_host, "source-value")
 option_fields = fields(input_plugin, "input-option")
 for record_name, record_fields in (("source-value", source_value_fields), ("input-option", option_fields)):
     if any(contains_named_type(value, "input-credential") or contains_named_type(value, "credential-access") for value in record_fields.values()):
@@ -679,8 +679,8 @@ for record_name, record_fields in (("source-value", source_value_fields), ("inpu
     if credentialish & record_fields.keys():
         raise SystemExit(f"{record_name} must not grow direct credential or secret fields")
 metadata_record = io_contract["interfaces"]["io-host"]["records"]["plugin-metadata"]
-delegation_record = input_host["records"]["input-delegation"]
-for record_name, record in (("plugin-metadata", metadata_record), ("input-delegation", delegation_record)):
+source_record = input_host["records"]["source"]
+for record_name, record in (("plugin-metadata", metadata_record), ("source", source_record)):
     record_names = {field["name"] for field in record["fields"]}
     if credentialish & record_names:
         raise SystemExit(f"{record_name} must not become a credential transport")
@@ -696,7 +696,7 @@ def require_credential_bindings(function_name: str, interface: dict = input_plug
     ):
         raise SystemExit(f"Input {function_name} must receive host-authorized credential bindings")
 
-for lifecycle_phase in ("resolve", "resolve-delegation", "discover"):
+for lifecycle_phase in ("resolve", "discover"):
     require_credential_bindings(lifecycle_phase)
 
 # Discovery has exactly one delivery path: acknowledged bounded batches.
@@ -1107,39 +1107,67 @@ for filename in ("wit/io.wit", "wit/input.wit", "wit/enrichment.wit", "wit/broad
 item_fields = fields(input_host, "discovered-item")
 if not {"id", "reference"} <= item_fields.keys():
     raise SystemExit("discovered-item must retain its stable identity and opaque reference")
-delegation_fields = input_host["records"].get("input-delegation", {}).get("fields", [])
-if {field["name"] for field in delegation_fields} != {"reference"}:
-    raise SystemExit("Input delegation must contain only one opaque reference")
-if delegation_fields[0]["type"] != {"kind": "scalar", "name": "string"}:
-    raise SystemExit("Input delegation reference must remain an opaque string")
-delegation_type = item_fields.get("delegation")
-if delegation_type != {"kind": "option", "value": {"kind": "named", "name": "input-delegation"}}:
-    raise SystemExit("discovered-item must carry optional generic Input delegation context")
-if input_plugin["uses"].get("discovered-item") != "input-host":
-    raise SystemExit("input-plugin must reuse input-host's canonical discovered-item type")
-if input_plugin["uses"].get("input-delegation") != "input-host":
-    raise SystemExit("input-plugin must reuse input-host's canonical input-delegation type")
-if "input-delegation" in input_plugin["records"]:
-    raise SystemExit("Input delegation identity must remain in the host-owned discovery boundary")
-
-delegation_resolver = next(
-    (function for function in input_plugin["functions"] if function["name"] == "resolve-delegation"),
-    None,
-)
-if delegation_resolver is None:
-    raise SystemExit("Input must expose the generic resolve-delegation entry point")
-if delegation_type is None:
-    raise SystemExit("discovered-item must carry optional generic Input delegation context")
-if not delegation_resolver["arguments"] or delegation_resolver["arguments"][0] != {
-    "name": "delegation", "type": delegation_type["value"]
+source_type = {"kind": "named", "name": "source"}
+if fields(input_host, "source") != {
+    "reference": {"kind": "option", "value": {"kind": "scalar", "name": "string"}},
+    "values": {"kind": "list", "value": {"kind": "named", "name": "source-value"}},
 }:
-    raise SystemExit("resolve-delegation must receive discovered-item's canonical input-delegation type")
-if delegation_resolver.get("result") != {
+    raise SystemExit("Input source must contain only an optional opaque reference and plugin-defined values")
+if source_value_fields != {
+    "key": {"kind": "scalar", "name": "string"},
+    "value": {"kind": "named", "name": "option-value"},
+}:
+    raise SystemExit("source-value must retain plugin-defined typed key/value configuration")
+if item_fields.get("source") != {"kind": "option", "value": source_type} or "delegation" in item_fields:
+    raise SystemExit("discovered-item must carry an optional canonical source, not a delegation")
+for type_name in ("discovered-item", "source", "option-value"):
+    if input_plugin["uses"].get(type_name) != "input-host":
+        raise SystemExit(f"input-plugin must reuse input-host's canonical {type_name} type")
+for interface in (input_host, input_plugin):
+    if "input-delegation" in interface["records"] or any(
+        function["name"] == "resolve-delegation" for function in interface["functions"]
+    ):
+        raise SystemExit("the obsolete delegation type and resolution lifecycle must be removed")
+if "source" in input_plugin["records"] or "source-value" in input_plugin["records"]:
+    raise SystemExit("Input source identity must remain canonical at the discovery boundary")
+probe = discovery_functions.get("can-resolve")
+source_argument = {"name": "source", "type": source_type}
+if probe is None or probe.get("arguments") != [source_argument] or probe.get("result") != {"kind": "scalar", "name": "bool"}:
+    raise SystemExit("can-resolve must be a credentialless boolean probe of the canonical source")
+resolver = discovery_functions.get("resolve")
+if resolver is None or resolver.get("arguments") != [
+    source_argument,
+    {"name": "credentials", "type": {"kind": "list", "value": credential_binding}},
+] or resolver.get("result") != {
     "kind": "result",
     "ok": {"kind": "named", "name": "resolved-input"},
     "error": {"kind": "named", "name": "plugin-error"},
 }:
-    raise SystemExit("resolve-delegation must use the generic Input resolution and error types")
+    raise SystemExit("resolve must use the same canonical source and normal Input resolution/error types")
+routing_document = repo_root / "protocol" / "input-routing.md"
+routing_text = routing_document.read_text(encoding="utf-8")
+routing_rules = (
+    "It MUST be cheap, deterministic for the same source and immutable plugin configuration/package, and independent of mutable process-local state.",
+    "It MUST NOT resolve the source, mutate host/plugin state, perform network discovery or other expensive discovery, require/access credentials, create resources, stage data, call helpers, or perform acquisition.",
+    "It MUST NOT call imported host capabilities.",
+    "Core MUST NOT run normal resolution as a capability probe.",
+    "Core MUST NOT use it to probe/fall through to another Input.",
+    "Core MUST pass the same canonical source value unchanged",
+    "Core MUST NOT interpret plugin-defined source values or convert references into plugin-specific configuration.",
+    "An upstream Input MUST NOT identify a target plugin",
+    "The receiving Input MUST NOT require source provenance or a separate delegated-source path.",
+    "Core MUST preserve the discovering relationship even if routing fails or the downstream Input already exists.",
+    "Provenance MUST remain Core-owned and MUST NOT be injected into B's source or resolution request.",
+    "Cycle/repeat detection and hop limits remain Core policy using package/component/Item provenance",
+    "RSS discovers an HTTP URL",
+    "RSS discovers a YouTube URL",
+    "RSS discovers a magnet URI / BitTorrent reference",
+    "OPDS discovers an HTTP publication",
+    "Generic feed discovers an unknown source",
+    "User directly adds the same YouTube URL",
+)
+if any(rule not in routing_text for rule in routing_rules):
+    raise SystemExit("Input routing semantics must preserve cheap capability probing, one source lifecycle, and Core provenance")
 if fields(input_host, "discovery-batch").get("items") != {
     "kind": "list", "value": {"kind": "named", "name": "discovered-item"}
 }:

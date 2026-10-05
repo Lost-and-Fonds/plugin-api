@@ -99,12 +99,12 @@ Contract 0.5 added the Enrichment world; contract 0.7 adds shared host-managed
 streaming and staged writing. The package manifest keeps the same shape and
 can select each canonical component world.
 
-Contract 0.8 gives Input credentials one host-managed model across `resolve`,
-`resolve-delegation`, `discover`, and `acquire`. Each call receives named,
+Input credentials use one host-managed model across `resolve`, `discover`,
+and `acquire`. Each call receives named,
 plugin-defined bindings to opaque host credential references. A binding name
 identifies the plugin's configured slot; Core treats both it and the reference
 as opaque. References are not secrets and do not belong in source values,
-options, metadata, or delegation records. The host grants only references
+options, metadata, or source records. The host grants only references
 authorized for that invocation and checks availability when access is opened,
 so a credential revoked after discovery can be unavailable during acquisition.
 
@@ -525,18 +525,24 @@ Core uses opaque IDs and references to connect lifecycle records, byte estimates
 for storage decisions, and staged descriptors to ingest content and calculate
 fixity. It does not infer domain meaning from plugin metadata.
 
-An Input can attach an optional `input-delegation` to a discovered item. It
-contains only the opaque reference another Input should resolve; keeping it on
-the discovered item preserves the discovering Input and item as provenance.
-Core routes the reference by probing installed Inputs through
-`resolve-delegation`. A receiving Input returns its normal `resolved-input` or
-the typed `unsupported` error. Core does not parse references or need a
-provider taxonomy. Package and component IDs identify each Input in a
-delegation chain, while discovered item IDs retain the handoff context, so
-Core can detect repeats or bound a chain later.
+Input sources have one canonical shape: an optional opaque `reference` and
+plugin-defined `values`. A plain discovered reference needs no target-plugin
+schema: `{reference: some(reference), values: []}`. Direct configuration can
+use that identical shape or provide plugin-defined values without a reference.
+An Item's optional `source` requests handling as another Input source; Core
+retains the discovering package/component/Item relationship as provenance.
 
-Core routing and cycle bounds, SDK support for the new field and resolver,
-and provider implementations such as Generic Feeds remain downstream work.
+Core asks installed Inputs `can-resolve(source)`, a cheap deterministic,
+credentialless boolean capability probe, then calls the selected Input's
+`resolve(source, credentials)` with the unchanged source. Resolution is never
+the routing probe and `unsupported` is not a routing signal. The receiving
+Input sees no provenance or separate handoff lifecycle. No provider taxonomy,
+target-plugin ID, or Core interpretation of plugin-defined values is involved.
+No accepting Input means no suitable installed Input; multiple acceptances,
+cycle detection, and hop bounds remain Core policy using retained provenance.
+See [Input source routing](protocol/input-routing.md) for normative semantics,
+RPC shapes, and forcing cases. Core and SDK implementation remain downstream
+work; this working contract change does not change the declared version.
 
 Collection exporters receive generic collection metadata, entries, and options,
 and return a named media artifact or a typed plugin error. Their lifecycle does
@@ -582,7 +588,7 @@ representation. Sensitivity mutations protect JSON/root/duplicate-key and
 non-canonicalization semantics, byte-stream chunk/EOF and progress validity,
 Input size pairs and independent-invocation identity, preserved Asset invocation
 grants, Broadcast delivery timing, authority-before-range validation, and current
-README Broadcast accuracy. It also checks Input delegation, configuration identity,
+README Broadcast accuracy. It also checks canonical Input source routing, configuration identity,
 HTTP credentials and errors, Enrichment revision-aware execution, shared plugin
 error detail, and logging. Historical contract notes retain removed Broadcast
 phase names only as explicitly former/removed behavior.

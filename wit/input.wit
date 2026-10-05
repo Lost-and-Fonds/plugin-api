@@ -19,11 +19,20 @@ interface input-host {
     /// `unavailable` remain distinct.
     open-credential: func(reference: credential-reference) -> result<credential-access, credential-error>;
 
-    /// An opaque reference for another Input to resolve. The host retains the
-    /// discovered item as the source of this handoff and does not inspect the
-    /// reference's format or meaning.
-    record input-delegation {
-        reference: string,
+    variant option-value {
+        boolean(bool),
+        number(s64),
+        text(string),
+    }
+
+    record source-value {
+        key: string,
+        value: option-value,
+    }
+
+    record source {
+        reference: option<string>,
+        values: list<source-value>,
     }
 
     /// The complete Item, especially stable `id` and opaque `reference`,
@@ -34,7 +43,7 @@ interface input-host {
     record discovered-item {
         id: string,
         reference: string,
-        delegation: option<input-delegation>,
+        source: option<source>,
         size-bytes: option<u64>,
         size-estimated: bool,
         metadata: list<plugin-metadata>,
@@ -104,20 +113,9 @@ interface input-host {
 }
 
 interface input-plugin {
-    use input-host.{discovered-item, input-delegation, discovery-continuation, discovery-refresh-state, deficiency};
+    use input-host.{discovered-item, source, option-value, discovery-continuation, discovery-refresh-state, deficiency};
     use io-host.{credential-binding, plugin-metadata, staged-artifact};
     use plugin-types.{plugin-error-detail};
-
-    variant option-value {
-        boolean(bool),
-        number(s64),
-        text(string),
-    }
-
-    record source-value {
-        key: string,
-        value: option-value,
-    }
 
     record input-option {
         key: string,
@@ -188,10 +186,8 @@ interface input-plugin {
         failed(plugin-error-detail),
     }
 
-    resolve: func(source: list<source-value>, credentials: list<credential-binding>) -> result<resolved-input, plugin-error>;
-    /// Resolve a handoff delegated by another Input. Inputs that cannot
-    /// handle it return `unsupported`; Core may probe other installed Inputs.
-    resolve-delegation: func(delegation: input-delegation, credentials: list<credential-binding>) -> result<resolved-input, plugin-error>;
+    can-resolve: func(source: source) -> bool;
+    resolve: func(source: source, credentials: list<credential-binding>) -> result<resolved-input, plugin-error>;
     /// Success requires an acknowledged terminal batch; otherwise it is a protocol
     /// violation and MUST NOT complete the run. After terminal acknowledgment, the
     /// plugin MUST return success without further discovery or batch commits.

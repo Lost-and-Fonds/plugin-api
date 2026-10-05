@@ -532,7 +532,7 @@
             "item": {
               "id": "item-1",
               "reference": "source:item-1",
-              "delegation": null,
+              "source": null,
               "size-bytes": null,
               "size-estimated": false,
               "metadata": []

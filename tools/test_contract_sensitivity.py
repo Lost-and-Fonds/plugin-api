@@ -136,7 +136,7 @@ def expect_package_schema_rejected(name: str, mutate) -> None:
 
 def add_provider_field(candidate: dict) -> None:
     interface = input_interface(candidate, "input-host")
-    interface["records"]["input-delegation"]["fields"].append(
+    interface["records"]["source"]["fields"].append(
         {"name": "provider", "type": {"kind": "scalar", "name": "string"}}
     )
 
@@ -144,14 +144,63 @@ def add_provider_field(candidate: dict) -> None:
 def remove_discovery_boundary(candidate: dict) -> None:
     interface = input_interface(candidate, "input-host")
     interface["records"]["discovered-item"]["fields"] = [
-        field for field in interface["records"]["discovered-item"]["fields"] if field["name"] != "delegation"
+        field for field in interface["records"]["discovered-item"]["fields"] if field["name"] != "source"
     ]
 
 
 def replace_resolver_type_with_string(candidate: dict) -> None:
     interface = input_interface(candidate, "input-plugin")
-    resolver = next(function for function in interface["functions"] if function["name"] == "resolve-delegation")
+    resolver = next(function for function in interface["functions"] if function["name"] == "resolve")
     resolver["arguments"][0]["type"] = {"kind": "scalar", "name": "string"}
+
+
+def remove_source_probe(candidate: dict) -> None:
+    plugin = input_interface(candidate, "input-plugin")
+    plugin["functions"] = [function for function in plugin["functions"] if function["name"] != "can-resolve"]
+
+
+def source_probe(candidate: dict) -> dict:
+    return next(function for function in input_interface(candidate, "input-plugin")["functions"] if function["name"] == "can-resolve")
+
+
+def resolve_from_probe(candidate: dict) -> None:
+    source_probe(candidate)["result"] = {"kind": "result", "ok": {"kind": "named", "name": "resolved-input"}, "error": {"kind": "named", "name": "plugin-error"}}
+
+
+def credentialed_probe(candidate: dict) -> None:
+    source_probe(candidate)["arguments"].append({"name": "credentials", "type": {"kind": "list", "value": {"kind": "named", "name": "credential-binding"}}})
+
+
+def raw_probe(candidate: dict) -> None:
+    source_probe(candidate)["arguments"][0]["type"] = {"kind": "scalar", "name": "string"}
+
+
+def restore_delegation_resolver(candidate: dict) -> None:
+    plugin = input_interface(candidate, "input-plugin")
+    resolver = copy.deepcopy(next(function for function in plugin["functions"] if function["name"] == "resolve"))
+    resolver["name"] = "resolve-delegation"
+    resolver["arguments"][0] = {"name": "delegation", "type": {"kind": "named", "name": "input-delegation"}}
+    plugin["functions"].append(resolver)
+
+
+def restore_delegation_record(candidate: dict) -> None:
+    input_interface(candidate, "input-host")["records"]["input-delegation"] = {"fields": [{"name": "reference", "type": {"kind": "scalar", "name": "string"}}]}
+
+
+def restore_delegation_field(candidate: dict) -> None:
+    item = input_interface(candidate, "input-host")["records"]["discovered-item"]
+    field = next(field for field in item["fields"] if field["name"] == "source")
+    field.update({"name": "delegation", "type": {"kind": "option", "value": {"kind": "named", "name": "input-delegation"}}})
+
+
+def remove_source_reference(candidate: dict) -> None:
+    record = input_interface(candidate, "input-host")["records"]["source"]
+    record["fields"] = [field for field in record["fields"] if field["name"] != "reference"]
+
+
+def remove_source_values(candidate: dict) -> None:
+    record = input_interface(candidate, "input-host")["records"]["source"]
+    record["fields"] = [field for field in record["fields"] if field["name"] != "values"]
 
 
 def inline_http_body(candidate: dict) -> None:
@@ -426,7 +475,7 @@ def leak_host_path_into_staging(candidate: dict) -> None:
 
 def remove_early_credential_access(candidate: dict) -> None:
     interface = input_interface(candidate, "input-plugin")
-    for function_name in ("resolve", "resolve-delegation", "discover"):
+    for function_name in ("resolve", "discover"):
         function = next(function for function in interface["functions"] if function["name"] == function_name)
         function["arguments"] = [argument for argument in function["arguments"] if argument["name"] != "credentials"]
 
@@ -440,7 +489,7 @@ def remove_helper_credential_mediation(candidate: dict) -> None:
 
 
 def embed_secret_in_source(candidate: dict) -> None:
-    record = input_interface(candidate, "input-plugin")["records"]["source-value"]
+    record = input_interface(candidate, "input-host")["records"]["source-value"]
     record["fields"].append({"name": "password", "type": {"kind": "scalar", "name": "string"}})
 
 
@@ -454,8 +503,8 @@ def embed_secret_in_metadata(candidate: dict) -> None:
     record["fields"].append({"name": "secret", "type": {"kind": "scalar", "name": "string"}})
 
 
-def embed_secret_in_delegation(candidate: dict) -> None:
-    record = input_interface(candidate, "input-host")["records"]["input-delegation"]
+def embed_secret_in_source_record(candidate: dict) -> None:
+    record = input_interface(candidate, "input-host")["records"]["source"]
     record["fields"].append({"name": "credential", "type": {"kind": "scalar", "name": "string"}})
 
 
@@ -734,9 +783,18 @@ expect_staging_rule_rejected("invalid result partially adopts outputs", "The hos
 expect_staging_rule_rejected("duplicate reference silently adopted", "The same canonical reference MUST NOT occur more than once among adoption candidates in one successful result. A duplicate is a contract violation: reject the whole result, adopt none, and do not silently deduplicate or create multiple durable outputs.")
 expect_staging_rule_rejected("unreturned completed output automatically durable", "Completed staged artifacts not returned for adoption remain temporary and are discarded at invocation end, even if opened as HTTP/helper input. Finish alone does not make output durable.")
 
-expect_rejected("provider-specific delegation", add_provider_field)
-expect_rejected("loss of the discovered-item delegation boundary", remove_discovery_boundary)
-expect_rejected("raw-string receiving boundary", replace_resolver_type_with_string)
+expect_rejected("provider-specific source", add_provider_field)
+expect_rejected("loss of the discovered-item source boundary", remove_discovery_boundary)
+expect_rejected("raw-string resolution boundary", replace_resolver_type_with_string)
+expect_rejected("missing capability probe", remove_source_probe)
+expect_rejected("resolution result used for routing", resolve_from_probe)
+expect_rejected("credentials required by capability probe", credentialed_probe)
+expect_rejected("different probe and resolution source types", raw_probe)
+expect_rejected("legacy delegation lifecycle", restore_delegation_resolver)
+expect_rejected("legacy delegation type", restore_delegation_record)
+expect_rejected("raw discovered delegation wire shape", restore_delegation_field)
+expect_rejected("source without generic discovered reference", remove_source_reference)
+expect_rejected("source without plugin-defined values", remove_source_values)
 expect_rejected("inline-only HTTP request body", inline_http_body)
 expect_rejected("inline-only HTTP response body", inline_broadcast_http_body)
 expect_rejected("missing staged output writer", remove_staged_writer)
@@ -751,7 +809,7 @@ expect_rejected("helper without host-mediated credentials", remove_helper_creden
 expect_rejected("raw password embedded in source values", embed_secret_in_source)
 expect_rejected("raw token embedded in Input options", embed_secret_in_option)
 expect_rejected("secret embedded in metadata", embed_secret_in_metadata)
-expect_rejected("credential embedded in delegation records", embed_secret_in_delegation)
+expect_rejected("credential embedded in canonical source", embed_secret_in_source_record)
 expect_rejected("secret embedded in opaque credential configuration", embed_secret_in_credential_configuration)
 expect_rejected("legacy raw acquisition credential model", restore_raw_acquisition_credentials)
 expect_rejected("Enrichment without explicit invocation configuration", remove_enrichment_configuration)
@@ -1149,6 +1207,42 @@ def verify_preservation_semantics() -> None:
         if result.returncode == 0:
             raise SystemExit(f"semantic verifier accepted weakened preservation semantics: {original}")
         print(f"sensitivity check caught weakened preservation semantics: {original}")
+
+
+def verify_input_routing_semantics() -> None:
+    document = Path(__file__).resolve().parents[1] / "protocol" / "input-routing.md"
+    text = document.read_text(encoding="utf-8")
+    rules = (
+        "It MUST be cheap, deterministic for the same source and immutable plugin configuration/package, and independent of mutable process-local state.",
+        "It MUST NOT resolve the source, mutate host/plugin state, perform network discovery or other expensive discovery, require/access credentials, create resources, stage data, call helpers, or perform acquisition.",
+        "It MUST NOT call imported host capabilities.",
+        "Core MUST NOT run normal resolution as a capability probe.",
+        "Core MUST NOT use it to probe/fall through to another Input.",
+        "Core MUST pass the same canonical source value unchanged",
+        "Core MUST NOT interpret plugin-defined source values or convert references into plugin-specific configuration.",
+        "An upstream Input MUST NOT identify a target plugin",
+        "The receiving Input MUST NOT require source provenance or a separate delegated-source path.",
+        "Core MUST preserve the discovering relationship even if routing fails or the downstream Input already exists.",
+        "Provenance MUST remain Core-owned and MUST NOT be injected into B's source or resolution request.",
+        "Cycle/repeat detection and hop limits remain Core policy using package/component/Item provenance",
+    )
+    for rule in rules:
+        if rule not in text:
+            raise SystemExit(f"routing sensitivity mutation did not apply: {rule}")
+        document.write_text(text.replace(rule, "Removed routing invariant."), encoding="utf-8")
+        try:
+            result = subprocess.run(
+                [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
+                capture_output=True, text=True, check=False,
+            )
+        finally:
+            document.write_text(text, encoding="utf-8")
+        if result.returncode == 0:
+            raise SystemExit(f"semantic verifier accepted weakened Input routing: {rule}")
+        print(f"sensitivity check caught weakened Input routing: {rule}")
+
+
+verify_input_routing_semantics()
 
 
 def verify_terminal_commit_authority() -> None:
