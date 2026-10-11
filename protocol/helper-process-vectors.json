@@ -1,5 +1,5 @@
 {
-  "contract": "stashd:plugin@0.18.0",
+  "contract": "stashd:plugin@0.19.0",
   "event_order": [
     {"name": "stdout-only-live", "events": [{"output": {"channel": "stdout", "bytes_hex": "6869"}}, {"terminal": {"exited": {"code": 0, "output": null}}}]},
     {"name": "stderr-only-live", "events": [{"output": {"channel": "stderr", "bytes_hex": "7761726e"}}, {"terminal": {"exited": {"code": 0, "output": null}}}]},

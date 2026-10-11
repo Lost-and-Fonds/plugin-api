@@ -6,164 +6,154 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 from pathlib import Path
 
 
-DECLARATION = re.compile(r"\b(record|variant|enum|resource)\s+([A-Za-z0-9-]+)\s*\{")
 INTERFACE = re.compile(r"\b(interface|world)\s+([A-Za-z0-9-]+)\s*\{")
-FUNCTION = re.compile(r"([A-Za-z0-9-]+)\s*:\s*func\((.*?)\)\s*(?:->\s*([^;]+))?;", re.S)
 
 
-def matching_brace(source: str, opening: int) -> int:
+def normalize_package(resolved: dict, paths: list[Path], repo_root: Path) -> list[dict]:
+    types = resolved["types"]
+    interfaces = resolved["interfaces"]
+    inventory = {
+        "input.wit": ({"input-host", "input-plugin"}, {"input-world"}),
+        "broadcast.wit": ({"broadcast-host", "broadcast-plugin"}, {"broadcast-world"}),
+        "enrichment.wit": ({"enrichment-host", "enrichment-plugin"}, {"enrichment-world"}),
+        "collection-export.wit": ({"collection-export-plugin"}, {"collection-export-world"}),
+        "io.wit": ({"plugin-types", "progress-host", "logging-host", "http-host", "io-host"}, set()),
+    }
+
+    def unsupported(value):
+        raise SystemExit(f"E_WIT_UNSUPPORTED: {value}")
+
+    def value_type(value):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            if value not in {"bool", "string", "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "f32", "f64", "float32", "float64"}:
+                unsupported(f"scalar {value}")
+            return {"kind": "scalar", "name": {"float32": "f32", "float64": "f64"}.get(value, value)}
+        declaration = types[value]
+        if declaration["name"] is not None:
+            return {"kind": "named", "name": declaration["name"]}
+        kind = declaration["kind"]
+        if "type" in kind:
+            return value_type(kind["type"])
+        for wrapper in ("list", "option"):
+            if wrapper in kind:
+                return {"kind": wrapper, "value": value_type(kind[wrapper])}
+        if "result" in kind:
+            return {"kind": "result", "ok": value_type(kind["result"]["ok"]), "error": value_type(kind["result"]["err"])}
+        if "handle" in kind:
+            ownership, target = next(iter(kind["handle"].items()))
+            target_type = {"kind": "named", "name": types[target]["name"]}
+            return target_type if ownership == "own" else {"kind": "borrow", "value": target_type}
+        unsupported(kind)
+
+    def normalize_interface(interface_id):
+        source = interfaces[interface_id]
+        output = {"records": {}, "variants": {}, "enums": {}, "resources": [], "functions": [], "uses": {}}
+        resources = {}
+        for name, type_id in source["types"].items():
+            declaration = types[type_id]
+            kind = declaration["kind"]
+            if isinstance(kind, dict) and "type" in kind:
+                target = kind["type"]
+                owner = types[target].get("owner") if isinstance(target, int) else None
+                if not owner or "interface" not in owner or owner["interface"] == interface_id:
+                    raise SystemExit(f"E_WIT_UNSUPPORTED: type alias {name}")
+                if types[target]["name"] != name:
+                    unsupported(f"renamed import {name}")
+                output["uses"][name] = interfaces[owner["interface"]]["name"]
+            elif kind == "resource":
+                resource = {"name": name, "functions": []}
+                output["resources"].append(resource)
+                resources[type_id] = resource
+            elif "record" in kind:
+                output["records"][name] = {"fields": [{"name": field["name"], "type": value_type(field["type"])} for field in kind["record"]["fields"]]}
+            elif "variant" in kind:
+                output["variants"][name] = {"values": [{"name": case["name"], "type": value_type(case.get("type"))} for case in kind["variant"]["cases"]]}
+            elif "enum" in kind:
+                output["enums"][name] = {"values": [case["name"] for case in kind["enum"]["cases"]]}
+            else:
+                unsupported(f"declaration {name}: {kind}")
+        for function in source["functions"].values():
+            kind = function["kind"]
+            params = function["params"]
+            name = function["name"]
+            destination = output["functions"]
+            if kind != "freestanding":
+                if not isinstance(kind, dict) or set(kind) != {"method"}:
+                    unsupported(f"function {name}: {kind}")
+                destination = resources[kind["method"]]["functions"]
+                params = params[1:]
+                name = name.split(".", 1)[1]
+            results = function["results"]
+            if len(results) > 1:
+                unsupported(f"multiple results: {name}")
+            destination.append({"name": name, "arguments": [{"name": param["name"], "type": value_type(param["type"])} for param in params], "result": value_type(results[0]["type"]) if results else None})
+        return output
+
+    for index in range(len(interfaces)):
+        normalize_interface(index)
+    package = resolved["packages"]
+    if len(package) != 1:
+        unsupported("external packages")
+    contracts = []
+    seen_interfaces = set()
+    seen_worlds = set()
+    for path in paths:
+        if path.name not in inventory:
+            unsupported(f"source file {path.name}")
+        interface_names, world_names = inventory[path.name]
+        source = strip_comments(path.read_text())
+        declared = {(match.group(1), match.group(2)) for match in INTERFACE.finditer(source)}
+        expected = {("interface", name) for name in interface_names} | {("world", name) for name in world_names}
+        if declared != expected:
+            unsupported(f"source inventory {path.name}: {declared ^ expected}")
+        contract = {"file": path.relative_to(repo_root).as_posix(), "package": package[0]["name"], "interfaces": {}, "worlds": {}}
+        for match in INTERFACE.finditer(source):
+            category, name = match.group(1), match.group(2)
+            if category == "interface":
+                contract["interfaces"][name] = normalize_interface(package[0]["interfaces"][name])
+                seen_interfaces.add(name)
+            else:
+                world = resolved["worlds"][package[0]["worlds"][name]]
+                directions = {}
+                for direction in ("imports", "exports"):
+                    names = []
+                    for entry in world[direction].values():
+                        if set(entry) != {"interface"}:
+                            unsupported(f"world {name}: {entry}")
+                        names.append(interfaces[entry["interface"]["id"]]["name"])
+                    directions[direction] = names
+                contract["worlds"][name] = directions
+                seen_worlds.add(name)
+        contracts.append(contract)
+    if seen_interfaces != set(package[0]["interfaces"]) or seen_worlds != set(package[0]["worlds"]):
+        unsupported("unattributed declarations")
+    return contracts
+
+
+def strip_comments(source: str) -> str:
+    output = []
+    index = 0
     depth = 0
-    for index in range(opening, len(source)):
-        if source[index] == "{":
+    while index < len(source):
+        if source.startswith("/*", index):
             depth += 1
-        elif source[index] == "}":
+            index += 2
+        elif depth and source.startswith("*/", index):
             depth -= 1
-            if depth == 0:
-                return index
-    raise ValueError("unclosed WIT block")
-
-
-def split_top_level(value: str, delimiter: str = ",") -> list[str]:
-    values: list[str] = []
-    start = 0
-    angle = 0
-    paren = 0
-    for index, character in enumerate(value):
-        if character == "<":
-            angle += 1
-        elif character == ">":
-            angle -= 1
-        elif character == "(":
-            paren += 1
-        elif character == ")":
-            paren -= 1
-        elif character == delimiter and angle == 0 and paren == 0:
-            values.append(value[start:index].strip())
-            start = index + 1
-    tail = value[start:].strip()
-    if tail:
-        values.append(tail)
-    return values
-
-
-def parse_type(value: str) -> dict:
-    value = " ".join(value.strip().split())
-    for wrapper in ("list", "option", "borrow"):
-        prefix = f"{wrapper}<"
-        if value.startswith(prefix) and value.endswith(">"):
-            return {"kind": wrapper, "value": parse_type(value[len(prefix) : -1])}
-    if value.startswith("result<") and value.endswith(">"):
-        parts = split_top_level(value[7:-1])
-        return {
-            "kind": "result",
-            "ok": parse_type(parts[0]) if parts and parts[0] != "_" else None,
-            "error": parse_type(parts[1]) if len(parts) > 1 else None,
-        }
-    scalars = {"bool", "string", "u8", "u16", "u32", "u64", "s8", "s16", "s32", "s64", "f32", "f64"}
-    if value in scalars:
-        return {"kind": "scalar", "name": value}
-    return {"kind": "named", "name": value}
-
-
-def parse_arguments(value: str) -> list[dict]:
-    arguments = []
-    for argument in split_top_level(value):
-        if not argument:
-            continue
-        name, type_name = argument.split(":", 1)
-        arguments.append({"name": name.strip(), "type": parse_type(type_name)})
-    return arguments
-
-
-def parse_declarations(body: str) -> tuple[dict, dict, dict, list[dict], list[dict]]:
-    records: dict = {}
-    variants: dict = {}
-    enums: dict = {}
-    resources: list[dict] = []
-    functions: list[dict] = []
-    occupied: list[tuple[int, int]] = []
-    for match in DECLARATION.finditer(body):
-        start = match.start()
-        if any(begin <= start < end for begin, end in occupied):
-            continue
-        end = matching_brace(body, match.end() - 1)
-        occupied.append((start, end + 1))
-        kind, name = match.group(1), match.group(2)
-        content = body[match.end() : end].strip()
-        if kind == "record":
-            fields = []
-            for field in split_top_level(content):
-                if not field:
-                    continue
-                field_name, field_type = field.split(":", 1)
-                fields.append({"name": field_name.strip(), "type": parse_type(field_type)})
-            records[name] = {"fields": fields}
-        elif kind == "variant":
-            values = []
-            for item in split_top_level(content):
-                item = item.strip()
-                if not item:
-                    continue
-                if "(" in item and item.endswith(")"):
-                    variant_name, payload = item.split("(", 1)
-                    values.append({"name": variant_name.strip(), "type": parse_type(payload[:-1])})
-                else:
-                    values.append({"name": item, "type": None})
-            variants[name] = {"values": values}
-        elif kind == "enum":
-            enums[name] = {"values": [item.strip() for item in split_top_level(content) if item.strip()]}
+            index += 2
+        elif not depth and source.startswith("//", index):
+            end = source.find("\n", index)
+            index = len(source) if end < 0 else end
         else:
-            resources.append({"name": name, "functions": parse_functions(content)})
-    functions.extend(parse_functions(body, occupied))
-    return records, variants, enums, resources, functions
-
-
-def parse_functions(body: str, occupied: list[tuple[int, int]] | None = None) -> list[dict]:
-    functions = []
-    for match in FUNCTION.finditer(body):
-        if occupied and any(begin <= match.start() < end for begin, end in occupied):
-            continue
-        functions.append(
-            {
-                "name": match.group(1),
-                "arguments": parse_arguments(match.group(2)),
-                "result": parse_type(match.group(3)) if match.group(3) else None,
-            }
-        )
-    return functions
-
-
-def parse_file(path: Path, relative: str) -> dict:
-    source = re.sub(r"//.*", "", path.read_text())
-    package = re.search(r"package\s+([^;]+);", source)
-    interfaces = {}
-    worlds = {}
-    for match in INTERFACE.finditer(source):
-        end = matching_brace(source, match.end() - 1)
-        name, body = match.group(2), source[match.end() : end]
-        if match.group(1) == "interface":
-            records, variants, enums, resources, functions = parse_declarations(body)
-            interfaces[name] = {
-                "records": records,
-                "variants": variants,
-                "enums": enums,
-                "resources": resources,
-                "functions": functions,
-                "uses": {
-                    imported.strip(): source
-                    for source, names in re.findall(r"use\s+([A-Za-z0-9-]+)\.\{([^}]+)\};", body)
-                    for imported in names.split(",")
-                    if imported.strip()
-                },
-            }
-        else:
-            imports = re.findall(r"import\s+([A-Za-z0-9-]+)\s*;", body)
-            exports = re.findall(r"export\s+([A-Za-z0-9-]+)\s*;", body)
-            worlds[name] = {"imports": imports, "exports": exports}
-    return {"file": relative, "package": package.group(1).strip() if package else None, "interfaces": interfaces, "worlds": worlds}
+            output.append(source[index] if not depth else "\n" if source[index] == "\n" else " ")
+            index += 1
+    return "".join(output)
 
 
 def report(schema: dict) -> str:
@@ -292,10 +282,10 @@ def main() -> None:
             path.name,
         ),
     )
-    contracts = [
-        parse_file(path, path.relative_to(args.repo_root).as_posix())
-        for path in paths
-    ]
+    resolved = json.loads(subprocess.check_output(
+        ["wasm-tools", "component", "wit", str(wit_root), "--json"], text=True
+    ))
+    contracts = normalize_package(resolved, paths, args.repo_root)
     if not contracts:
         raise ValueError("the WIT package must contain at least one contract file")
     packages = {contract["package"] for contract in contracts}

@@ -1,4 +1,4 @@
-package stashd:plugin@0.18.0;
+package stashd:plugin@0.19.0;
 
 interface collection-export-plugin {
     use plugin-types.{plugin-error-detail};
@@ -21,7 +21,7 @@ interface collection-export-plugin {
     record collection {
         title: option<string>,
         /// Inline interchange input. The complete encoded lifecycle request MUST
-        /// fit the host-advertised RPC receive-frame maximum; entry count has no
+        /// fit the plugin-advertised RPC receive-frame maximum; entry count has no
         /// separate universal limit or hidden smaller request-message byte ceiling.
         entries: list<collection-entry>,
     }
@@ -31,7 +31,7 @@ interface collection-export-plugin {
         media-type: string,
         /// Inline bytes. A host MAY enforce an explicit Collection Export artifact
         /// size limit. Independently, the complete encoded lifecycle response MUST
-        /// fit the plugin-advertised RPC receive-frame maximum; there is no
+        /// fit the host-advertised RPC receive-frame maximum; there is no
         /// separate hidden encoded-response ceiling.
         contents: list<u8>,
     }

@@ -1,0 +1,33 @@
+{
+  "contract": "stashd:plugin@0.19.0",
+  "ownership": [
+    {"name": "remote-owner-read-drop", "steps": [{"op": "transfer", "from": "host", "to": "plugin", "accepted": true}, {"op": "use", "from": "plugin"}, {"op": "drop", "from": "plugin"}], "owner": "plugin", "live": false, "releases": 1},
+    {"name": "rejected-before-acceptance", "steps": [{"op": "transfer", "from": "host", "to": "plugin", "accepted": false}], "owner": "host", "live": true, "releases": 0},
+    {"name": "accepted-start-failure", "steps": [{"op": "transfer", "from": "host", "to": "plugin", "accepted": true}, {"op": "transfer", "from": "plugin", "to": "host", "accepted": true, "outcome": "typed-error"}, {"op": "use", "from": "plugin", "rejected": true}, {"op": "cleanup"}], "owner": "host", "live": false, "releases": 1},
+    {"name": "uncertain-after-acceptance", "steps": [{"op": "transfer", "from": "host", "to": "plugin", "accepted": true}, {"op": "transfer", "from": "plugin", "to": "host", "accepted": true, "outcome": "transport-failure"}, {"op": "cleanup"}, {"op": "cleanup"}], "owner": "host", "live": false, "releases": 1},
+    {"name": "duplicate-owned-before-acceptance", "steps": [{"op": "transfer", "from": "host", "to": "plugin", "accepted": false, "duplicate-owned": true}], "owner": "host", "live": true, "releases": 0},
+    {"name": "normal-writer-return", "steps": [{"op": "transfer", "from": "host", "to": "plugin", "accepted": true}, {"op": "transfer", "from": "plugin", "to": "host", "accepted": true}, {"op": "transfer", "from": "host", "to": "plugin", "accepted": true}, {"op": "use", "from": "host", "rejected": true}, {"op": "use", "from": "plugin"}, {"op": "drop", "from": "plugin"}, {"op": "drop", "from": "plugin", "rejected": true}], "owner": "plugin", "live": false, "releases": 1},
+    {"name": "preacceptance-channel-failure", "steps": [{"op": "transfer", "from": "host", "to": "plugin", "accepted": false}, {"op": "cleanup"}], "owner": "host", "live": false, "releases": 1}
+  ],
+  "polling": [
+    {"name": "immediate-silence", "wait-ms": 0, "cancel-at-ms": null, "events": [], "expected": [{"invocation-cancel-requested": false, "state": "pending"}], "elapsed-ms": 0},
+    {"name": "bounded-silence", "wait-ms": 4294967295, "cancel-at-ms": null, "events": [], "expected": [{"invocation-cancel-requested": false, "state": "pending"}], "elapsed-ms": 1000},
+    {"name": "core-wakes-silent-poll", "wait-ms": 1000, "cancel-at-ms": 25, "events": [], "expected": [{"invocation-cancel-requested": true, "state": "pending"}, {"invocation-cancel-requested": true, "state": "pending"}], "elapsed-ms": 25},
+    {"name": "cancel-with-output-terminal-end", "wait-ms": 1000, "cancel-at-ms": 0, "events": ["output", "terminal"], "expected": [{"invocation-cancel-requested": true, "state": {"tag": "event", "value": "output"}}, {"invocation-cancel-requested": true, "state": {"tag": "event", "value": "terminal"}}, {"invocation-cancel-requested": true, "state": "end"}, {"invocation-cancel-requested": true, "state": "end"}], "elapsed-ms": 0},
+    {"name": "plugin-cancel-is-not-core-cancel", "wait-ms": 1000, "cancel-at-ms": null, "plugin-cancel": true, "events": ["terminal"], "expected": [{"invocation-cancel-requested": false, "state": {"tag": "event", "value": "terminal"}}, {"invocation-cancel-requested": false, "state": "end"}], "elapsed-ms": 0},
+    {"name": "cancel-after-response-construction", "wait-ms": 0, "cancel-at-ms": null, "cancel-before-poll": 1, "events": [], "expected": [{"invocation-cancel-requested": false, "state": "pending"}, {"invocation-cancel-requested": true, "state": "pending"}], "elapsed-ms": 0}
+  ],
+  "finalization": [
+    {"name": "finish-error-poisons", "steps": ["finish-error", "finish", "write", "drop"], "state": "POISONED", "registered": 0, "errors": 3},
+    {"name": "success-registers-once", "steps": ["write", "finish", "finish", "write", "drop"], "state": "FINISHED", "registered": 1, "errors": 2},
+    {"name": "write-error-poisons", "steps": ["write-error", "finish", "drop"], "state": "POISONED", "registered": 0, "errors": 2}
+  ],
+  "collection-export": {
+    "plugin-receive": 4096,
+    "host-receive": 8192,
+    "request-bytes": 5000,
+    "response-bytes": 5000,
+    "request-fits": false,
+    "response-fits": true
+  }
+}

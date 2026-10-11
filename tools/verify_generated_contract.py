@@ -26,10 +26,10 @@ if not enrichment_path.is_file():
 enrichment_text = enrichment_path.read_text(encoding="utf-8").casefold()
 collection_export_wit_text = collection_export_wit_path.read_text(encoding="utf-8").casefold()
 collection_export_requirements = (
-    ("complete encoded lifecycle request must", "host-advertised rpc receive-frame maximum"),
+    ("complete encoded lifecycle request must\n        /// fit the plugin-advertised rpc receive-frame maximum",),
     ("hidden smaller request-message byte ceiling", "entry count has no"),
     ("entry count has no", "separate universal limit"),
-    ("host may enforce an explicit collection export artifact", "complete encoded lifecycle response must", "plugin-advertised rpc receive-frame maximum", "separate hidden encoded-response ceiling"),
+    ("host may enforce an explicit collection export artifact", "complete encoded lifecycle response must\n        /// fit the host-advertised rpc receive-frame maximum", "separate hidden encoded-response ceiling"),
     ("explicit collection export", "artifact/domain constraint is exceeded", "rpc frame-size failures are not", "plugins must not return this case"),
     ("receiver's negotiated rpc receive maximum", "transport oversize is not normalized to that lifecycle\n    /// error"),
 )
@@ -196,6 +196,7 @@ staging_requirements = (
     ("unknown, fabricated, stale, or other-invocation references return `stream-error.missing`", "known reference with any descriptor-field mismatch returns `stream-error.denied`"),
     ("canonical descriptor may be reopened repeatedly in the same invocation", "new invocation-scoped canonical `byte-stream`"),
     ("**open**", "**poisoned**", "**finished**"),
+    ("any typed `finish` failure from open transitions open to poisoned", "returns no descriptor", "registers no completed artifact", "registration is atomic with successful finalization"),
     ("because it returns `staging-error`, transitions open to poisoned", "host's advertised receive-frame maximum", "must not impose a smaller private rpc/chunk byte ceiling"),
     ("subsequent `write` and `finish` calls fail deterministically with `staging-error.failed(...)`", "a poisoned writer cannot recover"),
     ("subsequent `write` and second `finish` calls fail deterministically", "finish does not consume the writer resource"),
@@ -225,7 +226,7 @@ if any(term not in package_document for term in component_identity_requirements)
 
 contracts = schema["contracts"]
 packages = {contract["package"] for contract in contracts}
-expected_package = "stashd:plugin@0.18.0"
+expected_package = "stashd:plugin@0.19.0"
 if len(packages) != 1 or None in packages or packages != {schema["package"]} or schema["package"] != expected_package:
     raise SystemExit("WIT package identity mismatch")
 
@@ -242,8 +243,21 @@ worlds = {
 world_count = sum(len(contract["worlds"]) for contract in contracts)
 if len(worlds) != world_count:
     raise SystemExit("WIT world names must be unique across the package")
-if not worlds:
-    raise SystemExit("the WIT package must declare at least one component world")
+canonical_worlds = {
+    "input-world": ({"io-host", "input-host", "http-host", "progress-host", "plugin-types", "logging-host"}, {"input-plugin"}),
+    "broadcast-world": ({"io-host", "broadcast-host", "http-host", "progress-host", "plugin-types", "logging-host"}, {"broadcast-plugin"}),
+    "enrichment-world": ({"io-host", "enrichment-host", "http-host", "progress-host", "plugin-types", "logging-host"}, {"enrichment-plugin"}),
+    "collection-export-world": ({"plugin-types", "logging-host"}, {"collection-export-plugin"}),
+}
+if set(worlds) != set(canonical_worlds):
+    raise SystemExit("E_WORLD_SET: canonical worlds differ")
+for name, (expected_imports, expected_exports) in canonical_worlds.items():
+    for direction, expected in (("imports", expected_imports), ("exports", expected_exports)):
+        actual = worlds[name][direction]
+        if set(actual) != expected or len(actual) != len(expected):
+            raise SystemExit(f"E_WORLD_MEMBERS: {name}.{direction}")
+if len(interfaces) != sum(len(contract["interfaces"]) for contract in contracts):
+    raise SystemExit("E_INTERFACE_DUPLICATE: interface names must be unique")
 
 for name, world in worlds.items():
     imports = world["imports"]
@@ -255,8 +269,15 @@ for name, world in worlds.items():
 
 if package_schema.get("x-stashd-contract-package") != schema["package"] or package_schema.get("x-stashd-contract-package") != expected_package:
     raise SystemExit("plugin package schema refers to a different WIT package identity")
+if package_schema.get("type") != "object" or package_schema.get("additionalProperties") is not False:
+    raise SystemExit("E_MANIFEST_ROOT: root must be a closed object")
+if set(package_schema.get("properties", {})) != {"id", "version", "contract", "components"}:
+    raise SystemExit("E_MANIFEST_FIELDS: root fields differ")
+for name in ("id", "version"):
+    if package_schema["properties"][name].get("type") != "string" or package_schema["properties"][name].get("minLength") != 1:
+        raise SystemExit(f"E_MANIFEST_STRING: {name}")
 package_required = set(package_schema.get("required", []))
-if not {"id", "version", "contract", "components"} <= package_required:
+if package_required != {"id", "version", "contract", "components"}:
     raise SystemExit("plugin package schema must declare its id, version, exact contract identity, and components")
 package_contract = package_schema.get("properties", {}).get("contract", {})
 if package_contract.get("type") != "string" or package_contract.get("pattern") != r"^stashd:plugin@[0-9]+\.[0-9]+\.[0-9]+$":
@@ -276,7 +297,9 @@ if "properties" in components_schema or components_schema.get("additionalPropert
 if components_schema.get("propertyNames", {}).get("pattern") != "^[a-z0-9][a-z0-9._-]*$":
     raise SystemExit("component identities must use the stable component-ID pattern")
 component_definition = package_schema.get("$defs", {}).get("component", {})
-if not {"world", "artifact"} <= set(component_definition.get("required", [])):
+if component_definition.get("type") != "object":
+    raise SystemExit("E_MANIFEST_COMPONENT: component must be an object")
+if set(component_definition.get("required", [])) != {"world", "artifact"}:
     raise SystemExit("each identified component must declare its WIT world and artifact")
 component_properties = component_definition.get("properties", {})
 if set(component_properties) != {"world", "artifact", "credential_slots"}:
@@ -291,6 +314,10 @@ if slot_schema.get("required") != ["label", "required"] or slot_schema.get("addi
     raise SystemExit("credential slots must contain only presentation label, optional description, and required semantics")
 if set(slot_schema.get("properties", {})) != {"label", "required", "description"}:
     raise SystemExit("credential slot declarations must not include credential taxonomy or secret material")
+if slot_schema.get("type") != "object" or slot_schema["properties"]["label"].get("type") != "string" or slot_schema["properties"]["label"].get("minLength") != 1 or slot_schema["properties"]["required"].get("type") != "boolean" or slot_schema["properties"]["description"].get("type") != "string":
+    raise SystemExit("E_MANIFEST_SLOT: credential slot constraints differ")
+if component_properties["world"].get("type") != "string":
+    raise SystemExit("E_MANIFEST_WORLD: world must be a string")
 slot_text = json.dumps(slot_schema, sort_keys=True).lower()
 if any(term in slot_text for term in ("reference", "secret", "provider", "oauth", "token", "password", "scope", "header", "query")):
     raise SystemExit("credential slot schema must not encode credential values or taxonomy")
@@ -366,7 +393,10 @@ logging_host = io_contract["interfaces"].get("logging-host", {})
 
 
 def fields(interface: dict, record_name: str) -> dict[str, dict]:
-    return {field["name"]: field["type"] for field in interface["records"][record_name]["fields"]}
+    record = interface.get("records", {}).get(record_name)
+    if record is None:
+        raise SystemExit(f"E_RECORD_MISSING: {record_name}")
+    return {field["name"]: field["type"] for field in record["fields"]}
 
 
 def contains_named_type(value: object, name: str) -> bool:
@@ -1071,7 +1101,7 @@ helper_resource = next((resource for resource in io_host.get("resources", []) if
 helper_methods = {function["name"]: function for function in helper_resource["functions"]} if helper_resource else {}
 if set(helper_methods) != {"next-event", "cancel"}:
     raise SystemExit("helper process must expose event consumption and explicit cancellation")
-if helper_methods["next-event"].get("result") != {"kind": "option", "value": {"kind": "named", "name": "helper-event"}}:
+if helper_methods["next-event"].get("result") != {"kind": "named", "name": "helper-poll-result"} or helper_methods["next-event"].get("arguments") != [{"name": "wait-ms", "type": {"kind": "scalar", "name": "u32"}}]:
     raise SystemExit("helper event consumption must terminate only after terminal event consumption")
 start_output = next((argument for argument in helper.get("arguments", []) if argument["name"] == "output"), None) if helper else None
 if start_output is None or start_output["type"] != {"kind": "option", "value": {"kind": "named", "name": "staged-writer"}}:

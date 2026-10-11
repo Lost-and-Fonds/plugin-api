@@ -1,4 +1,4 @@
-package stashd:plugin@0.18.0;
+package stashd:plugin@0.19.0;
 
 /// Lifecycle-independent plugin value contracts. Metadata facets remain in
 /// `io-host` with the shared host-managed I/O boundary.
@@ -185,6 +185,17 @@ interface io-host {
         terminal(helper-terminal),
     }
 
+    variant helper-poll-state {
+        pending,
+        event(helper-event),
+        end,
+    }
+
+    record helper-poll-result {
+        invocation-cancel-requested: bool,
+        state: helper-poll-state,
+    }
+
     variant helper-error {
         denied,
         credential-denied,
@@ -217,7 +228,10 @@ interface io-host {
     /// must fit the host-advertised RPC receive-frame maximum; no smaller hidden
     /// RPC byte ceiling applies. Any ordinary write error makes the writer
     /// unfinalizable, so its partial output is discarded when dropped.
-    /// `finish` is the only operation that creates a staged-artifact.
+    /// `finish` is the only operation that creates a staged-artifact. Any typed
+    /// finish failure poisons the writer, returns no descriptor, and registers
+    /// no artifact. Registration is atomic with success; retries cannot recover.
+    /// See protocol/staging.md.
     /// Dropping an unfinished writer discards its partial output. Completed
     /// artifacts remain invocation-scoped; the host makes available only
     /// artifacts returned by a successful plugin result and discards the rest.
@@ -252,11 +266,15 @@ interface io-host {
     /// larger logical writes split into ordered chunks without a smaller hidden
     /// helper-output ceiling or loss/reordering within each stream. Cancellation
     /// is idempotent: the first terminal condition determined wins, and a later
-    /// cancel cannot rewrite it. EOF follows terminal consumption. Dropping the
+    /// cancel cannot rewrite it. Bounded next-event polls return pending/event/end
+    /// and a sticky invocation-cancel-requested flag. Core cancellation wakes a
+    /// blocked poll; helper cancel does not set that flag. Effective wait is
+    /// min(wait-ms, 1000) milliseconds, zero polls immediately, and end is sticky
+    /// after terminal consumption. See protocol/helper-process.md. Dropping the
     /// resource or ending the invocation terminates/reaps the child and cleans
     /// up its streams. Process existence alone is not meaningful liveness.
     resource helper-process {
-        next-event: func() -> option<helper-event>;
+        next-event: func(wait-ms: u32) -> helper-poll-result;
         cancel: func();
     }
 

@@ -89,7 +89,31 @@
 - **Fix:** Require the expected diagnostic and reject unexpected exceptions. Merge the duplicate staging rejection helpers while touching this code.
 - **If we skip it:** Broken verification can look like strong regression protection.
 
-## Verdict
+## Remediation status
+
+Implemented for `stashd:plugin@0.19.0` (RPC remains protocol 1):
+
+| Finding | Resolution and regression coverage |
+|---|---|
+| 1 | `protocol/rpc-v1.md` separates backing resources from handle owners; `protocol/audit-vectors.json` covers remote-owner reads/drops, pre-acceptance rejection, accepted typed failures, uncertain transfers, return transfers, and cleanup. |
+| 2 | Collection Export WIT and RPC directions corrected; verifier checks bind each direction to its recipient; asymmetric-limit vectors retained. |
+| 3 | `helper-poll-result` adds bounded pending/event/end polling and sticky Core cancellation observation; helper cancellation remains separate. Polling vectors and specification mutations cover wake-up, stickiness, output ordering, and races. |
+| 4 | Extraction uses the authoritative wasm-tools resolved graph. Comment/determinism tests and parser-accepted alias, flags, tuple, constructor, and static-method fixtures prove unsupported declarations fail explicitly. |
+| 5 | Exact independent world membership and essential manifest constraints enforced; removed Input/Broadcast hosts, duplicate/extra members, and weakened schema mutations rejected. |
+| 6 | Failed finish poisons the writer and registers no artifact; registration is atomic with success. State vectors and specification mutations cover failure and prohibited retries. |
+| 7 | README helper guidance corrected and links the canonical contract. |
+| 8 | RPC integer checks require canonical ASCII decimal spelling before conversion; negative mutation tests retain leading zeros, negative zero, Unicode digits, and range/type failures. |
+| 9 | Sensitivity tests validate a clean baseline and exact expected diagnostics/status; unrelated failures and exceptions cannot count as rejection. Duplicate staging helpers merged; missing-record checks return explicit diagnostics. |
+
+Run `./bin/verify-contract` for generation freshness/determinism, semantic vectors,
+focused audit regressions, and diagnostic-specific sensitivity checks. The
+README's 0.19.0 downstream handoff records Core/SDK migration requirements.
+Only plugin-api changed: downstream runtime timing, process cleanup, and atomic
+filesystem publication still require consumer implementation and runtime tests.
+State-transition vectors are contract models, not execution of a real helper or
+storage backend. This status supersedes the original verdict below.
+
+## Original verdict
 
 Fix resource ownership and Collection Export frame directions first, then close the helper cancellation gap. The passing suite is useful, but it is not yet reliable evidence of contract consistency.
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 vectors = json.loads((root / "protocol/helper-process-vectors.json").read_text(encoding="utf-8"))
-if vectors.get("contract") != "stashd:plugin@0.18.0":
+if vectors.get("contract") != "stashd:plugin@0.19.0":
     raise SystemExit("helper process vectors refer to the wrong contract")
 
 required_cases = {
@@ -84,7 +84,7 @@ if b"".join(chunks) != logical_bytes or len(chunks) < 2:
 if len(logical_bytes) <= frame_max:
     raise SystemExit("large output sequence must exceed the negotiated frame maximum")
 for event, chunk in ((event, expand_pattern(event["output"]["bytes_pattern"])) for event in large["events"] if "output" in event):
-    response = {"protocol": 1, "id": "plugin-event-1", "kind": "response", "invocation": "inv-helper-1", "result": {"tag": "output", "value": {"channel": "stdout", "bytes": list(chunk)}}}
+    response = {"protocol": 1, "id": "plugin-event-1", "kind": "response", "invocation": "inv-helper-1", "result": {"invocation-cancel-requested": False, "state": {"tag": "event", "value": {"tag": "output", "value": {"channel": "stdout", "bytes": list(chunk)}}}}}
     encoded_size = len(json.dumps(response, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
     if encoded_size > frame_max:
         raise SystemExit(f"encoded next-event response exceeds negotiated frame maximum: {encoded_size} > {frame_max}")

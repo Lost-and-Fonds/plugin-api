@@ -1,9 +1,9 @@
 {
-  "canonical_contract": "stashd:plugin@0.18.0",
+  "canonical_contract": "stashd:plugin@0.19.0",
   "cases": [
     {
       "name": "supported exact contract with independent package version",
-      "manifest": {"id": "example.plugin", "version": "9.4.1", "contract": "stashd:plugin@0.18.0", "components": {"main": {"world": "input-plugin", "artifact": "components/main.wasm"}}},
+      "manifest": {"id": "example.plugin", "version": "9.4.1", "contract": "stashd:plugin@0.19.0", "components": {"main": {"world": "input-plugin", "artifact": "components/main.wasm"}}},
       "outcome": "valid"
     },
     {
@@ -13,7 +13,7 @@
     },
     {
       "name": "malformed contract identity",
-      "manifest": {"id": "example.plugin", "version": "1.0.0", "contract": "0.18.0", "components": {"main": {"world": "input-plugin", "artifact": "components/main.wasm"}}},
+      "manifest": {"id": "example.plugin", "version": "1.0.0", "contract": "0.19.0", "components": {"main": {"world": "input-plugin", "artifact": "components/main.wasm"}}},
       "outcome": "invalid"
     },
     {
@@ -23,7 +23,7 @@
     },
     {
       "name": "RPC version does not determine contract identity",
-      "manifest": {"id": "example.plugin", "version": "0.16.0", "contract": "stashd:plugin@0.18.0", "components": {"main": {"world": "input-plugin", "artifact": "components/main.wasm"}}},
+      "manifest": {"id": "example.plugin", "version": "0.16.0", "contract": "stashd:plugin@0.19.0", "components": {"main": {"world": "input-plugin", "artifact": "components/main.wasm"}}},
       "rpc_protocol": 1,
       "outcome": "valid"
     }

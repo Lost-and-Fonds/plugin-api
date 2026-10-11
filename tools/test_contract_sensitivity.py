@@ -59,9 +59,26 @@ def contract(candidate: dict, filename: str) -> dict:
     return next(item for item in candidate["contracts"] if item["file"] == filename)
 
 
+expected_diagnostics = json.loads(Path(__file__).with_name("sensitivity-diagnostics.json").read_text())
+
+
+def check_rejection(result, name):
+    expected = expected_diagnostics[name]
+    if result.returncode != 1 or result.stderr.strip() != expected or "Traceback" in result.stderr:
+        raise SystemExit(f"wrong rejection for {name}: {result.returncode}\n{result.stdout}{result.stderr}")
+
+
+baseline_env = {key: value for key, value in os.environ.items() if not key.startswith("STASHD_")}
+os.environ.clear()
+os.environ.update(baseline_env)
+subprocess.run([sys.executable, str(verifier), str(schema_path), str(package_schema_path)], check=True, env=baseline_env)
+
+
 def expect_rejected(name: str, mutate) -> None:
     candidate = copy.deepcopy(schema)
     mutate(candidate)
+    if candidate == schema:
+        raise SystemExit(f"mutation did not apply: {name}")
     with tempfile.TemporaryDirectory(prefix="stashd-contract-sensitivity-") as temp:
         candidate_path = Path(temp) / "wit-schema.json"
         candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
@@ -71,8 +88,7 @@ def expect_rejected(name: str, mutate) -> None:
             text=True,
             check=False,
         )
-    if result.returncode == 0:
-        raise SystemExit(f"semantic verifier accepted the {name} regression")
+    check_rejection(result, name)
     print(f"sensitivity check caught {name}")
 
 
@@ -90,34 +106,19 @@ def expect_staging_rule_rejected(name: str, weakened_rule: str) -> None:
             check=False,
             env={**os.environ, "STASHD_STAGING_SPEC": str(candidate_path)},
         )
-    if result.returncode == 0:
-        raise SystemExit(f"semantic verifier accepted the {name} regression")
+    check_rejection(result, name)
     print(f"sensitivity check caught {name}")
 
 
-def expect_staging_adoption_position_rejected(name: str, position: str) -> None:
-    candidate = staging_text.replace(position, "", 1)
-    if candidate == staging_text:
-        raise SystemExit(f"staging sensitivity mutation could not locate {name}")
-    with tempfile.TemporaryDirectory(prefix="stashd-staging-sensitivity-") as temp:
-        candidate_path = Path(temp) / "staging.md"
-        candidate_path.write_text(candidate, encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(verifier), str(schema_path), str(package_schema_path)],
-            capture_output=True,
-            text=True,
-            check=False,
-            env={**os.environ, "STASHD_STAGING_SPEC": str(candidate_path)},
-        )
-    if result.returncode == 0:
-        raise SystemExit(f"semantic verifier accepted the {name} regression")
-    print(f"sensitivity check caught {name}")
+expect_staging_adoption_position_rejected = expect_staging_rule_rejected
 
 
 def expect_package_schema_rejected(name: str, mutate) -> None:
     candidate = copy.deepcopy(schema)
     package_candidate = copy.deepcopy(package_schema)
     mutate(package_candidate)
+    if package_candidate == package_schema:
+        raise SystemExit(f"mutation did not apply: {name}")
     with tempfile.TemporaryDirectory(prefix="stashd-contract-sensitivity-") as temp:
         candidate_path = Path(temp) / "wit-schema.json"
         package_candidate_path = Path(temp) / "plugin-package.schema.json"
@@ -129,8 +130,7 @@ def expect_package_schema_rejected(name: str, mutate) -> None:
             text=True,
             check=False,
         )
-    if result.returncode == 0:
-        raise SystemExit(f"semantic verifier accepted the {name} regression")
+    check_rejection(result, name)
     print(f"sensitivity check caught {name}")
 
 
@@ -1023,8 +1023,7 @@ def verify_enrichment_capability_semantics() -> None:
                 capture_output=True, text=True, check=False,
                 env={**os.environ, "STASHD_ENRICHMENT_SPEC": str(candidate_path)},
             )
-        if result.returncode == 0:
-            raise SystemExit(f"semantic verifier accepted weakened Enrichment capability semantics: {original}")
+        check_rejection(result, (f"sensitivity check caught weakened Enrichment capability semantics: {original}").removeprefix("sensitivity check caught "))
         print(f"sensitivity check caught weakened Enrichment capability semantics: {original}")
 
 
@@ -1042,8 +1041,7 @@ def expect_document_semantic_rejected(name: str, env_key: str, path: Path, mutat
                 capture_output=True, text=True, check=False,
                 env={**os.environ, env_key: str(candidate)},
             )
-        if result.returncode == 0:
-            raise SystemExit(f"semantic verifier accepted weakened {name} semantics: {original}")
+        check_rejection(result, (f"sensitivity check caught weakened {name} semantics: {original}").removeprefix("sensitivity check caught "))
         print(f"sensitivity check caught weakened {name} semantics: {original}")
 
 
@@ -1072,8 +1070,7 @@ def verify_preserved_asset_grant_semantics() -> None:
                 capture_output=True, text=True, check=False,
                 env={**os.environ, "STASHD_PRESERVED_ASSET_GRANTS_SPEC": str(candidate)},
             )
-        if result.returncode == 0:
-            raise SystemExit(f"grant verifier accepted weakened semantics: {original}")
+        check_rejection(result, (f"sensitivity check caught weakened preserved Asset grant semantics: {original}").removeprefix("sensitivity check caught "))
         print(f"sensitivity check caught weakened preserved Asset grant semantics: {original}")
 
 
@@ -1101,8 +1098,7 @@ def verify_byte_range_semantics() -> None:
             )
         finally:
             document.write_text(text, encoding="utf-8")
-        if result.returncode == 0:
-            raise SystemExit(f"byte-range verifier accepted weakened semantics: {original}")
+        check_rejection(result, (f"sensitivity check caught weakened byte-range semantics: {original}").removeprefix("sensitivity check caught "))
         print(f"sensitivity check caught weakened byte-range semantics: {original}")
 
 
@@ -1204,8 +1200,7 @@ def verify_preservation_semantics() -> None:
             )
         finally:
             document.write_text(text, encoding="utf-8")
-        if result.returncode == 0:
-            raise SystemExit(f"semantic verifier accepted weakened preservation semantics: {original}")
+        check_rejection(result, (f"sensitivity check caught weakened preservation semantics: {original}").removeprefix("sensitivity check caught "))
         print(f"sensitivity check caught weakened preservation semantics: {original}")
 
 
@@ -1237,8 +1232,7 @@ def verify_input_routing_semantics() -> None:
             )
         finally:
             document.write_text(text, encoding="utf-8")
-        if result.returncode == 0:
-            raise SystemExit(f"semantic verifier accepted weakened Input routing: {rule}")
+        check_rejection(result, (f"sensitivity check caught weakened Input routing: {rule}").removeprefix("sensitivity check caught "))
         print(f"sensitivity check caught weakened Input routing: {rule}")
 
 
@@ -1259,8 +1253,7 @@ def verify_terminal_commit_authority() -> None:
         )
     finally:
         document.write_text(text, encoding="utf-8")
-    if result.returncode == 0:
-        raise SystemExit("semantic verifier accepted missing terminal commit-point semantics")
+    check_rejection(result, ("sensitivity check caught missing terminal commit-point semantics").removeprefix("sensitivity check caught "))
     print("sensitivity check caught missing terminal commit-point semantics")
 
 
@@ -1286,8 +1279,7 @@ def verify_broadcast_collection_semantics() -> None:
             )
         finally:
             document.write_text(text, encoding="utf-8")
-        if result.returncode == 0:
-            raise SystemExit(f"semantic verifier accepted weakened Broadcast collection semantics: {original}")
+        check_rejection(result, (f"sensitivity check caught weakened Broadcast collection semantics: {original}").removeprefix("sensitivity check caught "))
         print(f"sensitivity check caught weakened Broadcast collection semantics: {original}")
 
 
@@ -1320,8 +1312,7 @@ def verify_component_execution_semantics() -> None:
             )
         finally:
             document.write_text(text, encoding="utf-8")
-        if result.returncode == 0:
-            raise SystemExit(f"semantic verifier accepted weakened component execution semantics: {original}")
+        check_rejection(result, (f"sensitivity check caught weakened component execution semantics: {original}").removeprefix("sensitivity check caught "))
         print(f"sensitivity check caught weakened component execution semantics: {original}")
 
 
@@ -1341,8 +1332,7 @@ def verify_shared_component_identity_semantics() -> None:
         )
     finally:
         document.write_text(text, encoding="utf-8")
-    if result.returncode == 0:
-        raise SystemExit("semantic verifier accepted same-world dependence on implicit component identity")
+    check_rejection(result, ("sensitivity check caught implicit same-world component identity").removeprefix("sensitivity check caught "))
     print("sensitivity check caught implicit same-world component identity")
 
 
@@ -1362,8 +1352,7 @@ def verify_rpc_response_envelope_semantics() -> None:
         )
     finally:
         document.write_text(text, encoding="utf-8")
-    if result.returncode == 0:
-        raise SystemExit("RPC verifier accepted a restored top-level response error")
+    check_rejection(result, ("sensitivity check caught top-level RPC response error permitted").removeprefix("sensitivity check caught "))
     print("sensitivity check caught top-level RPC response error permitted")
 
 
@@ -1383,8 +1372,7 @@ def verify_rpc_duplicate_member_semantics() -> None:
         )
     finally:
         document.write_text(text, encoding="utf-8")
-    if result.returncode == 0:
-        raise SystemExit("RPC verifier accepted weakened duplicate-member semantics")
+    check_rejection(result, ("sensitivity check caught weakened RPC duplicate-member semantics").removeprefix("sensitivity check caught "))
     print("sensitivity check caught weakened RPC duplicate-member semantics")
 
 
@@ -1411,8 +1399,7 @@ def verify_frame_negotiation_semantics() -> None:
             )
         finally:
             document.write_text(text, encoding="utf-8")
-        if result.returncode == 0:
-            raise SystemExit(f"RPC verifier accepted weakened frame negotiation semantics: {original}")
+        check_rejection(result, (f"sensitivity check caught weakened frame negotiation: {original}").removeprefix("sensitivity check caught "))
         print(f"sensitivity check caught weakened frame negotiation: {original}")
 
 

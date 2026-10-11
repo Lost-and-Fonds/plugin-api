@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -30,7 +31,7 @@ spec = spec_path.read_text(encoding="utf-8")
 vectors = json.loads(vectors_path.read_text(encoding="utf-8"))
 schema = json.loads(schema_path.read_text(encoding="utf-8"))
 package = schema.get("package")
-if package != "stashd:plugin@0.18.0" or vectors.get("package") != package:
+if package != "stashd:plugin@0.19.0" or vectors.get("package") != package:
     raise SystemExit("RPC v1 conformance material has a conflicting contract identity")
 
 required = (
@@ -68,7 +69,7 @@ required = (
     "Final whole-contract checkpoint #32 froze the",
     "`stashd:plugin@0.17.0`, the exact",
     "Issue #57 exposed a contract-level",
-    "`stashd:plugin@0.18.0` supersedes that frozen target",
+    "`stashd:plugin@0.19.0` supersedes that frozen target",
     "SDK/runtime migration target",
     "Subsequent incompatible contract changes",
 )
@@ -207,7 +208,8 @@ for name, low, high in (
     ("s64-boundaries", -(2**63), 2**63 - 1),
 ):
     values = by_name[name]["values"]
-    if any(type(value) is not str or not value.lstrip("-").isdigit() or not low <= int(value) <= high for value in values):
+    grammar = r"(?:0|[1-9][0-9]*)" if low == 0 else r"(?:0|-?[1-9][0-9]*)"
+    if any(type(value) is not str or re.fullmatch(grammar, value) is None or not low <= int(value) <= high for value in values):
         raise SystemExit(f"RPC v1 {name} must use in-range decimal strings")
 
 collection_request = by_name["broadcast-publish-collection-resource"]

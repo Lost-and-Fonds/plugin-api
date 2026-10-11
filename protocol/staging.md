@@ -24,6 +24,8 @@ In OPEN, a successful `write` appends the complete chunk and leaves the writer O
 
 A POISONED writer cannot recover or produce an artifact. Subsequent `write` and `finish` calls fail deterministically with `staging-error.failed(...)`; retrying a failed chunk cannot make it finalizable.
 
+Any typed `finish` failure from OPEN transitions OPEN to POISONED, returns no descriptor, and registers no completed artifact. Registration is atomic with successful finalization; unpublished physical output is discarded on drop or invocation cleanup. Retrying finish cannot recover the writer. Transport uncertainty follows RPC invocation-failure cleanup, not a typed retry path.
+
 A successful `finish` from OPEN closes/finalizes the byte sequence, computes authoritative size, freezes create-time media type and metadata, creates a fresh reference, registers exactly one artifact, returns its canonical descriptor, and transitions OPEN to FINISHED. Finish does not consume the writer resource. FINISHED is terminal: subsequent `write` and second `finish` calls fail deterministically with `staging-error.failed(...)`. They append no bytes, create no artifact, and alter no descriptor. A writer resource remains a live owned WIT resource until explicitly dropped or invocation cleanup; use after its handle is dropped is an RPC resource-lifetime violation, not a staging error.
 
 Dropping an OPEN or POISONED writer discards partial unpublished output and creates no artifact. Dropping a FINISHED writer releases only the writer resource handle. Its completed artifact remains registered and usable for the rest of the invocation, including reopening and successful lifecycle-result adoption. Artifact lifetime is independent of writer-handle lifetime.

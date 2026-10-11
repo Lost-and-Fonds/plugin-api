@@ -34,6 +34,8 @@ python3 "$repo_root/tools/verify_input_routing.py"
 python3 "$repo_root/tools/verify_byte_ranges.py"
 python3 "$repo_root/tools/verify_preserved_asset_grants.py"
 python3 "$repo_root/tools/verify_helper_process.py"
+python3 "$repo_root/tools/verify_audit_contract.py"
+python3 "$repo_root/tools/test_audit_regressions.py"
 python3 "$repo_root/tools/test_contract_sensitivity.py" \
     "$temporary_root/first/wit-schema.json" \
     "$temporary_root/first/plugin-package.schema.json"

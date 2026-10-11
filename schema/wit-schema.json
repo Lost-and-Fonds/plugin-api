@@ -762,7 +762,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.18.0",
+      "package": "stashd:plugin@0.19.0",
       "worlds": {
         "input-world": {
           "exports": [
@@ -1359,7 +1359,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.18.0",
+      "package": "stashd:plugin@0.19.0",
       "worlds": {
         "broadcast-world": {
           "exports": [
@@ -1796,7 +1796,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.18.0",
+      "package": "stashd:plugin@0.19.0",
       "worlds": {
         "enrichment-world": {
           "exports": [
@@ -2046,7 +2046,7 @@
           }
         }
       },
-      "package": "stashd:plugin@0.18.0",
+      "package": "stashd:plugin@0.19.0",
       "worlds": {
         "collection-export-world": {
           "exports": [
@@ -2442,6 +2442,24 @@
                 }
               ]
             },
+            "helper-poll-result": {
+              "fields": [
+                {
+                  "name": "invocation-cancel-requested",
+                  "type": {
+                    "kind": "scalar",
+                    "name": "bool"
+                  }
+                },
+                {
+                  "name": "state",
+                  "type": {
+                    "kind": "named",
+                    "name": "helper-poll-state"
+                  }
+                }
+              ]
+            },
             "plugin-metadata": {
               "fields": [
                 {
@@ -2658,14 +2676,19 @@
             {
               "functions": [
                 {
-                  "arguments": [],
+                  "arguments": [
+                    {
+                      "name": "wait-ms",
+                      "type": {
+                        "kind": "scalar",
+                        "name": "u32"
+                      }
+                    }
+                  ],
                   "name": "next-event",
                   "result": {
-                    "kind": "option",
-                    "value": {
-                      "kind": "named",
-                      "name": "helper-event"
-                    }
+                    "kind": "named",
+                    "name": "helper-poll-result"
                   }
                 },
                 {
@@ -2738,6 +2761,25 @@
                     "kind": "named",
                     "name": "helper-terminal"
                   }
+                }
+              ]
+            },
+            "helper-poll-state": {
+              "values": [
+                {
+                  "name": "pending",
+                  "type": null
+                },
+                {
+                  "name": "event",
+                  "type": {
+                    "kind": "named",
+                    "name": "helper-event"
+                  }
+                },
+                {
+                  "name": "end",
+                  "type": null
                 }
               ]
             },
@@ -2897,10 +2939,10 @@
           "variants": {}
         }
       },
-      "package": "stashd:plugin@0.18.0",
+      "package": "stashd:plugin@0.19.0",
       "worlds": {}
     }
   ],
-  "package": "stashd:plugin@0.18.0",
+  "package": "stashd:plugin@0.19.0",
   "schema_version": 1
 }

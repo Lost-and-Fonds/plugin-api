@@ -9,9 +9,9 @@ Provider repositories own provider behavior.
 
 Version changes must preserve the documented compatibility policy.
 
-The current contract is `stashd:plugin@0.18.0`. It describes invocation-scoped
+The current contract is `stashd:plugin@0.19.0`. It describes invocation-scoped
 host capabilities for Input, Broadcast, Enrichment, and Collection Export.
-Version 0.18.0 adds the live helper-process resource and byte-event contract in
+Version 0.19.0 adds bounded helper polling with observable invocation cancellation in
 [`protocol/helper-process.md`](protocol/helper-process.md). Subsequent
 incompatible contract changes require a new exact package identity.
 [RPC v1](protocol/rpc-v1.md) is the canonical wire specification, including
@@ -462,11 +462,30 @@ policy, and generic HTTP errors remain host mediated; redirect behavior and
 credential forwarding are never inherited implicitly from an SDK client.
 
 
-The shared helper capability receives an optional owned byte stream for stdin
-and an optional borrowed staged writer for stdout. The host streams helper
-input and output without exposing a mount or path. A plugin can call a helper
-once for each output stream when a helper produces multiple files, or copy a
-returned byte stream through the same writer API.
+The [helper contract](protocol/helper-process.md) transfers optional owned
+stdin and stdout-writer resources and returns a helper process. Normal exit
+returns the valid writer for finalization; abnormal outcomes discard it.
+Bounded polling distinguishes Core invocation cancellation from plugin helper
+cancellation without concurrent RPC requests.
+
+### 0.19.0 downstream handoff
+
+`stashd:plugin@0.19.0` changes helper polling bindings; RPC remains version 1.
+Core must explicitly support this exact identity, retain sticky invocation
+cancellation state, wake blocked polls on cancellation, encode the new result,
+and preserve output ordering and transferred-resource cleanup. SDKs must update
+bindings and convenience loops for pending/event/end and expose invocation
+cancellation separately from helper terminal status. Accepted transfer failures
+consume handles; failed finalization poisons writers without registering output.
+Both consumers must conform to corrected directional frame limits and canonical
+integer encoding. Hello does not negotiate WIT compatibility: never silently
+interpret a 0.18.0 component with 0.19.0 bindings.
+
+Downstream runtime tests must cover silent-helper cancellation visibility,
+cancellation/output races, startup failure after owned transfers, and atomic
+failed-finalization registration. API verification cannot prove runtime timing,
+process reaping, or filesystem guarantees. This repository implements no Core
+or SDK runtime; end-to-end support requires those consumers to migrate and test.
 
 ## Shared primitive decisions
 

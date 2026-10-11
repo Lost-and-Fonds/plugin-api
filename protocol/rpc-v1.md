@@ -174,13 +174,14 @@ WIT position.
 The endpoint that creates a resource allocates its ID. IDs MUST be unique
 across every resource in that invocation, MUST NOT be reused during the
 invocation, and MUST be tracked with the declared WIT resource type. The
-current owner keeps the active entry. When an owned WIT value is transferred,
-the sender atomically marks its entry transferred and the receiver installs the
-same ID and type as its active entry; only the receiver can then use or drop
-that handle. A receiver MUST NOT resolve a transferred handle before installing
-that entry, and an endpoint MUST reject a handle that is not in its current
-owner table. Resource creation and ownership transfer are therefore explicit
-state changes, not shared object identity.
+implementing endpoint retains the backing resource and an invocation-scoped
+ledger recording type, liveness, and current handle owner. Transfer changes
+handle ownership, not backing-resource identity. Only the current owner may
+originate method calls, borrowed use, owned transfers, or destruction.
+The implementing endpoint MUST accept remote-owner method calls, borrows, and
+drops after validating invocation, direction, grant, type, liveness, and current
+ownership. It MUST NOT require local ownership to service these requests.
+Resource creation and ownership transfer are explicit state changes.
 
 IDs SHOULD be unpredictable, but are not bearer authority: possession or
 guessing never bypasses the invocation, direction, grant, type, liveness, and
@@ -194,8 +195,9 @@ call, response, resource handle and callback for that call uses that same ID.
 The host MUST reject a handle used with any other invocation, even if its text
 matches an active ID there. At invocation end, all IDs become stale and no
 cleanup request is required or permitted after the lifecycle channel closes.
-An endpoint MUST reject a stale, replayed, unknown, dropped, or
-transferred-away handle deterministically; it MUST never resolve it against
+An endpoint MUST reject stale, replayed, unknown, or dropped handles and use
+originating from a transferred-away endpoint deterministically. Legitimate
+remote-owner requests remain valid. It MUST never resolve a handle against
 another invocation or host object.
 
 ## Ownership, borrowing, and release
@@ -217,6 +219,8 @@ flag in JSON:
   as an owned top-level argument does; a nested borrow remains call-scoped.
 
 The receiver validates all resource positions and ownership before dispatch.
+Duplicate owned occurrences of one handle, including an owned argument aliasing
+a borrowed receiver, MUST be rejected before acceptance; no transfer commits.
 Once it has received and validated the complete request frame, owned arguments
 are consumed by the sender and installed at the receiver before dispatch,
 even if the WIT operation returns a valid error result. A successful dispatch
@@ -232,10 +236,13 @@ correlated request with `method: "stashd:plugin/rpc.resource-drop"` and
 `params: {"resource": HANDLE}`; the receiver responds with `result: null` after
 releasing it. The receiver invalidates the ID before performing cleanup, so a
 cleanup failure cannot make the resource usable again. Duplicate drop, drop of
-a borrowed/transferred handle, and drop of an unknown, wrong-type, or stale
-handle are protocol failures. A borrowed handle is never separately dropped.
-Invocation end is unconditional cleanup: each endpoint releases every owned
-resource it created or accepted, invalidates every handle, closes streams,
+a borrowed handle or drop originating from a former owner, and drop of an
+unknown, wrong-type, or stale handle are protocol failures. A remote current
+owner's drop MUST NOT be rejected merely because the implementing endpoint
+previously transferred that handle. A borrowed handle is never separately dropped.
+Invocation end is unconditional cleanup: the implementing endpoint releases
+each backing resource exactly once regardless of current handle ownership.
+Each endpoint invalidates every handle, closes streams,
 discards unfinished staged writers, and discards unadopted invocation output.
 Garbage collection is not a release mechanism. Staged artifact descriptor
 authority, writer finalization, and all-or-nothing successful-result adoption
@@ -256,14 +263,14 @@ read-error, and successful-exhaustion requirements.
 ## Collection Export host result
 
 Collection Export's WIT `plugin-error.limit-exceeded` is reserved for the host.
-If an indivisible serialized request cannot fit the host's advertised receive
-maximum, the sender fails locally without transmitting an oversized frame.
+If an indivisible serialized request cannot fit the plugin's advertised receive
+maximum, the host fails locally without transmitting an oversized frame.
 Collection Export's `limit-exceeded` remains reserved for host-enforced
 artifact/domain constraints, not transport sizing. `DETAIL` is the canonical
 `plugin-error-detail` record. Thus the lifecycle result is a valid WIT outcome;
 it is not the response envelope's top-level RPC `error`. If plugin output cannot
-fit the host's advertised maximum, the host fails the invocation at the
-appropriate boundary without transmitting an oversized frame.
+fit the host's advertised maximum, the plugin fails locally without
+transmitting an oversized frame; the invocation fails.
 
 A plugin MUST NOT return `limit-exceeded`. If it does, the host rejects the
 plugin's lifecycle response as a contract violation, fails the invocation, and
@@ -359,6 +366,7 @@ value or WIT shape. The HTTP method model established `stashd:plugin@0.16.0` as 
 identity at that stage. Final whole-contract checkpoint #32 froze the
 subsequently hardened WIT/wire contract as `stashd:plugin@0.17.0`, the exact
 SDK/runtime migration target at that time. Issue #57 exposed a contract-level
-process-observability gap; `stashd:plugin@0.18.0` supersedes that frozen target
-with the live helper-process contract. Subsequent incompatible contract changes
+process-observability gap, addressed by the live helper-process contract in
+`stashd:plugin@0.18.0`; `stashd:plugin@0.19.0` supersedes that frozen target
+with bounded helper polling and observable Core invocation cancellation. Subsequent incompatible contract changes
 require another explicit package identity change.
